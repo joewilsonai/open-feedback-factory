@@ -72,6 +72,11 @@ docker compose up -d --build
 pnpm demo:seed
 ```
 
+`pnpm demo:seed` may create only real sample feedback records and real sample
+feature-usage records. It must not fabricate agent runs, PRs, costs, releases,
+or shipped states. Use `pnpm demo:reset` before or after smoke tests when the
+local Docker database should be cleared of sample seed and integration-test rows.
+
 ## GitHub App Install Path
 
 The canonical setup path is the control center wizard:

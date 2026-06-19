@@ -55,11 +55,17 @@ cp .env.example .env
 pnpm docker:up
 ```
 
-Seed the local loop after the stack is up:
+Optional sample data after the stack is up:
 
 ```bash
 pnpm demo:seed
 ```
+
+`pnpm demo:seed` submits real Daybook feedback through the SDK and records one
+real feature-usage event. It does not create fake PRs, fake costs, fake agent
+runs, fake release events, or fake shipped states. Use `pnpm demo:reset` to clear
+sample seed and local integration-test rows from the Docker database without
+touching real `daybook_demo_app` submissions.
 
 The Docker stack starts Postgres, the API, the worker, the control center, and
 the Daybook notepad/todo demo app. The worker polls `/runner/jobs/claim`, runs the configured runner,

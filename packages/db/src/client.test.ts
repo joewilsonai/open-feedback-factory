@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildAssumptionRecord, routeFeedback, sanitizeFeedback } from "@open-feedback-factory/core";
-import pg from "pg";
+import pg, { type PoolClient } from "pg";
 import { OpenFeedbackStore } from "./client.js";
 import { migrateDatabase } from "./migrate.js";
 
@@ -11,15 +11,17 @@ const { Pool } = pg;
 test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip: !databaseUrl }, async () => {
   assert.ok(databaseUrl);
   await migrateDatabase(databaseUrl);
+  await cleanupDatabaseTestRows(databaseUrl);
   const store = new OpenFeedbackStore(databaseUrl);
+  const uniqueSuffix = Date.now().toString(36);
+  const testSource = `test_${uniqueSuffix}`;
 
   try {
-    const uniqueSuffix = Date.now().toString(36);
     const feedback = {
       message: `Please add a dashboard focus meter ${uniqueSuffix}`,
       metadata: { route: "/settings", surface: "settings" },
-      source: "test",
-      userId: "user-1",
+      source: testSource,
+      userId: `test-user-${uniqueSuffix}-1`,
     };
     const sanitized = sanitizeFeedback(feedback);
     const decision = routeFeedback({ sanitized, signalCount: 2 });
@@ -40,7 +42,8 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     const usageId = await store.recordFeatureUsage({
       action: "enabled",
       featureId: "dark-mode",
-      userId: "user-1",
+      metadata: { source: testSource },
+      userId: `test-user-${uniqueSuffix}-1`,
     });
     assert.match(usageId, /^usage_/);
 
@@ -120,8 +123,8 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     const staleFeedback = {
       message: `Please add pinned notes stale ${uniqueSuffix}`,
       metadata: { route: "/daybook", surface: "notes" },
-      source: "test",
-      userId: "user-2",
+      source: testSource,
+      userId: `test-user-${uniqueSuffix}-2`,
     };
     const staleSanitized = sanitizeFeedback(staleFeedback);
     const staleDecision = routeFeedback({ sanitized: staleSanitized, signalCount: 2 });
@@ -148,6 +151,7 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(requeued?.status, "planned");
   } finally {
     await store.close();
+    await cleanupDatabaseTestRows(databaseUrl);
   }
 });
 
@@ -200,3 +204,80 @@ test("schema migration enables workspace RLS scaffolding", { skip: !databaseUrl 
     await pool.end();
   }
 });
+
+async function cleanupDatabaseTestRows(url: string): Promise<void> {
+  const pool = new Pool({ connectionString: url });
+  const client = await pool.connect();
+  const feedbackSources = ["test"];
+
+  try {
+    await client.query("begin");
+    const sourceClusters = await ids(
+      client,
+      `select distinct cluster_key as id
+       from feedback_signals
+       where source = any($1::text[]) or source like 'test_%'`,
+      [feedbackSources],
+    );
+    const feedbackIds = await ids(
+      client,
+      `select id
+       from feedback_signals
+       where source = any($1::text[]) or source like 'test_%'`,
+      [feedbackSources],
+    );
+    const workItemIds = sourceClusters.length
+      ? await ids(client, `select id from work_items where cluster_key = any($1::text[])`, [sourceClusters])
+      : [];
+    const runIds = workItemIds.length
+      ? await ids(client, `select id from agent_runs where work_item_id = any($1::text[])`, [workItemIds])
+      : [];
+
+    if (workItemIds.length || runIds.length) {
+      await client.query(
+        `delete from agent_assumptions
+         where work_item_id = any($1::text[])
+            or agent_run_id = any($2::text[])`,
+        [workItemIds, runIds],
+      );
+      await client.query(`delete from github_artifacts where work_item_id = any($1::text[])`, [workItemIds]);
+      await client.query(`delete from release_events where work_item_id = any($1::text[])`, [workItemIds]);
+      await client.query(`delete from cost_records where work_item_id = any($1::text[])`, [workItemIds]);
+      await client.query(`delete from agent_runs where work_item_id = any($1::text[])`, [workItemIds]);
+      await client.query(`delete from user_notifications where work_item_id = any($1::text[])`, [workItemIds]);
+      await client.query(`delete from work_items where id = any($1::text[])`, [workItemIds]);
+    }
+
+    if (feedbackIds.length) {
+      await client.query(`delete from user_notifications where feedback_id = any($1::text[])`, [feedbackIds]);
+    }
+
+    await client.query(`delete from feedback_signals where id = any($1::text[])`, [feedbackIds]);
+    if (sourceClusters.length) {
+      await client.query(
+        `delete from feedback_clusters fc
+         where fc.cluster_key = any($1::text[])
+           and not exists (select 1 from feedback_signals fs where fs.cluster_key = fc.cluster_key)`,
+        [sourceClusters],
+      );
+    }
+    await client.query(
+      `delete from feature_usage_events
+       where metadata ->> 'source' like 'test_%'
+          or user_id like 'test-user-%'
+          or user_id = 'user-1'`,
+    );
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+    await pool.end();
+  }
+}
+
+async function ids(client: PoolClient, sql: string, params: unknown[]): Promise<string[]> {
+  const result = await client.query<{ id: string }>(sql, params);
+  return result.rows.map((row) => row.id);
+}

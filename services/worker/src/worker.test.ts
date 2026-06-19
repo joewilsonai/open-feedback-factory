@@ -26,6 +26,7 @@ const job: WorkItemRow = {
   latestBranchName: null,
   riskTier: "safe_auto_merge",
   shouldCreateIssue: true,
+  signalSources: ["demo"],
   status: "planned",
   summary: "Please add dark mode to settings",
   title: "Add a dark mode option",

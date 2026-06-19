@@ -66,10 +66,19 @@ Open or report:
 - Demo app: `http://localhost:5174`
 - API doctor: `http://localhost:4100/doctor`
 
-Seed a sample feedback-to-feature loop:
+Optional sample feedback:
 
 ```bash
 pnpm demo:seed
+```
+
+The seed command sends real Daybook feedback through the SDK and records one real
+sample usage event. It does not fake PRs, model costs, agent runs, releases, or
+shipped states. To clear sample seed rows and local integration-test rows from
+Docker Postgres, run:
+
+```bash
+pnpm demo:reset
 ```
 
 ## Verify The Install
