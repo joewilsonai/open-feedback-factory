@@ -14,6 +14,11 @@ real Codex worker is attached.
 - Codex auth mode selected in the control center.
 - Runner process started with `CODEX_RUNNER_MODE=codex`.
 
+The worker reads live approval/auth settings from `/doctor` before each claim.
+That means `CODEX_AUTH_MODE` can be changed in the control center and the host
+worker will pick it up. `CODEX_RUNNER_MODE=codex` still has to be set on the
+worker process because it is the switch that attaches real execution.
+
 ## Approval Modes
 
 `manual` means feedback queues until an operator runs one selected work item.
@@ -28,9 +33,10 @@ allows a running worker to claim work.
 `cli` uses the signed-in Codex CLI subscription path on the worker machine.
 
 `api_key` uses a server-side OpenAI API key. The control center saves the key to
-`CODEX_SECRETS_PATH`, defaulting to `.off/secrets.env`. This path is ignored by
-git. The key is masked in the UI and is never returned to the browser. The
-worker injects it only into the Codex process for API-key runs.
+`CODEX_SECRETS_PATH`, defaulting to `.off/secrets.env` for direct local runs and
+`/workspace/.off/secrets.env` in Docker Compose. This path is ignored by git.
+The key is masked in the UI and is never returned to the browser. The worker
+injects it only into the Codex process for API-key runs.
 
 ## Manual One-Item Run
 
@@ -42,13 +48,13 @@ cd /path/to/open-feedback-factory
 WORKER_RUN_ONCE=true \
 WORKER_WORK_ITEM_ID=work_... \
 CODEX_RUNNER_MODE=codex \
-CODEX_AUTH_MODE=api_key \
 CODEX_MANAGE_GIT=true \
 GITHUB_CREATE_PR=true \
 GITHUB_MODE=gh \
 GITHUB_PR_BASE=codex/open-feedback-factory-v1 \
 WORKER_API_BASE_URL=http://localhost:4100 \
 RUNNER_WORKSPACE=/path/to/open-feedback-factory \
+CODEX_SECRETS_PATH="$PWD/.off/secrets.env" \
 CODEX_MODEL=gpt-5.5 \
 CODEX_EFFORT=extra-high \
 CODEX_TIMEOUT_MS=900000 \
@@ -65,20 +71,21 @@ Use this when approval mode is auto:
 cd /path/to/open-feedback-factory
 
 CODEX_RUNNER_MODE=codex \
-CODEX_AUTH_MODE=api_key \
 CODEX_MANAGE_GIT=true \
 GITHUB_CREATE_PR=true \
 GITHUB_MODE=gh \
 GITHUB_PR_BASE=codex/open-feedback-factory-v1 \
 WORKER_API_BASE_URL=http://localhost:4100 \
 RUNNER_WORKSPACE=/path/to/open-feedback-factory \
+CODEX_SECRETS_PATH="$PWD/.off/secrets.env" \
 CODEX_MODEL=gpt-5.5 \
 CODEX_EFFORT=extra-high \
 CODEX_TIMEOUT_MS=900000 \
 pnpm --filter @open-feedback-factory/worker dev
 ```
 
-The worker polls `/runner/jobs/claim`, runs `codex exec --json`, commits real
+The worker polls `/doctor` for live settings, polls `/runner/jobs/claim`, runs
+`codex exec --json`, commits real
 changes when `CODEX_MANAGE_GIT=true`, optionally opens a PR, records actual
 token usage, records cost when pricing rates are configured, and posts the run
 result back to the API.

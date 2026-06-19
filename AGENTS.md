@@ -95,10 +95,16 @@ allows an attached live worker to claim queued work automatically.
 saved `OPENAI_API_KEY` injected only into the worker process. The key lives in
 `CODEX_SECRETS_PATH`, defaults to `.off/secrets.env`, and must never be logged,
 committed, echoed to the browser, or placed in GitHub artifacts.
+Host-worker commands should pass an explicit `CODEX_SECRETS_PATH` so the worker
+reads the same saved key the API reports.
 
 Auto approval does not start a worker by itself. A live worker still has to run
 with `CODEX_RUNNER_MODE=codex`. See
 [docs/agent-runner-setup.md](docs/agent-runner-setup.md).
+
+The worker reads live approval/auth settings from `/doctor` before claiming
+work. Do not force a stale `CODEX_AUTH_MODE` in a host worker command when the
+control center has the current mode.
 
 For a real local Codex subscription run, prefer running the worker on the host
 so it can use the signed-in Codex CLI:

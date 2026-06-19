@@ -102,7 +102,7 @@ function numberFromEnv(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function readOpenAiApiKey(envValue: string | undefined, secretsPath: string): string | undefined {
+export function readOpenAiApiKey(envValue: string | undefined, secretsPath: string): string | undefined {
   if (isUsableApiKey(envValue)) return envValue.trim();
   try {
     const contents = readFileSync(path.resolve(secretsPath), "utf8");

@@ -1,7 +1,7 @@
 import { pathToFileURL } from "node:url";
 import type { WorkItemRow } from "@open-feedback-factory/db";
 import { CodexCliRunner, GitHubClient, type RunnerResult } from "@open-feedback-factory/runner";
-import { readWorkerConfig, type WorkerConfig } from "./config.js";
+import { readOpenAiApiKey, readWorkerConfig, type WorkerConfig } from "./config.js";
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -47,25 +47,26 @@ export async function completeJob(
 
 export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike = fetch): Promise<boolean> {
   if (config.runnerMode !== "codex") return false;
-  if (config.codexAuthMode === "api_key" && !config.openAiApiKey) return false;
+  const runtimeConfig = await resolveRuntimeConfig(config, fetchImpl);
+  if (runtimeConfig.codexAuthMode === "api_key" && !runtimeConfig.openAiApiKey) return false;
 
-  const job = await claimJob(config, fetchImpl);
+  const job = await claimJob(runtimeConfig, fetchImpl);
   if (!job) return false;
   console.log(`Claimed ${job.id}: ${job.title}`);
 
   const runner = new CodexCliRunner({
-    cli: config.codexCli,
-    cwd: config.runnerWorkspace,
-    env: config.codexAuthMode === "api_key" ? { OPENAI_API_KEY: config.openAiApiKey } : undefined,
-    effort: config.codexEffort,
-    manageGit: config.codexManageGit,
-    model: config.codexModel,
-    pricing: config.codexPricing,
-    timeoutMs: config.codexTimeoutMs,
+    cli: runtimeConfig.codexCli,
+    cwd: runtimeConfig.runnerWorkspace,
+    env: runtimeConfig.codexAuthMode === "api_key" ? { OPENAI_API_KEY: runtimeConfig.openAiApiKey } : undefined,
+    effort: runtimeConfig.codexEffort,
+    manageGit: runtimeConfig.codexManageGit,
+    model: runtimeConfig.codexModel,
+    pricing: runtimeConfig.codexPricing,
+    timeoutMs: runtimeConfig.codexTimeoutMs,
   });
 
-  let result = await runSafely(runner.run(job), job, config);
-  const publication = await publishSafely(config, job, result);
+  let result = await runSafely(runner.run(job), job, runtimeConfig);
+  const publication = await publishSafely(runtimeConfig, job, result);
   if (publication.status === "failed") {
     result = {
       ...result,
@@ -74,14 +75,14 @@ export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike =
       summary: "Runner implemented the work, but pull request publication failed.",
     };
   }
-  const runId = await completeJob(config, job.id, result, publication.prUrl, fetchImpl);
+  const runId = await completeJob(runtimeConfig, job.id, result, publication.prUrl, fetchImpl);
   console.log(`Completed ${job.id} as ${result.status} (${runId})${publication.prUrl ? ` with ${publication.prUrl}` : ""}.`);
   return true;
 }
 
 export async function startWorkerLoop(config = readWorkerConfig(), fetchImpl: FetchLike = fetch): Promise<void> {
   console.log(
-    `Open Feedback Factory worker started in ${config.runnerMode}/${config.approvalMode}/${config.codexAuthMode} mode against ${config.apiBaseUrl} as ${config.workerName}.`,
+    `Open Feedback Factory worker started with runner=${config.runnerMode}, local approval default=${config.approvalMode}, local auth default=${config.codexAuthMode}; live approval/auth settings are read from ${config.apiBaseUrl}/doctor before each claim as ${config.workerName}.`,
   );
 
   do {
@@ -112,6 +113,34 @@ async function runSafely(run: Promise<RunnerResult>, job: WorkItemRow, config: W
       status: "failed",
       summary: `Runner failed while working on ${job.id}.`,
     };
+  }
+}
+
+async function resolveRuntimeConfig(config: WorkerConfig, fetchImpl: FetchLike): Promise<WorkerConfig> {
+  const settings = await fetchRuntimeSettings(config, fetchImpl);
+  const codexAuthMode = settings?.codexAuthMode ?? config.codexAuthMode;
+  return {
+    ...config,
+    approvalMode: settings?.approvalMode ?? config.approvalMode,
+    codexAuthMode,
+    openAiApiKey: readOpenAiApiKey(process.env.OPENAI_API_KEY ?? config.openAiApiKey, config.codexSecretsPath),
+  };
+}
+
+async function fetchRuntimeSettings(
+  config: WorkerConfig,
+  fetchImpl: FetchLike,
+): Promise<{ approvalMode?: "auto" | "manual"; codexAuthMode?: "api_key" | "cli" } | null> {
+  try {
+    const response = await fetchImpl(`${config.apiBaseUrl}/doctor`);
+    if (!response.ok) return null;
+    const body = (await response.json()) as Record<string, unknown>;
+    return {
+      approvalMode: body.approvalMode === "auto" || body.approvalMode === "manual" ? body.approvalMode : undefined,
+      codexAuthMode: body.codexAuthMode === "api_key" || body.codexAuthMode === "cli" ? body.codexAuthMode : undefined,
+    };
+  } catch {
+    return null;
   }
 }
 

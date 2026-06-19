@@ -101,6 +101,13 @@ it into the Codex process. For local dogfood, run the worker on the host with
 `pnpm --filter @open-feedback-factory/worker dev` so it can use your installed
 Codex CLI.
 
+The worker reads live approval/auth settings from `/doctor` before each claim,
+so changing Codex auth mode in the control center is picked up by an attached
+worker. The worker process still needs `CODEX_RUNNER_MODE=codex` because that is
+the explicit opt-in to real code execution. Host workers should pass an
+absolute `CODEX_SECRETS_PATH` or `CODEX_SECRETS_PATH="$PWD/.off/secrets.env"` so
+they read the same saved key the API reports.
+
 `CODEX_MANAGE_GIT=true` lets the Codex runner create a work branch before it
 runs. `GITHUB_CREATE_PR=true` plus `GITHUB_MODE=gh` lets the worker push that
 branch and open a pull request after a successful Codex run.
