@@ -3,6 +3,10 @@
 Open Feedback Factory is a standalone feedback-to-feature control plane for
 indie developers and small teams.
 
+The wedge is autonomous feature shipping for indie apps: real users ask for
+improvements inside the app, the system clusters demand, safe work becomes
+guarded agent implementation, and users get told what shipped or why it did not.
+
 The goal is simple: let an app listen to real user demand, decide what is worth
 acting on, turn safe requests into guarded agent work, track cost and release
 proof, notify users what happened, and measure whether shipped features get

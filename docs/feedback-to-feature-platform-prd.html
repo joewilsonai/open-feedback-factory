@@ -783,6 +783,9 @@
 <blockquote>The open-source feedback-to-feature loop: collect real user requests, validate</blockquote>
 <blockquote>demand, create guarded agent work, track cost, prove release, and tell users</blockquote>
 <blockquote>what shipped or why it did not.</blockquote>
+<p>Sharper launch wedge:</p>
+<blockquote>Autonomous feature shipping for indie apps: user feedback in, guarded agent</blockquote>
+<blockquote>work out, shipped status back to users.</blockquote>
 <p>The launch story should emphasize that the product starts from real users inside the app, not from an internal product manager typing a task into a coding workspace.</p>
 <p>Recommended launch framing:</p>
 <blockquote>Let your users drive the roadmap, and let agents do the first implementation</blockquote>
@@ -795,6 +798,11 @@
 <li>&quot;A coding-agent dashboard for your repo.&quot;</li>
 </ul>
 <p>Those phrases point at the broader AI-native product-platform category. Open Feedback Factory should own the narrower, more visceral system around user demand: in-app SDK, feedback clustering, thresholds, sanitization, decision memory, cost ledger, guardrails, release proof, and user follow-up.</p>
+<p>The indie developer emotional frame:</p>
+<blockquote>You are one person or a tiny team. Your users are already telling you what to</blockquote>
+<blockquote>build. Open Feedback Factory lets the safe, high-signal requests move toward</blockquote>
+<blockquote>implementation automatically while you keep the rules, budget, and release</blockquote>
+<blockquote>gates.</blockquote>
 <h2 id="3-target-users"><a class="heading-anchor" href="#3-target-users" aria-label="Link to 3. Target Users">#</a>3. Target Users</h2>
 <h3 id="primary"><a class="heading-anchor" href="#primary" aria-label="Link to Primary">#</a>Primary</h3>
 <p>Indie developers, solo founders, and small teams with active beta users.</p>
@@ -2474,6 +2482,35 @@ feedback-factory demo</code></pre>
 <li>open-source, self-hostable control-plane infrastructure for indie teams.</li>
 </ul>
 <p>The strategic conclusion: agent-built PRs are becoming table stakes. The product must sell and demonstrate the managed user-feedback-to-shipping loop.</p>
+<p>Useful product patterns to adapt, without copying the positioning:</p>
+<ul>
+<li><strong>Connect existing repository first.</strong> The install path should make &quot;connect</li>
+<p>my real repo&quot; the obvious path, with repo discovery, branch/PR base settings, and clear GitHub App status. Templates can exist, but the magic is acting on a repo the developer already ships.</p>
+<li><strong>Provider connection clarity.</strong> Agent setup should show Codex CLI, Codex API</li>
+<p>key, future OpenRouter/Requesty, and other providers as explicit connection cards with health, scopes, missing secrets, and whether each lane can run locally, in Docker, or remotely.</p>
+<li><strong>Live run logs.</strong> Every agent attempt needs a readable timeline: planning,</li>
+<p>files inspected, commands run, tests, blocked reasons, assumptions, cost, PR, review, release marker, and user notification. Logs should be honest enough that a failed sandbox or missing credential is understandable in seconds.</p>
+<li><strong>Task lifecycle UI.</strong> Work items should have visible stages such as queued,</li>
+<p>planning, building, checking, PR opened, awaiting review, merged, awaiting release proof, shipped, blocked, not planned, and needs more signal.</p>
+<li><strong>Review hub.</strong> Operators need one place to inspect the diff, checks,</li>
+<p>assumptions, cost, policy gates, reviewer decisions, protected paths, and user impact before approving merge or release.</p>
+<li><strong>Health page.</strong> The product should continuously report repo connection,</li>
+<p>GitHub webhook health, worker health, provider auth, queue age, failure rate, cost caps, and release-proof gaps.</p>
+<li><strong>Bug report with logs and UI state.</strong> The control center and SDK should be</li>
+<p>able to submit bug/error reports with safe diagnostics attached, so the same feedback-to-feature loop can handle product bugs without screenshots or raw private data leaking into GitHub.</p>
+<li><strong>In-product cost and credits visibility.</strong> Indie developers need predictable</li>
+<p>spend. Billing may be later, but V1 should make budget, estimated cost, actual cost, remaining cap, and prevented spend visible.</p>
+<li><strong>Agent follow-up affordances.</strong> After an agent run, the product should make</li>
+<p>the next useful actions obvious: explain assumptions, retry with narrower scope, split into subtasks, ask for reviewer pass, mark not planned, or request release proof.</p>
+</ul>
+<p>Patterns to avoid copying:</p>
+<ul>
+<li>making the PM/designer task workspace the center of the product;</li>
+<li>competing on general cloud-agent execution alone;</li>
+<li>generic &quot;build anything from a prompt&quot; launch copy;</li>
+<li>hiding failed provisioning, missing repo attachment, or missing credentials</li>
+<p>behind optimistic statuses.</p>
+</ul>
 <h3 id="feedback-tools"><a class="heading-anchor" href="#feedback-tools" aria-label="Link to Feedback tools">#</a>Feedback tools</h3>
 <p>Canny, Featurebase, Productboard, Linear Customer Requests, and similar tools capture and organize user feedback.</p>
 <p>They are not primarily agent implementation systems.</p>
@@ -2489,6 +2526,8 @@ feedback-factory demo</code></pre>
 <li>Current phase: private internal dogfood, not public open-source launch.</li>
 <li>Positioning: do not lead with generic &quot;agent-built PRs&quot;; lead with the</li>
 <p>open-source managed loop that turns real user demand into guarded agent work, cost/release evidence, and user follow-up.</p>
+<li>Launch wedge: indie-dev autonomous shipping with guardrails. The product</li>
+<p>should make safe user-requested features auto-creatable without becoming a generic PM/designer task workspace.</p>
 <li>Public launch: deferred until the real dogfood loop proves feedback intake,</li>
 <p>GitHub issue creation, Codex implementation, PR creation, gate evaluation, cost capture, release marker, and user follow-up.</p>
 <li>Built-in runner: Codex only.</li>

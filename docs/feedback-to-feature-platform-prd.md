@@ -58,6 +58,11 @@ The wedge:
 > demand, create guarded agent work, track cost, prove release, and tell users
 > what shipped or why it did not.
 
+Sharper launch wedge:
+
+> Autonomous feature shipping for indie apps: user feedback in, guarded agent
+> work out, shipped status back to users.
+
 The launch story should emphasize that the product starts from real users
 inside the app, not from an internal product manager typing a task into a coding
 workspace.
@@ -78,6 +83,13 @@ Those phrases point at the broader AI-native product-platform category. Open
 Feedback Factory should own the narrower, more visceral system around user
 demand: in-app SDK, feedback clustering, thresholds, sanitization, decision
 memory, cost ledger, guardrails, release proof, and user follow-up.
+
+The indie developer emotional frame:
+
+> You are one person or a tiny team. Your users are already telling you what to
+> build. Open Feedback Factory lets the safe, high-signal requests move toward
+> implementation automatically while you keep the rules, budget, and release
+> gates.
 
 ## 3. Target Users
 
@@ -2459,6 +2471,49 @@ agent run:
 The strategic conclusion: agent-built PRs are becoming table stakes. The product
 must sell and demonstrate the managed user-feedback-to-shipping loop.
 
+Useful product patterns to adapt, without copying the positioning:
+
+- **Connect existing repository first.** The install path should make "connect
+  my real repo" the obvious path, with repo discovery, branch/PR base settings,
+  and clear GitHub App status. Templates can exist, but the magic is acting on
+  a repo the developer already ships.
+- **Provider connection clarity.** Agent setup should show Codex CLI, Codex API
+  key, future OpenRouter/Requesty, and other providers as explicit connection
+  cards with health, scopes, missing secrets, and whether each lane can run
+  locally, in Docker, or remotely.
+- **Live run logs.** Every agent attempt needs a readable timeline: planning,
+  files inspected, commands run, tests, blocked reasons, assumptions, cost, PR,
+  review, release marker, and user notification. Logs should be honest enough
+  that a failed sandbox or missing credential is understandable in seconds.
+- **Task lifecycle UI.** Work items should have visible stages such as queued,
+  planning, building, checking, PR opened, awaiting review, merged, awaiting
+  release proof, shipped, blocked, not planned, and needs more signal.
+- **Review hub.** Operators need one place to inspect the diff, checks,
+  assumptions, cost, policy gates, reviewer decisions, protected paths, and
+  user impact before approving merge or release.
+- **Health page.** The product should continuously report repo connection,
+  GitHub webhook health, worker health, provider auth, queue age, failure rate,
+  cost caps, and release-proof gaps.
+- **Bug report with logs and UI state.** The control center and SDK should be
+  able to submit bug/error reports with safe diagnostics attached, so the same
+  feedback-to-feature loop can handle product bugs without screenshots or raw
+  private data leaking into GitHub.
+- **In-product cost and credits visibility.** Indie developers need predictable
+  spend. Billing may be later, but V1 should make budget, estimated cost,
+  actual cost, remaining cap, and prevented spend visible.
+- **Agent follow-up affordances.** After an agent run, the product should make
+  the next useful actions obvious: explain assumptions, retry with narrower
+  scope, split into subtasks, ask for reviewer pass, mark not planned, or
+  request release proof.
+
+Patterns to avoid copying:
+
+- making the PM/designer task workspace the center of the product;
+- competing on general cloud-agent execution alone;
+- generic "build anything from a prompt" launch copy;
+- hiding failed provisioning, missing repo attachment, or missing credentials
+  behind optimistic statuses.
+
 ### Feedback tools
 
 Canny, Featurebase, Productboard, Linear Customer Requests, and similar tools
@@ -2487,6 +2542,9 @@ with an open-source wedge and GitHub-native developer workflow.
 - Positioning: do not lead with generic "agent-built PRs"; lead with the
   open-source managed loop that turns real user demand into guarded agent work,
   cost/release evidence, and user follow-up.
+- Launch wedge: indie-dev autonomous shipping with guardrails. The product
+  should make safe user-requested features auto-creatable without becoming a
+  generic PM/designer task workspace.
 - Public launch: deferred until the real dogfood loop proves feedback intake,
   GitHub issue creation, Codex implementation, PR creation, gate evaluation,
   cost capture, release marker, and user follow-up.
