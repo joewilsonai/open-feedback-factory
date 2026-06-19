@@ -7,6 +7,7 @@ export interface WorkerConfig {
   codexManageGit: boolean;
   codexModel: string;
   codexPricing?: CodexPricing;
+  codexTimeoutMs: number;
   githubMode: "app" | "disabled" | "gh";
   pollIntervalMs: number;
   pullRequestBase: string;
@@ -28,6 +29,7 @@ export function readWorkerConfig(env = process.env): WorkerConfig {
     codexManageGit: env.CODEX_MANAGE_GIT === "true",
     codexModel: env.CODEX_MODEL ?? "gpt-5.5",
     codexPricing: readCodexPricing(env),
+    codexTimeoutMs: Number(env.CODEX_TIMEOUT_MS ?? 5 * 60_000),
     githubMode: githubModeFromEnv(env.GITHUB_MODE),
     pollIntervalMs: Number(env.WORKER_POLL_INTERVAL_MS ?? 5000),
     pullRequestBase: env.GITHUB_PR_BASE ?? "main",

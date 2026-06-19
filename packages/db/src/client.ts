@@ -130,7 +130,7 @@ export class OpenFeedbackStore {
       if (input.decision.action === "create_work_item") {
         const existing = await client.query<{ id: string }>(
           `select id from work_items
-           where cluster_key = $1 and status not in ('shipped', 'closed', 'not_planned', 'blocked')
+           where cluster_key = $1 and status not in ('shipped', 'closed', 'not_planned', 'blocked', 'failed')
            order by created_at asc
            limit 1`,
           [input.decision.clusterKey],

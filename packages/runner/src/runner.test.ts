@@ -60,6 +60,7 @@ test("buildCodexExecArgs uses local codex exec json mode with output schema", ()
       "gpt-5.5",
       "-c",
       'model_reasoning_effort="xhigh"',
+      "--ignore-user-config",
       "--sandbox",
       "workspace-write",
       "--cd",
@@ -89,6 +90,7 @@ test("buildCodexPrompt contains sanitized work item context only", () => {
   const prompt = buildCodexPrompt(workItem);
 
   assert.match(prompt, /Please add dark mode to settings/);
+  assert.match(prompt, /make only the requested file\/content change/i);
   assert.match(prompt, /Do not commit, push, or open a pull request/);
   assert.match(prompt, /Do not inspect or request raw private feedback/);
   assert.doesNotMatch(prompt, /joe@example.com|sk-/i);

@@ -20,3 +20,14 @@ test("clusterKeyForFeedback groups dark mode phrasing variants", () => {
     ],
   );
 });
+
+test("clusterKeyForFeedback keeps unrelated copy requests separate", () => {
+  assert.equal(
+    clusterKeyForFeedback({ sanitizedMessage: "Copy update: change the save button label to Done" }),
+    "safe.copy.change-save-button-done",
+  );
+  assert.equal(
+    clusterKeyForFeedback({ sanitizedMessage: "Copy update: create docs codex runner smoke file" }),
+    "safe.copy.docs-codex-runner-smoke-file",
+  );
+});

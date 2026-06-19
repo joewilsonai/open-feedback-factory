@@ -8,6 +8,21 @@ const SYNONYMS: Array<[RegExp, string]> = [
   [/\b(crash|crashes|crashed|freezes|hangs)\b/g, "crash"],
 ];
 
+const STOP_WORDS = new Set([
+  "add",
+  "and",
+  "can",
+  "copy",
+  "create",
+  "for",
+  "please",
+  "text",
+  "the",
+  "this",
+  "update",
+  "with",
+]);
+
 export function clusterKeyForFeedback(input: Pick<SanitizedFeedback, "sanitizedMessage">): string {
   let normalized = input.sanitizedMessage.toLowerCase();
   normalized = normalized.replace(/\[[^\]]+\]/g, " ");
@@ -22,17 +37,19 @@ export function clusterKeyForFeedback(input: Pick<SanitizedFeedback, "sanitizedM
   }
 
   if (/\bcopy\b/.test(normalized)) {
-    return "safe.copy";
+    const copyWords = wordsForCluster(normalized).filter((word) => !STOP_WORDS.has(word)).slice(0, 8);
+    return copyWords.length ? `safe.copy.${copyWords.join("-")}` : "safe.copy";
   }
 
   if (/\bcrash\b/.test(normalized)) {
     return "bug.crash";
   }
 
-  const words = normalized
-    .split(/\s+/)
-    .filter((word) => word.length > 2)
-    .slice(0, 8);
+  const words = wordsForCluster(normalized).slice(0, 8);
 
   return words.length ? `feedback.${words.join("-")}` : "feedback.uncategorized";
+}
+
+function wordsForCluster(value: string): string[] {
+  return value.split(/\s+/).filter((word) => word.length > 2);
 }
