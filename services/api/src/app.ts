@@ -110,6 +110,27 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     logger: false,
   });
 
+  app.setErrorHandler((error, request, reply) => {
+    const apiError = error as { message?: unknown; statusCode?: unknown };
+    const storageError = storageNotReadyError(error);
+    if (storageError) {
+      return reply.code(503).send(storageError);
+    }
+
+    const statusCode = typeof apiError.statusCode === "number" && apiError.statusCode >= 400 ? apiError.statusCode : 500;
+    if (statusCode >= 500) {
+      return reply.code(statusCode).send({
+        code: "internal_error",
+        error: request.url.startsWith("/sdk/")
+          ? "Feedback is temporarily unavailable. Please try again soon."
+          : "Open Feedback Factory hit an internal error. Check server logs for details.",
+        retryable: true,
+      });
+    }
+
+    return reply.code(statusCode).send({ error: typeof apiError.message === "string" ? apiError.message : "Request failed" });
+  });
+
   app.removeContentTypeParser("application/json");
   app.addContentTypeParser("application/json", { parseAs: "string" }, (request, body, done) => {
     const rawBody = typeof body === "string" ? body : body.toString("utf8");
@@ -134,4 +155,23 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await registerGithubRoutes(app, deps);
 
   return app;
+}
+
+function storageNotReadyError(error: unknown) {
+  const pgError = error as { code?: unknown; message?: unknown };
+  const code = typeof pgError.code === "string" ? pgError.code : "";
+  const message = typeof pgError.message === "string" ? pgError.message : "";
+
+  if (
+    ["42P01", "42703", "42883"].includes(code) ||
+    /relation .+ does not exist|column .+ does not exist|function .+ does not exist/i.test(message)
+  ) {
+    return {
+      code: "storage_not_ready",
+      error: "Feedback storage is still being prepared. Please try again soon.",
+      retryable: true,
+    };
+  }
+
+  return null;
 }

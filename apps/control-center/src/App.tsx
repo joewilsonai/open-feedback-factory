@@ -3,6 +3,7 @@ import "./styles.css";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 const adminTokenStorageKey = "open-feedback-factory.admin-token";
+const liveSyncIntervalMs = 4_000;
 
 interface Snapshot {
   counts: {
@@ -246,6 +247,7 @@ export function App() {
   const [releaseFeatureIdInput, setReleaseFeatureIdInput] = useState("");
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
   const [status, setStatus] = useState("Connecting");
+  const [lastSyncedAt, setLastSyncedAt] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = useMemo(
     () => snapshot.workItems.find((item) => item.id === selectedId) ?? snapshot.workItems[0] ?? null,
@@ -275,8 +277,8 @@ export function App() {
     }
   }
 
-  async function refresh() {
-    setStatus("Refreshing");
+  async function refresh(options: { silent?: boolean } = {}) {
+    if (!options.silent) setStatus("Refreshing");
     const doctorResponse = await fetch(`${apiBaseUrl}/doctor`);
     const nextDoctor = (await doctorResponse.json()) as Doctor;
     setDoctor(nextDoctor);
@@ -289,6 +291,7 @@ export function App() {
       setAdminAuthBlocked(true);
       setSnapshot(emptySnapshot);
       setStatus(nextDoctor.adminAuthRequired ? "Admin token required" : "Admin access blocked");
+      setLastSyncedAt(timeLabel(new Date()));
       return;
     }
     setAdminAuthBlocked(false);
@@ -298,6 +301,7 @@ export function App() {
     if (evidenceId) await loadWorkItemEvidence(evidenceId);
     else setEvidence(null);
     setStatus("Live");
+    setLastSyncedAt(timeLabel(new Date()));
   }
 
   async function runWorkItem(id: string) {
@@ -539,8 +543,21 @@ export function App() {
   }
 
   useEffect(() => {
-    refresh().catch((error) => setStatus(error instanceof Error ? error.message : "Offline"));
-  }, []);
+    let stopped = false;
+    const sync = (silent: boolean) => {
+      refresh({ silent }).catch((error) => {
+        if (!stopped) setStatus(error instanceof Error ? error.message : "Offline");
+      });
+    };
+
+    sync(false);
+    const interval = window.setInterval(() => sync(true), liveSyncIntervalMs);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+    };
+  }, [adminToken, selectedId]);
 
   useEffect(() => {
     if (selected) setReleaseFeatureIdInput(featureIdSuggestion(selected));
@@ -570,9 +587,11 @@ export function App() {
           <p className="eyebrow">Open Feedback Factory</p>
           <h1>Control Center</h1>
         </div>
-        <button type="button" onClick={refresh}>
-          Refresh
-        </button>
+        <div className="live-sync-pill" aria-live="polite">
+          <span />
+          <strong>{status}</strong>
+          <small>{lastSyncedAt ? `Synced ${lastSyncedAt}` : "Syncing"}</small>
+        </div>
       </header>
 
       <section className="status-strip" aria-label="System health">
@@ -651,6 +670,7 @@ export function App() {
                 {selected.githubIssueUrl ? <a href={selected.githubIssueUrl}>GitHub issue</a> : <span>No issue yet</span>}
                 {selected.githubPrUrl ? <a href={selected.githubPrUrl}>Pull request</a> : <span>No PR yet</span>}
               </div>
+              <FeatureLifecycleView evidence={evidence} item={selected} />
               <AssumptionList assumptions={selected.unresolvedAssumptions ?? []} />
               <label className="feature-id-field" htmlFor="release-feature-id">
                 Feature usage id
@@ -1406,6 +1426,65 @@ function EvidenceLedgerPanel(props: {
   );
 }
 
+function FeatureLifecycleView(props: { evidence: WorkItemEvidence | null; item: WorkItem }) {
+  const item = props.item;
+  const evidence = props.evidence;
+  const hasIssue = Boolean(
+    item.githubIssueUrl ?? evidence?.githubArtifacts.some((artifact) => artifact.artifactType === "issue"),
+  );
+  const hasPr = Boolean(
+    item.githubPrUrl ?? evidence?.githubArtifacts.some((artifact) => artifact.artifactType === "pull_request"),
+  );
+  const hasAgentRun = Boolean(evidence?.agentRuns.length);
+  const hasReview = Boolean(item.reviewDecision);
+  const hasRelease = item.status === "shipped" || Boolean(evidence?.releaseEvents.length);
+  const terminalBlocked = item.status === "blocked" || item.status === "not_planned";
+
+  const steps: Array<{ detail: string; label: string; state: "done" | "active" | "waiting" | "blocked" }> = [
+    {
+      detail: sourceLabel(item.signalSources),
+      label: "Signal",
+      state: "done",
+    },
+    {
+      detail: workStatusLabel(item.status),
+      label: "Triage",
+      state: terminalBlocked ? "blocked" : item.status === "planned" ? "active" : "done",
+    },
+    {
+      detail: hasIssue ? "Issue recorded" : "Waiting for GitHub",
+      label: "Issue",
+      state: hasIssue ? "done" : terminalBlocked ? "blocked" : "waiting",
+    },
+    {
+      detail: hasAgentRun ? latestAgentRunLabel(evidence) : "Waiting for worker",
+      label: "Agent work",
+      state: hasAgentRun ? (item.status === "in_progress" ? "active" : "done") : terminalBlocked ? "blocked" : "waiting",
+    },
+    {
+      detail: hasPr ? "PR available" : hasReview ? reviewDecisionLabel(item.reviewDecision) : "Waiting for review",
+      label: "Review",
+      state: hasPr || hasReview ? "done" : terminalBlocked ? "blocked" : "waiting",
+    },
+    {
+      detail: terminalBlocked ? workStatusLabel(item.status) : hasRelease ? "Release proof recorded" : "Not shipped yet",
+      label: "Outcome",
+      state: terminalBlocked ? "blocked" : hasRelease ? "done" : "waiting",
+    },
+  ];
+
+  return (
+    <section className="lifecycle-strip" aria-label="Feature lifecycle">
+      {steps.map((step) => (
+        <article className={`lifecycle-step ${step.state}`} key={step.label}>
+          <strong>{step.label}</strong>
+          <span>{step.detail}</span>
+        </article>
+      ))}
+    </section>
+  );
+}
+
 function LedgerSection(props: { children: ReactNode; title: string }) {
   return (
     <section className="ledger-section">
@@ -1491,6 +1570,16 @@ function Detail(props: { label: string; value: string }) {
       <dd>{props.value}</dd>
     </div>
   );
+}
+
+function latestAgentRunLabel(evidence: WorkItemEvidence | null): string {
+  const latest = evidence?.agentRuns[0];
+  if (!latest) return "Waiting for worker";
+  return `${workStatusLabel(latest.status)} / ${dateLabel(latest.completedAt ?? latest.createdAt)}`;
+}
+
+function timeLabel(value: Date): string {
+  return value.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
 }
 
 function approvalModeLabel(mode: string): string {

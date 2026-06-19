@@ -566,6 +566,32 @@ test("API accepts SDK feedback and returns user-safe status", async () => {
   await app.close();
 });
 
+test("API masks missing storage schema errors on public SDK feedback", async () => {
+  const store = new MemoryStore();
+  store.createFeedbackIntake = async () => {
+    const error = new Error('relation "feedback_clusters" does not exist') as Error & { code: string };
+    error.code = "42P01";
+    throw error;
+  };
+  const app = await buildApp({ config, store });
+
+  const response = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add reminders",
+      source: "daybook_demo_app",
+    },
+    url: "/sdk/feedback",
+  });
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().code, "storage_not_ready");
+  assert.equal(response.json().retryable, true);
+  assert.doesNotMatch(response.body, /feedback_clusters|relation|postgres/i);
+
+  await app.close();
+});
+
 test("API rate limits repeated SDK feedback intake by actor", async () => {
   const app = await buildApp({
     config: { ...config, rateLimitWindowMs: 60_000, sdkRateLimitMax: 2 },

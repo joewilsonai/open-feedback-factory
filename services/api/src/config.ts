@@ -32,10 +32,14 @@ export interface ApiConfig {
 }
 
 export function readConfig(env = process.env): ApiConfig {
+  const apiPort = env.PORT ?? env.API_PORT ?? "4100";
+  const runningOnRailway = Boolean(env.RAILWAY_ENVIRONMENT || env.RAILWAY_SERVICE_NAME);
+  const railwayPublicUrl = env.RAILWAY_PUBLIC_DOMAIN ? `https://${env.RAILWAY_PUBLIC_DOMAIN}` : undefined;
+
   return {
     adminToken: env.ADMIN_TOKEN || undefined,
-    apiHost: env.API_HOST ?? "127.0.0.1",
-    apiPort: Number(env.API_PORT ?? 4100),
+    apiHost: env.API_HOST ?? (runningOnRailway ? "0.0.0.0" : "127.0.0.1"),
+    apiPort: Number(apiPort),
     approvalMode: env.APPROVAL_MODE === "auto" ? "auto" : "manual",
     autoMergeEnabled: env.AUTO_MERGE_ENABLED === "true",
     codexAuthMode: env.CODEX_AUTH_MODE === "api_key" ? "api_key" : "cli",
@@ -58,7 +62,7 @@ export function readConfig(env = process.env): ApiConfig {
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean),
-    publicBaseUrl: stripTrailingSlash(env.PUBLIC_BASE_URL ?? `http://localhost:${env.API_PORT ?? 4100}`),
+    publicBaseUrl: stripTrailingSlash(env.PUBLIC_BASE_URL ?? railwayPublicUrl ?? `http://localhost:${apiPort}`),
     adminRateLimitMax: Number(env.ADMIN_RATE_LIMIT_MAX ?? 120),
     githubRateLimitMax: Number(env.GITHUB_RATE_LIMIT_MAX ?? 300),
     rateLimitWindowMs: Number(env.RATE_LIMIT_WINDOW_MS ?? 60_000),

@@ -7,6 +7,7 @@
     "build": "tsc -p tsconfig.json && vite build",
     "dev": "vite --host 127.0.0.1 --port 5173",
     "preview": "vite preview --host 127.0.0.1 --port 5173",
+    "start": "node ../../scripts/serve-vite-preview.mjs 5173",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

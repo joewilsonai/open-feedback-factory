@@ -27,12 +27,31 @@ the first implementation should prove the loop privately before public launch.
 See [docs/v1-dogfood-build-checklist.md](docs/v1-dogfood-build-checklist.md)
 for the exact private dogfood completion gate.
 
+## Hosted Private Stack
+
+The private hosted stack is now split across Railway and Vercel:
+
+- Railway: API, control center, demo app, disabled worker, and Postgres.
+- Vercel: public landing page from `apps/landing`.
+- Hostinger: DNS for `openfeedbackfactory.com`, `.dev`, and `.org`.
+
+Current private Railway URLs and the target custom-domain map are documented in
+[docs/hosted-deployment.md](docs/hosted-deployment.md).
+
+The hosted stack starts honest and safe: manual approval, runner disabled,
+GitHub disabled, auto-merge disabled, and admin/runner tokens required. It can
+receive real feedback and show real queued work, but it should not claim PRs,
+cost actuals, releases, or shipped state until the corresponding integrations
+are configured.
+
 ## V1 Direction
 
 - Docker Compose local install.
 - Hosted trial/sandbox path for developers who want to test before installing.
 - Web SDK first, including a floating suggestion launcher with automatic
   in-widget request status tracking.
+- Hosted landing page and hosted Daybook demo for developers who need to see
+  the loop before self-hosting.
 - Postgres database.
 - GitHub App integration.
 - Codex-only built-in runner.
@@ -43,6 +62,10 @@ for the exact private dogfood completion gate.
 - Focused operator control center with a realtime feature lifecycle view.
 - Recursive learning events that make routing, cost estimates, guardrails, and
   agent/provider selection smarter without weakening safety gates.
+- Codebase health/readiness scoring that turns repo and integration findings
+  into normal work items.
+- Secure integration secrets vault for scoped Supabase, Vercel, Resend, GitHub,
+  provider, and deployment credentials.
 
 Hosted trial/sandbox should let a developer connect a test or starter repo,
 install the SDK snippet, submit real feedback, watch the lifecycle, and see a
@@ -66,6 +89,13 @@ pnpm typecheck
 pnpm test
 pnpm run doctor
 pnpm dev
+```
+
+Landing page:
+
+```bash
+pnpm landing:dev
+pnpm landing:build
 ```
 
 Default local ports:
@@ -337,6 +367,7 @@ in-progress work.
 - [Agent instructions](AGENTS.md)
 - [Agent install guide](docs/agent-install.md)
 - [Agent runner setup](docs/agent-runner-setup.md)
+- [Hosted deployment](docs/hosted-deployment.md)
 - [V1 dogfood build checklist](docs/v1-dogfood-build-checklist.md)
 - [V1 test strategy](docs/v1-test-strategy.md)
 - [PRD](docs/feedback-to-feature-platform-prd.md)

@@ -667,7 +667,7 @@
 
   <div class="layout">
     <aside class="toc" aria-label="Table of contents">
-      <p class="toc-title">Contents <span>78</span></p>
+      <p class="toc-title">Contents <span>79</span></p>
       <a class="toc-link level-2" href="#1-product-thesis" data-for="1-product-thesis">1. Product Thesis</a>
 <a class="toc-link level-2" href="#2-positioning" data-for="2-positioning">2. Positioning</a>
 <a class="toc-link level-2" href="#3-target-users" data-for="3-target-users">3. Target Users</a>
@@ -714,8 +714,9 @@
 <a class="toc-link level-3" href="#15-8-multi-model-deliberation" data-for="15-8-multi-model-deliberation">15.8 Multi-Model Deliberation</a>
 <a class="toc-link level-3" href="#15-9-agent-quality-evaluation" data-for="15-9-agent-quality-evaluation">15.9 Agent Quality Evaluation</a>
 <a class="toc-link level-3" href="#15-10-integration-surface-and-webhooks" data-for="15-10-integration-surface-and-webhooks">15.10 Integration Surface and Webhooks</a>
-<a class="toc-link level-3" href="#15-11-config-versioning-and-upgrades" data-for="15-11-config-versioning-and-upgrades">15.11 Config Versioning and Upgrades</a>
-<a class="toc-link level-3" href="#15-12-testing-and-verification-requirements" data-for="15-12-testing-and-verification-requirements">15.12 Testing and Verification Requirements</a>
+<a class="toc-link level-3" href="#15-11-secure-integration-secrets-vault" data-for="15-11-secure-integration-secrets-vault">15.11 Secure Integration Secrets Vault</a>
+<a class="toc-link level-3" href="#15-12-config-versioning-and-upgrades" data-for="15-12-config-versioning-and-upgrades">15.12 Config Versioning and Upgrades</a>
+<a class="toc-link level-3" href="#15-13-testing-and-verification-requirements" data-for="15-13-testing-and-verification-requirements">15.13 Testing and Verification Requirements</a>
 <a class="toc-link level-2" href="#16-private-dogfood-and-open-source-launch-strategy" data-for="16-private-dogfood-and-open-source-launch-strategy">16. Private Dogfood and Open-Source Launch Strategy</a>
 <a class="toc-link level-2" href="#17-installation-and-admin-ui" data-for="17-installation-and-admin-ui">17. Installation and Admin UI</a>
 <a class="toc-link level-3" href="#17-1-installation-paths" data-for="17-1-installation-paths">17.1 Installation Paths</a>
@@ -836,6 +837,8 @@
 <li>Cluster duplicates and use repeated demand to reconsider earlier decisions.</li>
 <li>Let agents implement only work that passes policy gates.</li>
 <li>Let developers define their own guardrails, approval rules, and cost limits.</li>
+<li>Let developers securely store scoped integration credentials for systems such</li>
+<p>as Supabase, Vercel, Resend, Railway, GitHub, feature flags, and model providers without exposing raw keys to prompts, plans, PRs, or logs.</p>
 <li>Always create PRs, never push directly to <code>main</code>.</li>
 <li>Run checks and review lanes before merge.</li>
 <li>Track estimated and actual agent cost per feature.</li>
@@ -843,6 +846,8 @@
 <p>signal, or is blocked.</p>
 <li>Be designed for open-source, self-hostable distribution from day one, while</li>
 <p>keeping V1 private until the internal dogfood loop is proven.</p>
+<li>Provide codebase health and readiness analysis that turns repo, worker,</li>
+<p>provider, deploy, and integration findings into normal backlog/work items.</p>
 <li>Provide a demo that feels magical within minutes.</li>
 </ul>
 <h2 id="6-non-goals"><a class="heading-anchor" href="#6-non-goals" aria-label="Link to 6. Non-Goals">#</a>6. Non-Goals</h2>
@@ -973,6 +978,8 @@ trackFeatureOutcome({
 <li>feature exposure, usage, and outcome events;</li>
 <li>feedback-to-feature impact attribution;</li>
 <li>developer-defined guardrail and cost-control policies;</li>
+<li>encrypted integration secret metadata, scoped access grants, and credential</li>
+<p>access audit records;</p>
 <li>release/deploy state;</li>
 <li>user notification history.</li>
 </ul>
@@ -1008,6 +1015,8 @@ trackFeatureOutcome({
 <li>reconciliation actions for stale in-progress work and missing release proof;</li>
 <li>reconsideration candidates;</li>
 <li>user follow-up status;</li>
+<li>codebase health and readiness findings;</li>
+<li>integration secrets vault and credential health;</li>
 <li>worker attachment/install guidance for host CLI workers and Docker API-key</li>
 <p>workers.</p>
 </ul>
@@ -1060,6 +1069,25 @@ trackFeatureOutcome({
 <li>preserve a readable chronological log alongside the visual map so developers</li>
 <p>can debug failures without guessing.</p>
 </ul>
+<h4 id="codebase-health-and-readiness-view"><a class="heading-anchor" href="#codebase-health-and-readiness-view" aria-label="Link to Codebase Health and Readiness View">#</a>Codebase Health and Readiness View</h4>
+<p>The control center should include a codebase health view. This is not a generic static scorecard. It should tell an operator whether the connected repo and runtime integrations are ready for autonomous work, and what should be fixed before more automation is allowed.</p>
+<p>The view should report:</p>
+<ul>
+<li>repo connection and GitHub App installation health;</li>
+<li>webhook delivery health;</li>
+<li>branch, PR, and check-suite readiness;</li>
+<li>worker/runner attachment, sandbox health, queue age, and failure rate;</li>
+<li>provider auth and model/gateway health;</li>
+<li>database/migration health for configured integrations such as Supabase;</li>
+<li>deploy/release-proof health for providers such as Vercel, Railway, EAS, or</li>
+<p>other configured targets;</p>
+<li>codebase risk areas, such as missing tests, duplicated scripts, fragile</li>
+<p>migration paths, protected files, flaky checks, or legacy hotspots;</p>
+<li>recommendation tasks with impact, effort, risk, and whether they can be added</li>
+<p>to the queue.</p>
+</ul>
+<p>Health recommendations should be actionable. An operator should be able to turn a recommendation into a normal work item with the same policy, cost, review, PR, release, and follow-up pipeline as user-requested features.</p>
+<p>Health analysis should not need raw production secrets in an agent prompt. If a recommendation requires Supabase, Vercel, Resend, Railway, or another external system, the agent should request a narrow tool/action through the control plane and the action should be logged.</p>
 <h3 id="8-4-github-integration"><a class="heading-anchor" href="#8-4-github-integration" aria-label="Link to 8.4 GitHub Integration">#</a>8.4 GitHub Integration</h3>
 <p>V1 is GitHub-first.</p>
 <p>Capabilities:</p>
@@ -1784,7 +1812,32 @@ trackFeatureOutcome({
 <li>spend threshold reached.</li>
 </ul>
 <p>Webhooks let indie developers connect Slack, Discord, Linear, Jira, PostHog, Sentry, email, or their own scripts without waiting for native integrations.</p>
-<h3 id="15-11-config-versioning-and-upgrades"><a class="heading-anchor" href="#15-11-config-versioning-and-upgrades" aria-label="Link to 15.11 Config Versioning and Upgrades">#</a>15.11 Config Versioning and Upgrades</h3>
+<h3 id="15-11-secure-integration-secrets-vault"><a class="heading-anchor" href="#15-11-secure-integration-secrets-vault" aria-label="Link to 15.11 Secure Integration Secrets Vault">#</a>15.11 Secure Integration Secrets Vault</h3>
+<p>Self-hosted V1 can support ignored <code>.env</code> files for simple local setup, but the product should not stop there. Hosted installs and serious self-hosted installs need a secure integration secrets vault so agents can perform real work against systems such as Supabase, Vercel, Resend, Railway, GitHub, feature flag providers, email/SMS providers, model providers, and app stores without raw keys being copied into prompts or plans.</p>
+<p>Vault requirements:</p>
+<ul>
+<li>encrypt secrets at rest with environment/workspace-scoped keys;</li>
+<li>never return raw secret values from admin APIs after save;</li>
+<li>mask values in UI, logs, <code>/doctor</code>, audit records, and exported reports;</li>
+<li>store provider, scope, environment, repo/app binding, owner, creation date,</li>
+<p>rotation date, disabled state, and last-used metadata;</p>
+<li>support connection tests that return capability/status, not the secret;</li>
+<li>enforce per-provider scopes such as read-only, deploy, migration, email-send,</li>
+<p>DNS-write, or billing-read;</p>
+<li>require policy approval before a credential can mutate an external system;</li>
+<li>provide revocation and rotation flows;</li>
+<li>record every credential access request and every credential-backed action in</li>
+<p>the audit ledger;</p>
+<li>block secrets from entering GitHub issues, PR bodies, agent prompts, command</li>
+<p>logs, screenshots, user follow-up, or learning artifacts.</p>
+</ul>
+<p>Agents should not receive raw integration keys by default. When work requires a credential-backed action, the runner should call a narrow control-plane tool such as:</p>
+<pre><code class="language-text">apply_supabase_migration(work_item_id, migration_sql)
+deploy_vercel_preview(work_item_id, branch)
+send_resend_test_email(work_item_id, template_id)
+configure_feature_flag(work_item_id, flag_key, rollout)</code></pre>
+<p>The control plane owns the stored secret, performs or brokers the external operation, redacts sensitive output, and records the result as evidence. This lets agents fix real integration gaps while keeping the secret boundary clear.</p>
+<h3 id="15-12-config-versioning-and-upgrades"><a class="heading-anchor" href="#15-12-config-versioning-and-upgrades" aria-label="Link to 15.12 Config Versioning and Upgrades">#</a>15.12 Config Versioning and Upgrades</h3>
 <p>Self-hosted users need safe upgrades.</p>
 <p>Required:</p>
 <ul>
@@ -1799,7 +1852,7 @@ trackFeatureOutcome({
 <li>compatibility checks for agents, gateways, and database migrations.</li>
 </ul>
 <p>Upgrades must not silently weaken security policies, broaden agent access, or turn on real execution.</p>
-<h3 id="15-12-testing-and-verification-requirements"><a class="heading-anchor" href="#15-12-testing-and-verification-requirements" aria-label="Link to 15.12 Testing and Verification Requirements">#</a>15.12 Testing and Verification Requirements</h3>
+<h3 id="15-13-testing-and-verification-requirements"><a class="heading-anchor" href="#15-13-testing-and-verification-requirements" aria-label="Link to 15.13 Testing and Verification Requirements">#</a>15.13 Testing and Verification Requirements</h3>
 <p>V1 needs tests for the product loop, not only package-level code coverage. The test suite should prove that the system stays honest when integrations are missing, when agents fail, when costs are unavailable, and when a request should not be built.</p>
 <p>Required test tiers:</p>
 <ul>
@@ -2409,6 +2462,25 @@ feedback-factory demo</code></pre>
 </ul>
 <p>The open-source product should remain credible and useful. The hosted product should win on setup, reliability, observability, and scale.</p>
 <p>There should also be a hosted trial/sandbox path available in parallel with the self-hosted install. Many indie developers will not be ready to configure Docker, tunnels, GitHub Apps, workers, and secrets just to understand the loop. The hosted version should let them connect a test repo or starter repo, install the SDK snippet, submit real feedback, watch the lifecycle, and see a guarded PR path without pretending work shipped. This is both an onboarding path and a demo surface.</p>
+<p>Private V1 hosted architecture:</p>
+<ul>
+<li>Railway hosts the API, control center, hosted demo app, disabled-by-default</li>
+<p>worker, and Postgres.</p>
+<li>Vercel hosts the public landing page from <code>apps/landing</code>.</li>
+<li>Hostinger owns DNS for <code>openfeedbackfactory.com</code>, <code>openfeedbackfactory.dev</code>,</li>
+<p>and <code>openfeedbackfactory.org</code>.</p>
+</ul>
+<p>Target domain map:</p>
+<ul>
+<li><code>openfeedbackfactory.com</code>: Vercel landing page;</li>
+<li><code>www.openfeedbackfactory.com</code>: redirect or alias to the landing page;</li>
+<li><code>app.openfeedbackfactory.com</code>: hosted control center;</li>
+<li><code>api.openfeedbackfactory.com</code>: hosted API;</li>
+<li><code>demo.openfeedbackfactory.com</code>: hosted Daybook demo;</li>
+<li><code>openfeedbackfactory.dev</code>: developer docs or redirect later;</li>
+<li><code>openfeedbackfactory.org</code>: redirect later.</li>
+</ul>
+<p>The hosted stack must start with honest safe defaults: manual approval, auto-merge disabled, GitHub disabled until a GitHub App is configured, runner disabled until credentials are configured, and admin/runner tokens required. Hosted feedback may create real queued work, but should not claim agent runs, PRs, actual costs, releases, or shipped states until those integrations are actually connected.</p>
 <h2 id="19-mvp-requirements"><a class="heading-anchor" href="#19-mvp-requirements" aria-label="Link to 19. MVP Requirements">#</a>19. MVP Requirements</h2>
 <h3 id="must-have"><a class="heading-anchor" href="#must-have" aria-label="Link to Must Have">#</a>Must Have</h3>
 <ul>
@@ -2442,6 +2514,10 @@ feedback-factory demo</code></pre>
 <li>User-safe status endpoint for shipped, planned, already available, not</li>
 <p>planned, blocked, unsafe, needs clarification, needs more signal, and waiting-for-release states.</p>
 <li>Feature usage tracking and feedback-impact attribution.</li>
+<li>Codebase health/readiness view that reports repo, runner, provider, deploy,</li>
+<p>release-proof, and integration gaps, with recommendations that can become work items.</p>
+<li>Secure integration secrets vault for scoped provider credentials and audited</li>
+<p>credential-backed actions.</p>
 <li>Real Daybook demo app and seed scenario with no fake PRs, fake costs, fake</li>
 <p>releases, or fake shipped states.</p>
 <li>Sample seed/reset path that keeps dry-run installs honest and prevents</li>
@@ -2450,6 +2526,7 @@ feedback-factory demo</code></pre>
 <li>Versioned config and migration path.</li>
 <li>Hosted trial/sandbox path for developers who want to test the loop before</li>
 <p>installing the full self-hosted stack.</p>
+<li>Vercel landing page and Railway hosted private stack documentation.</li>
 </ul>
 <h3 id="should-have"><a class="heading-anchor" href="#should-have" aria-label="Link to Should Have">#</a>Should Have</h3>
 <ul>
@@ -2546,7 +2623,7 @@ feedback-factory demo</code></pre>
 <p>The admin UI should be wizard-driven, start in dry-run, and make security, permissions, cost caps, connected repos, agent access, blocked work, and maintenance health obvious.</p>
 <p>The setup UI must make worker attachment explicit. Auto approval allows a live worker to claim queued work, but does not itself create a worker. The UI and docs must show the exact command or deployment path for manual one-item workers, host CLI auto-polling workers, and Docker API-key workers, including <code>CODEX_RUNNER_MODE</code>, <code>CODEX_AUTH_MODE</code>, <code>CODEX_SECRETS_PATH</code>, <code>CODEX_CLI</code> for host workers, <code>DOCKER_CODEX_CLI</code> and <code>CODEX_CLI_VERSION</code> for Docker workers, GitHub PR settings, model, effort, timeout, and workspace. The host install helper should generate macOS LaunchAgent and Linux user systemd files, provide status and uninstall commands, write logs under <code>.off/logs</code>, and avoid embedding secrets directly in generated service files.</p>
 <p>Admin and beta-user surfaces must not leak raw internal enum names. Labels such as <code>planned</code>, <code>safe_auto_merge</code>, <code>guarded_review</code>, and <code>not_planned</code> should be rendered as human-readable product states such as &quot;Queued&quot;, &quot;Low-risk auto lane&quot;, &quot;Needs review&quot;, and &quot;Not planned&quot;. Raw enum values can remain in APIs and audit logs, but not as the primary visible control-center language.</p>
-<p>The hosted version later needs multi-tenant auth, billing, hosted workers, team roles, managed secrets, managed backups, and webhook delivery monitoring.</p>
+<p>The hosted version needs multi-tenant auth, billing, hosted workers, team roles, managed backups, webhook delivery monitoring, and a scoped integration secrets vault. The vault is a product requirement, not an implementation convenience, because agents cannot safely update Supabase, Vercel, Resend, feature flags, email providers, or deployment systems by receiving raw keys in prompts.</p>
 <h3 id="20-4-trust-safety-and-control-requirements"><a class="heading-anchor" href="#20-4-trust-safety-and-control-requirements" aria-label="Link to 20.4 Trust, Safety, and Control Requirements">#</a>20.4 Trust, Safety, and Control Requirements</h3>
 <p>These requirements make people willing to run the product on their repos.</p>
 <p>Raw feedback must stay private by default. The system can store it internally, but GitHub issues, PRs, CI logs, and agent prompts should receive sanitized context only.</p>

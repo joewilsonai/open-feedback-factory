@@ -83,6 +83,24 @@ importers:
         specifier: ^4.0.16
         version: 4.1.9(@types/node@25.9.3)(vite@7.3.5(@types/node@25.9.3)(tsx@4.22.4))
 
+  apps/landing:
+    dependencies:
+      '@vitejs/plugin-react':
+        specifier: ^5.1.2
+        version: 5.2.0(vite@7.3.5(@types/node@25.9.3)(tsx@4.22.4))
+      react:
+        specifier: ^19.2.3
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.3
+        version: 19.2.7(react@19.2.7)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vite:
+        specifier: ^7.3.0
+        version: 7.3.5(@types/node@25.9.3)(tsx@4.22.4)
+
   packages/core: {}
 
   packages/db:
@@ -93,6 +111,9 @@ importers:
       pg:
         specifier: ^8.16.3
         version: 8.22.0
+      tsx:
+        specifier: ^4.21.0
+        version: 4.22.4
 
   packages/runner:
     dependencies:
@@ -126,6 +147,9 @@ importers:
       fastify:
         specifier: ^5.6.2
         version: 5.8.5
+      tsx:
+        specifier: ^4.21.0
+        version: 4.22.4
 
   services/worker:
     dependencies:
@@ -135,6 +159,9 @@ importers:
       '@open-feedback-factory/runner':
         specifier: workspace:*
         version: link:../../packages/runner
+      tsx:
+        specifier: ^4.21.0
+        version: 4.22.4
 
 packages:
 

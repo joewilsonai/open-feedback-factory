@@ -8,12 +8,14 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/worker.ts",
-    "start": "node dist/worker.js",
+    "start": "tsx src/worker.ts",
+    "start:compiled": "node dist/worker.js",
     "test": "node --import tsx --test src/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@open-feedback-factory/db": "workspace:*",
-    "@open-feedback-factory/runner": "workspace:*"
+    "@open-feedback-factory/runner": "workspace:*",
+    "tsx": "^4.21.0"
   }
 }

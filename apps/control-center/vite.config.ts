@@ -13,6 +13,10 @@ export default defineConfig({
     },
   },
   plugins: [react()],
+  preview: {
+    allowedHosts: allowedHosts(),
+    host: "0.0.0.0",
+  },
   server: {
     allowedHosts: allowedHosts(),
     host: "127.0.0.1",

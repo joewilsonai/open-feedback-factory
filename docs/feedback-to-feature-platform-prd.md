@@ -159,6 +159,9 @@ need an estimate before work starts and actual cost after it finishes.
 - Cluster duplicates and use repeated demand to reconsider earlier decisions.
 - Let agents implement only work that passes policy gates.
 - Let developers define their own guardrails, approval rules, and cost limits.
+- Let developers securely store scoped integration credentials for systems such
+  as Supabase, Vercel, Resend, Railway, GitHub, feature flags, and model
+  providers without exposing raw keys to prompts, plans, PRs, or logs.
 - Always create PRs, never push directly to `main`.
 - Run checks and review lanes before merge.
 - Track estimated and actual agent cost per feature.
@@ -166,6 +169,8 @@ need an estimate before work starts and actual cost after it finishes.
   signal, or is blocked.
 - Be designed for open-source, self-hostable distribution from day one, while
   keeping V1 private until the internal dogfood loop is proven.
+- Provide codebase health and readiness analysis that turns repo, worker,
+  provider, deploy, and integration findings into normal backlog/work items.
 - Provide a demo that feels magical within minutes.
 
 ## 6. Non-Goals
@@ -329,6 +334,8 @@ Stores:
 - feature exposure, usage, and outcome events;
 - feedback-to-feature impact attribution;
 - developer-defined guardrail and cost-control policies;
+- encrypted integration secret metadata, scoped access grants, and credential
+  access audit records;
 - release/deploy state;
 - user notification history.
 
@@ -380,6 +387,8 @@ Primary views:
 - reconciliation actions for stale in-progress work and missing release proof;
 - reconsideration candidates;
 - user follow-up status;
+- codebase health and readiness findings;
+- integration secrets vault and credential health;
 - worker attachment/install guidance for host CLI workers and Docker API-key
   workers.
 
@@ -448,6 +457,37 @@ Design requirements:
   planned, resolve assumption, request review, or record release proof;
 - preserve a readable chronological log alongside the visual map so developers
   can debug failures without guessing.
+
+#### Codebase Health and Readiness View
+
+The control center should include a codebase health view. This is not a generic
+static scorecard. It should tell an operator whether the connected repo and
+runtime integrations are ready for autonomous work, and what should be fixed
+before more automation is allowed.
+
+The view should report:
+
+- repo connection and GitHub App installation health;
+- webhook delivery health;
+- branch, PR, and check-suite readiness;
+- worker/runner attachment, sandbox health, queue age, and failure rate;
+- provider auth and model/gateway health;
+- database/migration health for configured integrations such as Supabase;
+- deploy/release-proof health for providers such as Vercel, Railway, EAS, or
+  other configured targets;
+- codebase risk areas, such as missing tests, duplicated scripts, fragile
+  migration paths, protected files, flaky checks, or legacy hotspots;
+- recommendation tasks with impact, effort, risk, and whether they can be added
+  to the queue.
+
+Health recommendations should be actionable. An operator should be able to turn
+a recommendation into a normal work item with the same policy, cost, review,
+PR, release, and follow-up pipeline as user-requested features.
+
+Health analysis should not need raw production secrets in an agent prompt. If a
+recommendation requires Supabase, Vercel, Resend, Railway, or another external
+system, the agent should request a narrow tool/action through the control plane
+and the action should be logged.
 
 ### 8.4 GitHub Integration
 
@@ -1437,7 +1477,48 @@ Webhook events:
 Webhooks let indie developers connect Slack, Discord, Linear, Jira, PostHog,
 Sentry, email, or their own scripts without waiting for native integrations.
 
-### 15.11 Config Versioning and Upgrades
+### 15.11 Secure Integration Secrets Vault
+
+Self-hosted V1 can support ignored `.env` files for simple local setup, but the
+product should not stop there. Hosted installs and serious self-hosted installs
+need a secure integration secrets vault so agents can perform real work against
+systems such as Supabase, Vercel, Resend, Railway, GitHub, feature flag
+providers, email/SMS providers, model providers, and app stores without raw
+keys being copied into prompts or plans.
+
+Vault requirements:
+
+- encrypt secrets at rest with environment/workspace-scoped keys;
+- never return raw secret values from admin APIs after save;
+- mask values in UI, logs, `/doctor`, audit records, and exported reports;
+- store provider, scope, environment, repo/app binding, owner, creation date,
+  rotation date, disabled state, and last-used metadata;
+- support connection tests that return capability/status, not the secret;
+- enforce per-provider scopes such as read-only, deploy, migration, email-send,
+  DNS-write, or billing-read;
+- require policy approval before a credential can mutate an external system;
+- provide revocation and rotation flows;
+- record every credential access request and every credential-backed action in
+  the audit ledger;
+- block secrets from entering GitHub issues, PR bodies, agent prompts, command
+  logs, screenshots, user follow-up, or learning artifacts.
+
+Agents should not receive raw integration keys by default. When work requires a
+credential-backed action, the runner should call a narrow control-plane tool
+such as:
+
+```text
+apply_supabase_migration(work_item_id, migration_sql)
+deploy_vercel_preview(work_item_id, branch)
+send_resend_test_email(work_item_id, template_id)
+configure_feature_flag(work_item_id, flag_key, rollout)
+```
+
+The control plane owns the stored secret, performs or brokers the external
+operation, redacts sensitive output, and records the result as evidence. This
+lets agents fix real integration gaps while keeping the secret boundary clear.
+
+### 15.12 Config Versioning and Upgrades
 
 Self-hosted users need safe upgrades.
 
@@ -1456,7 +1537,7 @@ Required:
 Upgrades must not silently weaken security policies, broaden agent access, or
 turn on real execution.
 
-### 15.12 Testing and Verification Requirements
+### 15.13 Testing and Verification Requirements
 
 V1 needs tests for the product loop, not only package-level code coverage. The
 test suite should prove that the system stays honest when integrations are
@@ -2218,6 +2299,31 @@ the SDK snippet, submit real feedback, watch the lifecycle, and see a guarded
 PR path without pretending work shipped. This is both an onboarding path and a
 demo surface.
 
+Private V1 hosted architecture:
+
+- Railway hosts the API, control center, hosted demo app, disabled-by-default
+  worker, and Postgres.
+- Vercel hosts the public landing page from `apps/landing`.
+- Hostinger owns DNS for `openfeedbackfactory.com`, `openfeedbackfactory.dev`,
+  and `openfeedbackfactory.org`.
+
+Target domain map:
+
+- `openfeedbackfactory.com`: Vercel landing page;
+- `www.openfeedbackfactory.com`: redirect or alias to the landing page;
+- `app.openfeedbackfactory.com`: hosted control center;
+- `api.openfeedbackfactory.com`: hosted API;
+- `demo.openfeedbackfactory.com`: hosted Daybook demo;
+- `openfeedbackfactory.dev`: developer docs or redirect later;
+- `openfeedbackfactory.org`: redirect later.
+
+The hosted stack must start with honest safe defaults: manual approval,
+auto-merge disabled, GitHub disabled until a GitHub App is configured, runner
+disabled until credentials are configured, and admin/runner tokens required.
+Hosted feedback may create real queued work, but should not claim agent runs,
+PRs, actual costs, releases, or shipped states until those integrations are
+actually connected.
+
 ## 19. MVP Requirements
 
 ### Must Have
@@ -2253,6 +2359,11 @@ demo surface.
   planned, blocked, unsafe, needs clarification, needs more signal, and
   waiting-for-release states.
 - Feature usage tracking and feedback-impact attribution.
+- Codebase health/readiness view that reports repo, runner, provider, deploy,
+  release-proof, and integration gaps, with recommendations that can become work
+  items.
+- Secure integration secrets vault for scoped provider credentials and audited
+  credential-backed actions.
 - Real Daybook demo app and seed scenario with no fake PRs, fake costs, fake
   releases, or fake shipped states.
 - Sample seed/reset path that keeps dry-run installs honest and prevents
@@ -2261,6 +2372,7 @@ demo surface.
 - Versioned config and migration path.
 - Hosted trial/sandbox path for developers who want to test the loop before
   installing the full self-hosted stack.
+- Vercel landing page and Railway hosted private stack documentation.
 
 ### Should Have
 
@@ -2515,8 +2627,12 @@ rendered as human-readable product states such as "Queued", "Low-risk auto
 lane", "Needs review", and "Not planned". Raw enum values can remain in APIs
 and audit logs, but not as the primary visible control-center language.
 
-The hosted version later needs multi-tenant auth, billing, hosted workers, team
-roles, managed secrets, managed backups, and webhook delivery monitoring.
+The hosted version needs multi-tenant auth, billing, hosted workers, team
+roles, managed backups, webhook delivery monitoring, and a scoped integration
+secrets vault. The vault is a product requirement, not an implementation
+convenience, because agents cannot safely update Supabase, Vercel, Resend,
+feature flags, email providers, or deployment systems by receiving raw keys in
+prompts.
 
 ### 20.4 Trust, Safety, and Control Requirements
 

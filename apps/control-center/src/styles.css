@@ -69,6 +69,34 @@ button:hover {
   margin-bottom: 1rem;
 }
 
+.live-sync-pill {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.1rem 0.55rem;
+  align-items: center;
+  min-width: 9.5rem;
+  border: 1px solid rgba(22, 26, 31, 0.16);
+  border-radius: 7px;
+  padding: 0.65rem 0.8rem;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.live-sync-pill span {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+  background: #0f6b4f;
+  box-shadow: 0 0 0 4px rgba(15, 107, 79, 0.12);
+}
+
+.live-sync-pill strong {
+  font-size: 0.9rem;
+}
+
+.live-sync-pill small {
+  grid-column: 2;
+}
+
 .eyebrow {
   margin: 0 0 0.35rem;
   color: #0f6b4f;
@@ -623,6 +651,58 @@ dd {
   text-underline-offset: 3px;
 }
 
+.lifecycle-strip {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 0 1rem;
+  border: 1px solid rgba(22, 26, 31, 0.13);
+  background: rgba(22, 26, 31, 0.13);
+}
+
+.lifecycle-step {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  min-height: 6.4rem;
+  padding: 0.8rem;
+  background: #ffffff;
+}
+
+.lifecycle-step::before {
+  content: "";
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 2px solid #8c9691;
+  border-radius: 999px;
+}
+
+.lifecycle-step.done::before {
+  border-color: #0f6b4f;
+  background: #0f6b4f;
+}
+
+.lifecycle-step.active::before {
+  border-color: #255bc7;
+  background: rgba(37, 91, 199, 0.18);
+}
+
+.lifecycle-step.blocked::before {
+  border-color: #8a4f00;
+  background: #8a4f00;
+}
+
+.lifecycle-step strong {
+  font-size: 0.82rem;
+}
+
+.lifecycle-step span {
+  color: #52605a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .mini-label {
   color: #65706c;
   font-size: 0.72rem;
@@ -775,6 +855,10 @@ code {
   }
 
   .ledger-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lifecycle-strip {
     grid-template-columns: 1fr;
   }
 }

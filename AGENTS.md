@@ -15,6 +15,7 @@ test matrix:
 
 - [docs/v1-dogfood-build-checklist.md](docs/v1-dogfood-build-checklist.md)
 - [docs/v1-test-strategy.md](docs/v1-test-strategy.md)
+- [docs/hosted-deployment.md](docs/hosted-deployment.md)
 
 Default local URLs:
 
@@ -38,6 +39,10 @@ Private dogfood auth:
   what is missing.
 - Do not commit `.env`, private keys, GitHub App PEMs, access tokens, database
   dumps, raw feedback exports, or local logs that may contain secrets.
+- Do not put Supabase, Vercel, Resend, Railway, GitHub, model-provider, feature
+  flag, email/SMS, or app-store credentials into prompts, plans, PRs, screenshots,
+  user follow-up, or logs. Credential-backed actions should go through scoped
+  control-plane tools and be recorded in the audit ledger.
 - Keep raw user feedback private. Only sanitized summaries should reach GitHub,
   PR bodies, issue bodies, or agent prompts.
 - Do not enable `AUTO_MERGE_ENABLED=true`, `GITHUB_CREATE_PR=true`, or mutating
@@ -212,3 +217,4 @@ silently relax safety gates.
 - `services/worker`: polling worker loop.
 - `apps/control-center`: operator dashboard.
 - `apps/demo-app`: Daybook notepad/todo demo product that submits feedback and usage events.
+- `apps/landing`: Vercel landing page for the hosted/open-source product.
