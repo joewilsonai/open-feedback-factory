@@ -148,6 +148,7 @@ function titleForDaybookFeature(message: string): string {
   if (/due date|deadline/.test(message)) return "Add due dates to todos";
   if (/pinned note|pin.*note/.test(message)) return "Add pinned notes";
   if (/search.*note/.test(message)) return "Add note search";
+  if (/edit|rename|update|change/.test(message) && /todo|task/.test(message)) return "Edit open tasks";
   if (/todo|task/.test(message)) return "Improve todos";
   return "Improve Daybook";
 }

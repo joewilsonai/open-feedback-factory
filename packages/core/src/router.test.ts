@@ -74,3 +74,18 @@ test("routeFeedback queues safe Daybook todo features", () => {
   assert.equal(decision.userStatus, "planned");
   assert.equal(decision.clusterKey, "feature.daybook.due-date-todo");
 });
+
+test("routeFeedback names editable open task requests distinctly", () => {
+  const sanitized = sanitizeFeedback({
+    message: "allow the user to edit tasks that are still open",
+    source: "daybook_demo_app",
+  });
+
+  const decision = routeFeedback({ sanitized });
+
+  assert.equal(decision.action, "create_work_item");
+  assert.equal(decision.shouldCreateIssue, true);
+  assert.equal(decision.riskTier, "safe_auto_merge");
+  assert.equal(decision.title, "Edit open tasks");
+  assert.equal(decision.clusterKey, "feature.daybook.allow-user-edit-todo-that-are-still-open");
+});
