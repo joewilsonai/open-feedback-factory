@@ -30,6 +30,11 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     const status = await store.getUserFeedbackStatus(intake.feedbackId);
     assert.equal(status?.state, "planned");
 
+    const duplicateBeforeRun = await store.createFeedbackIntake({ decision, feedback, sanitized });
+    assert.equal(duplicateBeforeRun.workItemId, intake.workItemId);
+    assert.equal(duplicateBeforeRun.status.state, "grouped");
+    assert.match(duplicateBeforeRun.status.message, /matching request/);
+
     const usageId = await store.recordFeatureUsage({
       action: "enabled",
       featureId: "dark-mode",
@@ -66,6 +71,11 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
 
     const progressedStatus = await store.getUserFeedbackStatus(intake.feedbackId);
     assert.equal(progressedStatus?.state, "in_progress");
+
+    const duplicateAfterRun = await store.createFeedbackIntake({ decision, feedback, sanitized });
+    assert.equal(duplicateAfterRun.workItemId, intake.workItemId);
+    assert.equal(duplicateAfterRun.status.state, "in_progress");
+    assert.match(duplicateAfterRun.status.message, /waiting for review or release/);
   } finally {
     await store.close();
   }

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { generateKeyPairSync } from "node:crypto";
 import test from "node:test";
 import {
   buildCodexCostActual,
@@ -11,6 +12,7 @@ import {
   parseCodexJsonlOutput,
 } from "./codexCliRunner.js";
 import { DemoRunner } from "./demoRunner.js";
+import { createGitHubAppJwt, GitHubClient, normalizePrivateKey } from "./githubClient.js";
 import type { WorkItemRow } from "@open-feedback-factory/db";
 
 const workItem: WorkItemRow = {
@@ -183,3 +185,83 @@ test("buildCodexCostActual uses configured pricing when usage is available", () 
   assert.equal(cost.confidence, "high");
   assert.equal(cost.tokens, 1350);
 });
+
+test("createGitHubAppJwt signs a GitHub App JWT with expected claims", () => {
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
+  const token = createGitHubAppJwt({ appId: "12345", nowSeconds: 1_800_000_000, privateKey: pem });
+  const [header, payload, signature] = token.split(".");
+
+  assert.ok(header);
+  assert.ok(payload);
+  assert.ok(signature);
+  assert.deepEqual(JSON.parse(Buffer.from(header, "base64url").toString("utf8")), { alg: "RS256", typ: "JWT" });
+  assert.deepEqual(JSON.parse(Buffer.from(payload, "base64url").toString("utf8")), {
+    exp: 1_800_000_540,
+    iat: 1_799_999_940,
+    iss: "12345",
+  });
+});
+
+test("GitHubClient app mode creates sanitized issues with installation tokens", async () => {
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
+  const calls: Array<{ body: unknown; method: string; url: string }> = [];
+  const fetchImpl: typeof fetch = async (url, init) => {
+    calls.push({
+      body: init?.body ? JSON.parse(String(init.body)) : null,
+      method: init?.method ?? "GET",
+      url: String(url),
+    });
+    if (String(url).endsWith("/repos/owner/repo/installation")) {
+      assert.match((init?.headers as Record<string, string>).authorization ?? "", /^Bearer /);
+      return jsonResponse({ id: 456 });
+    }
+    if (String(url).endsWith("/app/installations/456/access_tokens")) {
+      return jsonResponse({ expires_at: new Date(Date.now() + 60_000).toISOString(), token: "installation-token" });
+    }
+    if (String(url).endsWith("/repos/owner/repo/issues")) {
+      assert.equal((init?.headers as Record<string, string>).authorization, "Bearer installation-token");
+      assert.deepEqual(JSON.parse(String(init?.body)), {
+        body: "Work item: work_1\nSanitized summary only.",
+        labels: ["enhancement"],
+        title: "Improve product copy",
+      });
+      return jsonResponse({ html_url: "https://github.com/owner/repo/issues/7" });
+    }
+    return new Response("not found", { status: 404 });
+  };
+
+  const client = new GitHubClient({
+    appId: "123",
+    appPrivateKey: normalizePrivateKey(pem.replace(/\n/g, "\\n")),
+    cwd: "/repo",
+    fetch: fetchImpl,
+    mode: "app",
+    owner: "owner",
+    repo: "repo",
+  });
+
+  const url = await client.createIssue({
+    body: "Work item: work_1\nSanitized summary only.",
+    labels: ["enhancement"],
+    title: "Improve product copy",
+  });
+
+  assert.equal(url, "https://github.com/owner/repo/issues/7");
+  assert.deepEqual(
+    calls.map((call) => `${call.method} ${call.url}`),
+    [
+      "GET https://api.github.com/repos/owner/repo/installation",
+      "POST https://api.github.com/app/installations/456/access_tokens",
+      "POST https://api.github.com/repos/owner/repo/issues",
+    ],
+  );
+});
+
+function jsonResponse(value: unknown): Response {
+  return new Response(JSON.stringify(value), {
+    headers: { "content-type": "application/json" },
+    status: 200,
+  });
+}

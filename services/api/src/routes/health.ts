@@ -12,6 +12,9 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
     autoMergeEnabled: deps.config.autoMergeEnabled,
     codexRunnerMode: deps.config.codexRunnerMode,
     databaseConfigured: Boolean(deps.config.databaseUrl),
+    githubAppConfigured: Boolean(
+      deps.config.githubAppId && (deps.config.githubAppPrivateKey || deps.config.githubAppPrivateKeyPath),
+    ),
     githubMode: deps.config.githubMode,
     maxFeatureCostUsd: deps.config.maxFeatureCostUsd,
     protectedPathFragments: deps.config.protectedPathFragments,

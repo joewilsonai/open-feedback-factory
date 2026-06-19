@@ -1,7 +1,8 @@
 import { evaluateAutoMerge, type WorkRiskTier } from "@open-feedback-factory/core";
-import { CodexCliRunner, DemoRunner, GitHubClient } from "@open-feedback-factory/runner";
+import { CodexCliRunner, DemoRunner } from "@open-feedback-factory/runner";
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
+import { buildGithubClient } from "../githubClient.js";
 
 export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   app.get("/admin/control-room", async () => deps.store.getControlRoomSnapshot());
@@ -91,7 +92,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
 
     const prUrl = workItem.githubPrUrl;
     if (!prUrl) evaluation.reasons.push("missing_pr_url");
-    if (deps.config.githubMode !== "gh") evaluation.reasons.push("github_merge_mode_not_enabled");
+    if (deps.config.githubMode === "disabled") evaluation.reasons.push("github_merge_mode_not_enabled");
 
     if (!evaluation.eligible || evaluation.reasons.length > 0) {
       return reply.code(409).send({ evaluation: { eligible: false, reasons: evaluation.reasons }, status: "blocked" });
@@ -100,7 +101,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
       return reply.code(409).send({ evaluation: { eligible: false, reasons: ["missing_pr_url"] }, status: "blocked" });
     }
 
-    const github = new GitHubClient({ cwd: deps.config.runnerWorkspace });
+    const github = buildGithubClient(deps.config);
     const mergeOutput = await github.mergePullRequest(prUrl);
     const runId = await deps.store.recordAgentRun({
       agentName: "github-safe-automerge",

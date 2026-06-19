@@ -5,6 +5,7 @@ import type { UserFeedbackStatus } from "@open-feedback-factory/core";
 import type { ControlRoomSnapshot, WorkItemRow } from "@open-feedback-factory/db";
 import { buildApp, type AppStore } from "./app.js";
 import type { ApiConfig } from "./config.js";
+import { buildSanitizedGithubIssueInput } from "./routes/sdk.js";
 
 const config: ApiConfig = {
   apiHost: "127.0.0.1",
@@ -178,6 +179,22 @@ test("API exposes GitHub App manifest seam", async () => {
   assert.equal(response.json().url, "https://github.com/joewilsonai/open-feedback-factory");
 
   await app.close();
+});
+
+test("sanitized GitHub issue body excludes raw feedback", () => {
+  const issue = buildSanitizedGithubIssueInput({
+    category: "copy",
+    clusterKey: "safe.copy.save-label",
+    riskTier: "safe_auto_merge",
+    summary: "Please change the save button label to Done. Contact: [redacted email].",
+    title: "Improve product copy",
+    workItemId: "work_123",
+  });
+
+  assert.match(issue.body, /Please change the save button label to Done/);
+  assert.match(issue.body, /Work item: work_123/);
+  assert.match(issue.body, /Raw user feedback stays in the Open Feedback Factory database/);
+  assert.doesNotMatch(issue.body, /joe@example\.com|sk-live|raw transcript/i);
 });
 
 test("GitHub webhook verifies signature and records PR artifact", async () => {

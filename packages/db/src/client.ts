@@ -90,6 +90,8 @@ export class OpenFeedbackStore {
     const client = await this.pool.connect();
     const feedbackId = `feedback_${randomUUID()}`;
     let workItemId: string | null = null;
+    let userMessage = input.decision.userMessage;
+    let userStatus = input.decision.userStatus;
 
     try {
       await client.query("begin");
@@ -103,33 +105,9 @@ export class OpenFeedbackStore {
         [input.decision.clusterKey, input.decision.title, input.decision.category],
       );
 
-      await client.query(
-        `insert into feedback_signals
-         (id, user_id, source, severity, raw_payload, sanitized_summary, sanitized_payload,
-          privacy_risk, redactions, cluster_key, status, user_message)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [
-          feedbackId,
-          input.feedback.userId ?? null,
-          input.feedback.source,
-          input.feedback.severity ?? "medium",
-          JSON.stringify(input.feedback),
-          input.sanitized.sanitizedMessage,
-          JSON.stringify({
-            metadata: input.sanitized.safeMetadata,
-            message: input.sanitized.sanitizedMessage,
-          }),
-          input.sanitized.privacyRisk,
-          JSON.stringify(input.sanitized.redactions),
-          input.decision.clusterKey,
-          input.decision.userStatus,
-          input.decision.userMessage,
-        ],
-      );
-
       if (input.decision.action === "create_work_item") {
-        const existing = await client.query<{ id: string }>(
-          `select id from work_items
+        const existing = await client.query<{ id: string; status: string }>(
+          `select id, status from work_items
            where cluster_key = $1 and status not in ('shipped', 'closed', 'not_planned', 'blocked', 'failed')
            order by created_at asc
            limit 1`,
@@ -137,7 +115,11 @@ export class OpenFeedbackStore {
         );
 
         workItemId = existing.rows[0]?.id ?? `work_${randomUUID()}`;
-        if (!existing.rows[0]) {
+        if (existing.rows[0]) {
+          const existingFollowUp = followUpForExistingWorkItem(existing.rows[0].status);
+          userMessage = existingFollowUp.message;
+          userStatus = existingFollowUp.status;
+        } else {
           await client.query(
             `insert into work_items
              (id, cluster_key, title, summary, category, risk_tier, status, user_status,
@@ -172,15 +154,33 @@ export class OpenFeedbackStore {
       }
 
       await client.query(
+        `insert into feedback_signals
+         (id, user_id, source, severity, raw_payload, sanitized_summary, sanitized_payload,
+          privacy_risk, redactions, cluster_key, status, user_message)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [
+          feedbackId,
+          input.feedback.userId ?? null,
+          input.feedback.source,
+          input.feedback.severity ?? "medium",
+          JSON.stringify(input.feedback),
+          input.sanitized.sanitizedMessage,
+          JSON.stringify({
+            metadata: input.sanitized.safeMetadata,
+            message: input.sanitized.sanitizedMessage,
+          }),
+          input.sanitized.privacyRisk,
+          JSON.stringify(input.sanitized.redactions),
+          input.decision.clusterKey,
+          userStatus,
+          userMessage,
+        ],
+      );
+
+      await client.query(
         `insert into user_notifications (id, feedback_id, work_item_id, status, message)
          values ($1, $2, $3, $4, $5)`,
-        [
-          `note_${randomUUID()}`,
-          feedbackId,
-          workItemId,
-          input.decision.userStatus,
-          input.decision.userMessage,
-        ],
+        [`note_${randomUUID()}`, feedbackId, workItemId, userStatus, userMessage],
       );
 
       await client.query(
@@ -209,8 +209,8 @@ export class OpenFeedbackStore {
       feedbackId,
       status: buildUserStatus({
         feedbackId,
-        message: input.decision.userMessage,
-        state: input.decision.userStatus,
+        message: userMessage,
+        state: userStatus,
       }),
       workItemId,
     };
@@ -658,6 +658,25 @@ function completionStateForRun(status: RunnerJobCompletionInput["status"]): {
     message: "An agent tried this, but it failed and needs human review before it can ship.",
     userStatus: "blocked",
     workItemStatus: "failed",
+  };
+}
+
+function followUpForExistingWorkItem(status: string): { message: string; status: UserFeedbackState } {
+  if (status === "implemented") {
+    return {
+      message: "An agent implemented a matching request and it is waiting for review or release.",
+      status: "in_progress",
+    };
+  }
+  if (status === "in_progress") {
+    return {
+      message: "An agent is already working on a matching request.",
+      status: "in_progress",
+    };
+  }
+  return {
+    message: "We grouped this with a matching request that is already in the queue.",
+    status: "grouped",
   };
 }
 

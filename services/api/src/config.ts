@@ -5,6 +5,10 @@ export interface ApiConfig {
   codexRunnerMode: "codex" | "demo";
   databaseUrl: string;
   githubMode: "app" | "disabled" | "gh";
+  githubAppId?: string;
+  githubAppInstallationId?: string;
+  githubAppPrivateKey?: string;
+  githubAppPrivateKeyPath?: string;
   githubOwner: string;
   githubRepo: string;
   githubWebhookSecret: string;
@@ -23,6 +27,10 @@ export function readConfig(env = process.env): ApiConfig {
     codexRunnerMode: env.CODEX_RUNNER_MODE === "codex" ? "codex" : "demo",
     databaseUrl: env.DATABASE_URL ?? env.DOCKER_DATABASE_URL ?? "",
     githubMode: githubModeFromEnv(env.GITHUB_MODE),
+    githubAppId: env.GITHUB_APP_ID || undefined,
+    githubAppInstallationId: env.GITHUB_APP_INSTALLATION_ID || undefined,
+    githubAppPrivateKey: env.GITHUB_APP_PRIVATE_KEY || undefined,
+    githubAppPrivateKeyPath: env.GITHUB_APP_PRIVATE_KEY_PATH || undefined,
     githubOwner: env.GITHUB_OWNER ?? "joewilsonai",
     githubRepo: env.GITHUB_REPO ?? "open-feedback-factory",
     githubWebhookSecret: env.GITHUB_WEBHOOK_SECRET ?? "",

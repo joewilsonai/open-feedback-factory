@@ -99,9 +99,15 @@ the URL on the work item. Safe auto-merge still requires every gate to pass:
 safe risk tier, trusted branch, reviewer approval, passing checks, release
 health, cost cap, allowed paths, and an attached PR URL.
 
-`GITHUB_MODE=app` is reserved for the installable GitHub App path. The API
-already exposes `/github/app/manifest` and `/github/webhook` as the V1
-integration seam.
+`GITHUB_MODE=app` is the installable GitHub App path. Configure
+`GITHUB_APP_ID` plus either `GITHUB_APP_PRIVATE_KEY` or
+`GITHUB_APP_PRIVATE_KEY_PATH`; `GITHUB_APP_INSTALLATION_ID` is optional because
+the client can resolve it from the configured owner/repo. In App mode, sanitized
+issues, PR creation, PR comments, branch cleanup, and guarded merges use
+installation tokens instead of a personal GitHub CLI session.
+
+The API exposes `/github/app/manifest`, `/github/app/installed`, and
+`/github/webhook` for the App installation and webhook flow.
 
 ## CI And Safe Merge
 

@@ -39,6 +39,7 @@ interface Doctor {
   autoMergeEnabled: boolean;
   codexRunnerMode: string;
   databaseConfigured: boolean;
+  githubAppConfigured: boolean;
   githubMode: string;
   maxFeatureCostUsd: number;
   publicBaseUrl: string;
@@ -229,6 +230,7 @@ function SetupPanel(props: { doctor: Doctor | null }) {
           <Detail label="Database" value={doctor.databaseConfigured ? "Configured" : "Missing"} />
           <Detail label="Runner" value={doctor.codexRunnerMode} />
           <Detail label="GitHub" value={doctor.githubMode} />
+          <Detail label="GitHub App" value={doctor.githubAppConfigured ? "Configured" : "Not configured"} />
           <Detail label="Auto-merge" value={doctor.autoMergeEnabled ? "Enabled" : "Disabled"} />
           <Detail label="Cost cap" value={`$${doctor.maxFeatureCostUsd.toFixed(2)}`} />
           <Detail label="Public URL" value={doctor.publicBaseUrl} />

@@ -4,7 +4,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = resolve(new URL("..", import.meta.url).pathname);
-const env = loadEnv(resolve(root, ".env.example"), existsSync(resolve(root, ".env")) ? resolve(root, ".env") : null);
+const env = {
+  ...loadEnv(resolve(root, ".env.example"), existsSync(resolve(root, ".env")) ? resolve(root, ".env") : null),
+  ...process.env,
+};
 
 const checks = [];
 
@@ -50,6 +53,17 @@ checks.push({
 });
 
 checks.push({
+  label: "GitHub App credentials",
+  ok: env.GITHUB_MODE !== "app" || githubAppConfigured(env),
+  detail:
+    env.GITHUB_MODE === "app"
+      ? githubAppConfigured(env)
+        ? "configured"
+        : "missing GITHUB_APP_ID and private key"
+      : "not required",
+});
+
+checks.push({
   label: "Codex managed git",
   ok: env.CODEX_MANAGE_GIT !== "true" || env.CODEX_RUNNER_MODE === "codex",
   detail: env.CODEX_MANAGE_GIT === "true" ? "enabled" : "disabled",
@@ -57,7 +71,10 @@ checks.push({
 
 checks.push({
   label: "GitHub PR creation",
-  ok: env.GITHUB_CREATE_PR !== "true" || (env.GITHUB_MODE === "gh" && env.CODEX_MANAGE_GIT === "true"),
+  ok:
+    env.GITHUB_CREATE_PR !== "true" ||
+    ((env.GITHUB_MODE === "gh" || (env.GITHUB_MODE === "app" && githubAppConfigured(env))) &&
+      env.CODEX_MANAGE_GIT === "true"),
   detail: env.GITHUB_CREATE_PR === "true" ? "enabled" : "disabled",
 });
 
@@ -87,6 +104,14 @@ function commandCheck(command, args, label) {
 
 function firstLine(value) {
   return value.trim().split("\n")[0] || "ok";
+}
+
+function githubAppConfigured(env) {
+  const privateKeyPath = env.GITHUB_APP_PRIVATE_KEY_PATH ? resolve(root, env.GITHUB_APP_PRIVATE_KEY_PATH) : "";
+  return Boolean(
+    env.GITHUB_APP_ID &&
+      (env.GITHUB_APP_PRIVATE_KEY || (privateKeyPath && existsSync(privateKeyPath))),
+  );
 }
 
 async function portCheck(port, label) {

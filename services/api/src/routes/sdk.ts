@@ -1,7 +1,8 @@
 import { routeFeedback, sanitizeFeedback, type FeedbackInput } from "@open-feedback-factory/core";
-import { GitHubClient } from "@open-feedback-factory/runner";
+import type { GitHubIssueInput } from "@open-feedback-factory/runner";
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
+import { buildGithubClient } from "../githubClient.js";
 
 interface FeedbackBody {
   message?: string;
@@ -38,7 +39,7 @@ export async function registerSdkRoutes(app: FastifyInstance, deps: AppDeps): Pr
     const intake = await deps.store.createFeedbackIntake({ decision, feedback, sanitized });
     let githubIssueError: string | null = null;
     let githubIssueUrl: string | null = null;
-    if (intake.workItemId && deps.config.githubMode === "gh" && decision.shouldCreateIssue) {
+    if (intake.workItemId && deps.config.githubMode !== "disabled" && decision.shouldCreateIssue) {
       try {
         githubIssueUrl = await createSanitizedGithubIssue(deps, {
           category: decision.category,
@@ -103,8 +104,30 @@ async function createSanitizedGithubIssue(
     workItemId: string;
   },
 ): Promise<string | null> {
-  const github = new GitHubClient({ cwd: deps.config.runnerWorkspace });
-  const url = await github.createIssue({
+  const github = buildGithubClient(deps.config);
+  const url = await github.createIssue(buildSanitizedGithubIssueInput(input));
+  await deps.store.recordGithubArtifact({
+    artifactNumber: githubNumberFromUrl(url),
+    artifactType: "issue",
+    metadata: {
+      clusterKey: input.clusterKey,
+      riskTier: input.riskTier,
+    },
+    url,
+    workItemId: input.workItemId,
+  });
+  return url;
+}
+
+export function buildSanitizedGithubIssueInput(input: {
+  category: string;
+  clusterKey: string;
+  riskTier: string;
+  summary: string;
+  title: string;
+  workItemId: string;
+}): GitHubIssueInput {
+  return {
     body: [
       "## Sanitized Feedback",
       "",
@@ -121,18 +144,7 @@ async function createSanitizedGithubIssue(
     ].join("\n"),
     labels: ["enhancement"],
     title: input.title,
-  });
-  await deps.store.recordGithubArtifact({
-    artifactNumber: githubNumberFromUrl(url),
-    artifactType: "issue",
-    metadata: {
-      clusterKey: input.clusterKey,
-      riskTier: input.riskTier,
-    },
-    url,
-    workItemId: input.workItemId,
-  });
-  return url;
+  };
 }
 
 function githubNumberFromUrl(url: string): number | undefined {

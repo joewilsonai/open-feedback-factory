@@ -55,3 +55,10 @@ export interface GitHubCommentInput {
   body: string;
   issueOrPr: string;
 }
+
+export interface GitHubCheckSummary {
+  conclusion: string | null;
+  name: string;
+  status: string;
+  url: string | null;
+}

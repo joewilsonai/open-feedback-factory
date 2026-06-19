@@ -125,7 +125,7 @@ async function publishPullRequestIfEnabled(
 ): Promise<string | null> {
   if (
     !config.pullRequestEnabled ||
-    config.githubMode !== "gh" ||
+    config.githubMode === "disabled" ||
     config.runnerMode !== "codex" ||
     result.status !== "succeeded" ||
     !result.branchName
@@ -133,7 +133,16 @@ async function publishPullRequestIfEnabled(
     return null;
   }
 
-  const github = new GitHubClient({ cwd: config.runnerWorkspace });
+  const github = new GitHubClient({
+    appId: config.githubAppId,
+    appPrivateKey: config.githubAppPrivateKey,
+    appPrivateKeyPath: config.githubAppPrivateKeyPath,
+    cwd: config.runnerWorkspace,
+    installationId: config.githubAppInstallationId,
+    mode: config.githubMode === "app" ? "app" : "gh",
+    owner: config.githubOwner,
+    repo: config.githubRepo,
+  });
   await github.pushBranch(result.branchName);
   const prUrl = await github.createPullRequest({
     base: config.pullRequestBase,

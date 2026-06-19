@@ -9,6 +9,12 @@ export interface WorkerConfig {
   codexPricing?: CodexPricing;
   codexTimeoutMs: number;
   githubMode: "app" | "disabled" | "gh";
+  githubAppId?: string;
+  githubAppInstallationId?: string;
+  githubAppPrivateKey?: string;
+  githubAppPrivateKeyPath?: string;
+  githubOwner: string;
+  githubRepo: string;
   pollIntervalMs: number;
   pullRequestBase: string;
   pullRequestEnabled: boolean;
@@ -31,6 +37,12 @@ export function readWorkerConfig(env = process.env): WorkerConfig {
     codexPricing: readCodexPricing(env),
     codexTimeoutMs: Number(env.CODEX_TIMEOUT_MS ?? 5 * 60_000),
     githubMode: githubModeFromEnv(env.GITHUB_MODE),
+    githubAppId: env.GITHUB_APP_ID || undefined,
+    githubAppInstallationId: env.GITHUB_APP_INSTALLATION_ID || undefined,
+    githubAppPrivateKey: env.GITHUB_APP_PRIVATE_KEY || undefined,
+    githubAppPrivateKeyPath: env.GITHUB_APP_PRIVATE_KEY_PATH || undefined,
+    githubOwner: env.GITHUB_OWNER ?? "joewilsonai",
+    githubRepo: env.GITHUB_REPO ?? "open-feedback-factory",
     pollIntervalMs: Number(env.WORKER_POLL_INTERVAL_MS ?? 5000),
     pullRequestBase: env.GITHUB_PR_BASE ?? "main",
     pullRequestEnabled: env.GITHUB_CREATE_PR === "true",
