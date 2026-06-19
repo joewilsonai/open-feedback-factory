@@ -21,7 +21,7 @@ export interface AppStore {
     status: UserFeedbackStatus;
     workItemId: string | null;
   }>;
-  claimNextWorkItem(workerName?: string, workItemId?: string): Promise<WorkItemRow | null>;
+  claimNextWorkItem(workerName?: string, workItemId?: string, maxFeatureCostUsd?: number): Promise<WorkItemRow | null>;
   completeWorkItemRun(input: {
     agentName: string;
     assumptions?: AgentAssumptionRecord[];
@@ -36,6 +36,7 @@ export interface AppStore {
   getApprovalMode(defaultMode: ApiConfig["approvalMode"]): Promise<ApiConfig["approvalMode"]>;
   getCodexAuthMode(defaultMode: ApiConfig["codexAuthMode"]): Promise<ApiConfig["codexAuthMode"]>;
   getFeedbackClusterSignalCount(clusterKey: string): Promise<number>;
+  getMaxFeatureCostUsd(defaultCap: number): Promise<number>;
   getUserFeedbackStatus(feedbackId: string): Promise<UserFeedbackStatus | null>;
   getWorkItem(id: string): Promise<WorkItemRow | null>;
   getWorkItemDetail(id: string): Promise<WorkItemDetail | null>;
@@ -79,6 +80,7 @@ export interface AppStore {
   }): Promise<boolean>;
   setApprovalMode(mode: ApiConfig["approvalMode"], actor?: string): Promise<void>;
   setCodexAuthMode(mode: ApiConfig["codexAuthMode"], actor?: string): Promise<void>;
+  setMaxFeatureCostUsd(amountUsd: number, actor?: string): Promise<void>;
 }
 
 export interface AppDeps {

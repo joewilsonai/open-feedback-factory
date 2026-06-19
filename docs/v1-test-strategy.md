@@ -91,6 +91,8 @@ capture, release proof, and agent assumptions.
   installation, repo, and source trust where available.
 - Model/agent execution is limited by spend and attempt caps separate from HTTP
   rate limits: per work item, per day, per month, per workspace, and per runner.
+- Manual runs, targeted runner claims, automatic runner claims, and auto-merge
+  gates respect the live max feature cost cap before spending model time.
 - Rate-limit responses are user-safe and observable: they do not silently drop
   feedback, and they either queue, defer, or return a clear retry/status path.
 - Webhook delivery is idempotent and replay-resistant enough that duplicate

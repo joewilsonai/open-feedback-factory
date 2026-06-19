@@ -58,6 +58,9 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
       ),
       true,
     );
+    assert.equal(await store.getMaxFeatureCostUsd(5), 5);
+    await store.setMaxFeatureCostUsd(2.25, "db-test");
+    assert.equal(await store.getMaxFeatureCostUsd(5), 2.25);
 
     const claimed = await store.claimNextWorkItem("db-test-worker", intake.workItemId ?? undefined);
     assert.equal(claimed?.id, intake.workItemId);
@@ -168,6 +171,11 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.deepEqual(reconciliation.staleInProgressRequeuedIds, [staleClaimed?.id]);
     const requeued = await store.getWorkItem(staleClaimed?.id ?? "");
     assert.equal(requeued?.status, "planned");
+
+    const capBlockedClaim = await store.claimNextWorkItem("db-test-worker", staleClaimed?.id ?? "", 1);
+    assert.equal(capBlockedClaim, null);
+    const capAllowedClaim = await store.claimNextWorkItem("db-test-worker", staleClaimed?.id ?? "", 2);
+    assert.equal(capAllowedClaim?.id, staleClaimed?.id);
 
     await store.markWorkItemDecision({
       actor: "db-test",
@@ -282,6 +290,7 @@ async function cleanupDatabaseTestRows(url: string): Promise<void> {
       await client.query(`delete from cost_records where work_item_id = any($1::text[])`, [workItemIds]);
       await client.query(`delete from agent_runs where work_item_id = any($1::text[])`, [workItemIds]);
       await client.query(`delete from user_notifications where work_item_id = any($1::text[])`, [workItemIds]);
+      await client.query(`delete from audit_events where target_id = any($1::text[])`, [workItemIds]);
       await client.query(`delete from work_items where id = any($1::text[])`, [workItemIds]);
     }
 
@@ -304,6 +313,8 @@ async function cleanupDatabaseTestRows(url: string): Promise<void> {
           or user_id like 'test-user-%'
           or user_id = 'user-1'`,
     );
+    await client.query(`delete from audit_events where target_id = 'max_feature_cost_usd'`);
+    await client.query(`delete from policy_configs where key = 'max_feature_cost_usd'`);
     await client.query("commit");
   } catch (error) {
     await client.query("rollback");

@@ -12,6 +12,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
     approvalMode: await deps.store.getApprovalMode(deps.config.approvalMode),
     codexApiKey: await getCodexApiKeyStatus(deps.config),
     codexAuthMode: await deps.store.getCodexAuthMode(deps.config.codexAuthMode),
+    maxFeatureCostUsd: await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd),
   }));
 
   app.patch<{ Body: { approvalMode?: unknown } }>("/admin/settings/approval-mode", async (request, reply) => {
@@ -49,6 +50,16 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
     status: "removed",
   }));
 
+  app.patch<{ Body: { maxFeatureCostUsd?: unknown } }>("/admin/settings/cost-cap", async (request, reply) => {
+    const amount = Number(request.body?.maxFeatureCostUsd);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 10_000) {
+      return reply.code(400).send({ error: "maxFeatureCostUsd must be between 0 and 10000" });
+    }
+
+    await deps.store.setMaxFeatureCostUsd(amount, "control-center");
+    return { maxFeatureCostUsd: Math.round(amount * 100) / 100, status: "updated" };
+  });
+
   app.get<{ Params: { id: string } }>("/admin/work-items/:id", async (request, reply) => {
     const workItem = await deps.store.getWorkItem(request.params.id);
     if (!workItem) return reply.code(404).send({ error: "work item not found" });
@@ -64,6 +75,15 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
   app.post<{ Params: { id: string } }>("/admin/work-items/:id/run", async (request, reply) => {
     const workItem = await deps.store.getWorkItem(request.params.id);
     if (!workItem) return reply.code(404).send({ error: "work item not found" });
+    const maxFeatureCostUsd = await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd);
+    if (workItem.costEstimate.amountUsd > maxFeatureCostUsd) {
+      return reply.code(409).send({
+        costEstimateUsd: workItem.costEstimate.amountUsd,
+        error: "cost cap exceeded",
+        maxFeatureCostUsd,
+        status: "blocked",
+      });
+    }
     if (deps.config.codexRunnerMode !== "codex") {
       return reply.code(409).send({
         error: "codex runner disabled",
@@ -203,6 +223,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
   }>("/admin/work-items/:id/automerge", async (request, reply) => {
     const workItem = await deps.store.getWorkItem(request.params.id);
     if (!workItem) return reply.code(404).send({ error: "work item not found" });
+    const maxFeatureCostUsd = await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd);
 
     const evaluation = evaluateAutoMerge({
       autoMergeEnabled: deps.config.autoMergeEnabled,
@@ -210,7 +231,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
       changedFiles: request.body.changedFiles ?? [],
       checksPassed: request.body.checksPassed === true,
       costActualUsd: request.body.costActualUsd ?? workItem.costEstimate.amountUsd,
-      costCapUsd: deps.config.maxFeatureCostUsd,
+      costCapUsd: maxFeatureCostUsd,
       diffLineCount: request.body.diffLineCount ?? deps.config.maxSafeDiffLines + 1,
       maxDiffLineCount: deps.config.maxSafeDiffLines,
       protectedPathFragments: deps.config.protectedPathFragments,

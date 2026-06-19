@@ -41,6 +41,9 @@ describe("control center UI contract", () => {
     expect(source).toContain("Auto-merge");
     expect(source).toContain("Mark not planned");
     expect(source).toContain("Block work");
+    expect(source).toContain("Cost controls");
+    expect(source).toContain("Save cap");
+    expect(source).toContain("Workers and manual runs are blocked");
     expect(source).toContain("Manual approval required");
     expect(source).toContain("Auto approval");
     expect(source).toContain("Switch to auto");
@@ -70,6 +73,7 @@ describe("control center UI contract", () => {
     expect(source).toContain("/admin/settings/approval-mode");
     expect(source).toContain("/admin/settings/codex-auth-mode");
     expect(source).toContain("/admin/settings/codex-api-key");
+    expect(source).toContain("/admin/settings/cost-cap");
     expect(source).toContain("/github/app/setup");
     expect(source).toContain("/github/app/manifest");
     expect(source).toContain("runnerInstall");

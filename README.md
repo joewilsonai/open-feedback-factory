@@ -196,6 +196,10 @@ control center. That updates the work item, writes a user-safe notification for
 matching requesters, and stores an audit event so rejected work is explained
 instead of silently disappearing.
 
+The control center can update the max feature cost cap. `/doctor`, manual runs,
+runner claims, and safe auto-merge all read the live cap from policy config, so
+over-budget work stays queued instead of spending model time.
+
 ## Rate Limits
 
 V1 includes local fixed-window HTTP rate limits. Defaults are intentionally high

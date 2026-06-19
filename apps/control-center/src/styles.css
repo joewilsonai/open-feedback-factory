@@ -157,6 +157,26 @@ small {
   min-height: 22rem;
 }
 
+.cost-control-panel {
+  min-height: 14rem;
+}
+
+.cost-control-panel .secret-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 1rem;
+}
+
+.cost-control-panel input {
+  min-height: 42px;
+  min-width: 0;
+  border: 1px solid rgba(22, 26, 31, 0.22);
+  border-radius: 7px;
+  padding: 0.65rem 0.85rem;
+  color: inherit;
+  background: #ffffff;
+  font: inherit;
+}
+
 .admin-access-panel {
   min-height: 14rem;
 }

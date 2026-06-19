@@ -566,7 +566,7 @@ export class OpenFeedbackStore {
     };
   }
 
-  async claimNextWorkItem(workerName = "worker", workItemId?: string): Promise<WorkItemRow | null> {
+  async claimNextWorkItem(workerName = "worker", workItemId?: string, maxFeatureCostUsd?: number): Promise<WorkItemRow | null> {
     const client = await this.pool.connect();
     try {
       await client.query("begin");
@@ -575,6 +575,7 @@ export class OpenFeedbackStore {
          select id from work_items
            where status = 'planned'
              and ($1::text is null or id = $1)
+             and ($2::numeric is null or (cost_estimate ->> 'amountUsd')::numeric <= $2)
            order by created_at asc
            for update skip locked
            limit 1
@@ -596,7 +597,7 @@ export class OpenFeedbackStore {
                    null::jsonb as latest_actual_cost,
                    null::text as latest_branch_name,
                    wi.created_at, wi.updated_at`,
-        [workItemId ?? null],
+        [workItemId ?? null, maxFeatureCostUsd ?? null],
       );
 
       const row = result.rows[0];
@@ -1089,6 +1090,44 @@ export class OpenFeedbackStore {
         `insert into audit_events (id, actor, event, target_type, target_id, metadata)
          values ($1, $2, 'codex_auth_mode_updated', 'policy_config', 'codex_auth_mode', $3)`,
         [`audit_${randomUUID()}`, actor, JSON.stringify({ mode })],
+      );
+      await client.query("commit");
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async getMaxFeatureCostUsd(defaultCap: number): Promise<number> {
+    const result = await this.pool.query<{ amount_usd: string | null }>(
+      `select value ->> 'amountUsd' as amount_usd
+       from policy_configs
+       where key = 'max_feature_cost_usd'
+       limit 1`,
+    );
+    const parsed = Number(result.rows[0]?.amount_usd);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultCap;
+  }
+
+  async setMaxFeatureCostUsd(amountUsd: number, actor = "operator"): Promise<void> {
+    const normalized = Math.round(amountUsd * 100) / 100;
+    const client = await this.pool.connect();
+    try {
+      await client.query("begin");
+      await client.query(
+        `insert into policy_configs (id, key, value)
+         values ($1, 'max_feature_cost_usd', $2)
+         on conflict (key) do update
+         set value = excluded.value,
+             updated_at = now()`,
+        [`policy_${randomUUID()}`, JSON.stringify({ amountUsd: normalized })],
+      );
+      await client.query(
+        `insert into audit_events (id, actor, event, target_type, target_id, metadata)
+         values ($1, $2, 'cost_cap_updated', 'policy_config', 'max_feature_cost_usd', $3)`,
+        [`audit_${randomUUID()}`, actor, JSON.stringify({ amountUsd: normalized })],
       );
       await client.query("commit");
     } catch (error) {

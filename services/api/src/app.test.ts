@@ -44,6 +44,7 @@ class MemoryStore implements AppStore {
   feedbackStatuses = new Map<string, UserFeedbackStatus>();
   githubArtifacts = new Map<string, string>();
   githubArtifactRows: WorkItemDetail["githubArtifacts"] = [];
+  maxFeatureCostUsd: number | null = null;
   recentAssumptions: AgentAssumptionRecord[] = [];
   releaseEvents: WorkItemDetail["releaseEvents"] = [];
   userNotifications: WorkItemDetail["userNotifications"] = [];
@@ -164,13 +165,24 @@ class MemoryStore implements AppStore {
     this.codexAuthMode = mode;
   }
 
+  async getMaxFeatureCostUsd(defaultCap: number) {
+    return this.maxFeatureCostUsd ?? defaultCap;
+  }
+
+  async setMaxFeatureCostUsd(amountUsd: number) {
+    this.maxFeatureCostUsd = Math.round(amountUsd * 100) / 100;
+  }
+
   async getFeedbackClusterSignalCount(clusterKey: string) {
     return this.feedbackClusters.get(clusterKey)?.signalCount ?? 0;
   }
 
-  async claimNextWorkItem(_workerName?: string, workItemId?: string) {
+  async claimNextWorkItem(_workerName?: string, workItemId?: string, maxFeatureCostUsd?: number) {
     const item = this.workItems.find(
-      (workItem) => workItem.status === "planned" && (!workItemId || workItem.id === workItemId),
+      (workItem) =>
+        workItem.status === "planned" &&
+        (!workItemId || workItem.id === workItemId) &&
+        (maxFeatureCostUsd === undefined || workItem.costEstimate.amountUsd <= maxFeatureCostUsd),
     );
     if (!item) return null;
     item.status = "in_progress";
@@ -714,6 +726,48 @@ test("admin can change approval mode without restarting the API", async () => {
     url: "/admin/settings/approval-mode",
   });
   assert.equal(invalid.statusCode, 400);
+
+  await app.close();
+});
+
+test("admin can set cost cap and runner claims respect it", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  const updateCap = await app.inject({
+    method: "PATCH",
+    payload: { maxFeatureCostUsd: 1 },
+    url: "/admin/settings/cost-cap",
+  });
+  assert.equal(updateCap.statusCode, 200);
+  assert.equal(updateCap.json().maxFeatureCostUsd, 1);
+
+  const doctor = await app.inject({ method: "GET", url: "/doctor" });
+  assert.equal(doctor.json().maxFeatureCostUsd, 1);
+
+  const feedback = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add dark mode to settings",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+  const workItemId = feedback.json().workItemId;
+
+  const claim = await app.inject({
+    method: "POST",
+    payload: { workerName: "worker-test", workItemId },
+    url: "/runner/jobs/claim",
+  });
+  assert.equal(claim.statusCode, 200);
+  assert.equal(claim.json().job, null);
+  assert.equal(claim.json().reason, "cost_cap_exceeded");
+  assert.equal(store.workItems[0]?.status, "planned");
+
+  const manualRun = await app.inject({ method: "POST", url: `/admin/work-items/${workItemId}/run` });
+  assert.equal(manualRun.statusCode, 409);
+  assert.equal(manualRun.json().error, "cost cap exceeded");
 
   await app.close();
 });
