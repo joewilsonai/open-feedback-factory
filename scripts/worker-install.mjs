@@ -97,6 +97,8 @@ export function buildDockerApiKeyInstructions(input = {}) {
     "# Save the OpenAI API key from the control center first.",
     "CODEX_RUNNER_MODE=codex",
     "CODEX_AUTH_MODE=api_key",
+    "DOCKER_CODEX_CLI=codex",
+    "CODEX_CLI_VERSION=0.141.0",
     `WORKER_API_BASE_URL=${apiBaseUrl}`,
     "docker compose up -d --build worker",
   ].join("\n");

@@ -27,6 +27,7 @@ export interface WorkerConfig {
   runnerMode: "codex" | "disabled";
   runnerToken?: string;
   runnerWorkspace: string;
+  runsInContainer: boolean;
   workerName: string;
   workItemId?: string;
   openAiApiKey?: string;
@@ -60,6 +61,7 @@ export function readWorkerConfig(env = process.env): WorkerConfig {
     runnerMode: env.CODEX_RUNNER_MODE === "codex" ? "codex" : "disabled",
     runnerToken: env.RUNNER_TOKEN || undefined,
     runnerWorkspace: env.RUNNER_WORKSPACE ?? process.cwd(),
+    runsInContainer: env.OFF_WORKER_CONTAINER === "true",
     workerName: env.WORKER_NAME ?? "open-feedback-worker",
     workItemId: env.WORKER_WORK_ITEM_ID || undefined,
     openAiApiKey: readOpenAiApiKey(env.OPENAI_API_KEY, env.CODEX_SECRETS_PATH ?? ".off/secrets.env"),

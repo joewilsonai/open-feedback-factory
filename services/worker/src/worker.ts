@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import type { WorkItemRow } from "@open-feedback-factory/db";
 import { CodexCliRunner, GitHubClient, type RunnerResult } from "@open-feedback-factory/runner";
@@ -53,6 +54,14 @@ export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike =
   if (config.runnerMode !== "codex") return false;
   const runtimeConfig = await resolveRuntimeConfig(config, fetchImpl);
   if (runtimeConfig.codexAuthMode === "api_key" && !runtimeConfig.openAiApiKey) return false;
+  if (runtimeConfig.runsInContainer && runtimeConfig.codexAuthMode === "cli") {
+    console.error("Docker worker cannot use host Codex CLI auth; switch to CODEX_AUTH_MODE=api_key or use the host worker.");
+    return false;
+  }
+  if (!codexCliAvailable(runtimeConfig)) {
+    console.error(`Codex CLI is not available at ${runtimeConfig.codexCli}; leaving work queued.`);
+    return false;
+  }
 
   const job = await claimJob(runtimeConfig, fetchImpl);
   if (!job) return false;
@@ -158,6 +167,17 @@ async function fetchRuntimeSettings(
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function codexCliAvailable(config: WorkerConfig): boolean {
+  const result = spawnSync(config.codexCli, ["--version"], {
+    encoding: "utf8",
+    env: config.codexAuthMode === "api_key" && config.openAiApiKey
+      ? { ...process.env, OPENAI_API_KEY: config.openAiApiKey }
+      : process.env,
+    stdio: "ignore",
+  });
+  return result.status === 0;
 }
 
 function runnerHeaders(config: WorkerConfig): HeadersInit {

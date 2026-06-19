@@ -356,6 +356,14 @@ machine setup. The supported install lanes are:
   the control center and keep the worker inside Docker;
 - manual one-item worker command for targeted review, retries, and demos.
 
+Docker workers must install and use their own Codex CLI inside the container
+when `CODEX_RUNNER_MODE=codex`; they must not inherit host-only paths such as
+`/opt/homebrew/bin/codex`. Expose separate `DOCKER_CODEX_CLI` and
+`CODEX_CLI_VERSION` settings for the container lane. Docker workers should leave
+work queued in `cli` auth mode because host subscription auth is not available
+inside the container; use the host worker for `cli` auth or the Docker worker
+with `api_key` auth.
+
 The generated host service should source the ignored `.env` file at startup and
 set only worker-specific defaults such as `CODEX_RUNNER_MODE=codex`,
 `WORKER_RUN_ONCE=false`, `WORKER_API_BASE_URL`, `RUNNER_WORKSPACE`, and
@@ -1453,6 +1461,8 @@ It should launch:
 - clearly seeded sample feedback, labeled as sample input;
 - sample reset command that removes seed/test rows without touching real app
   submissions;
+- live workers leave sample-only seed work queued so dry-run data does not burn
+  real agent runs;
 - queued or blocked agent lane unless a real runner is configured;
 - no fake PR URLs, fake costs, fake agent runs, fake releases, or fake shipped
   state;
@@ -2234,11 +2244,12 @@ The setup UI must make worker attachment explicit. Auto approval allows a live
 worker to claim queued work, but does not itself create a worker. The UI and
 docs must show the exact command or deployment path for manual one-item workers,
 host CLI auto-polling workers, and Docker API-key workers, including
-`CODEX_RUNNER_MODE`, `CODEX_AUTH_MODE`, `CODEX_SECRETS_PATH`, GitHub PR
-settings, model, effort, timeout, and workspace. The host install helper should
-generate macOS LaunchAgent and Linux user systemd files, provide status and
-uninstall commands, write logs under `.off/logs`, and avoid embedding secrets
-directly in generated service files.
+`CODEX_RUNNER_MODE`, `CODEX_AUTH_MODE`, `CODEX_SECRETS_PATH`, `CODEX_CLI` for
+host workers, `DOCKER_CODEX_CLI` and `CODEX_CLI_VERSION` for Docker workers,
+GitHub PR settings, model, effort, timeout, and workspace. The host install
+helper should generate macOS LaunchAgent and Linux user systemd files, provide
+status and uninstall commands, write logs under `.off/logs`, and avoid
+embedding secrets directly in generated service files.
 
 Admin and beta-user surfaces must not leak raw internal enum names. Labels such
 as `planned`, `safe_auto_merge`, `guarded_review`, and `not_planned` should be

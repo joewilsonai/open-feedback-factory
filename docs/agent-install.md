@@ -87,8 +87,9 @@ pnpm demo:seed
 
 The seed command sends real Daybook feedback through the SDK and records one real
 sample usage event. It does not fake PRs, model costs, agent runs, releases, or
-shipped states. To clear sample seed rows and local integration-test rows from
-Docker Postgres, run:
+shipped states. Live workers leave sample-only seed work queued so dry-run data
+does not burn real agent runs. To clear sample seed rows and local
+integration-test rows from Docker Postgres, run:
 
 ```bash
 pnpm demo:reset
@@ -216,6 +217,14 @@ For the Docker API-key lane:
 pnpm worker:print:docker-api
 docker compose up -d --build worker
 ```
+
+When `CODEX_RUNNER_MODE=codex`, Compose installs `@openai/codex` in the API and
+worker containers. Use `CODEX_CLI_VERSION` to pin that container install and
+`DOCKER_CODEX_CLI=codex` for the container binary path. Keep host-specific paths
+such as `/opt/homebrew/bin/codex` in `CODEX_CLI` for host workers only.
+The Docker worker leaves work queued in `cli` auth mode because it cannot access
+host Codex subscription auth; use the host worker for `cli` auth or Docker with
+`api_key` auth.
 
 The control center **Worker install** panel shows the same commands and marks
 the recommended lane based on the selected Codex auth mode.

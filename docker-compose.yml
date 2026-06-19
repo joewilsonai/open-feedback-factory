@@ -20,6 +20,7 @@ services:
     working_dir: /workspace
     command: >
       sh -lc "npm install -g pnpm@10.28.1 &&
+      if [ \"$${CODEX_RUNNER_MODE:-disabled}\" = \"codex\" ]; then npm install -g @openai/codex@$${CODEX_CLI_VERSION:-0.141.0}; fi &&
       pnpm install --frozen-lockfile=false &&
       DATABASE_URL=$${DOCKER_DATABASE_URL:-postgres://off:off@postgres:5432/open_feedback_factory}
       pnpm --filter @open-feedback-factory/db migrate &&
@@ -44,7 +45,8 @@ services:
       APPROVAL_MODE: ${APPROVAL_MODE:-manual}
       AUTO_MERGE_ENABLED: ${AUTO_MERGE_ENABLED:-false}
       CODEX_AUTH_MODE: ${CODEX_AUTH_MODE:-cli}
-      CODEX_CLI: ${CODEX_CLI:-codex}
+      CODEX_CLI: ${DOCKER_CODEX_CLI:-codex}
+      CODEX_CLI_VERSION: ${CODEX_CLI_VERSION:-0.141.0}
       CODEX_EFFORT: ${CODEX_EFFORT:-extra-high}
       CODEX_MODEL: ${CODEX_MODEL:-gpt-5.5}
       CODEX_RUNNER_MODE: ${CODEX_RUNNER_MODE:-disabled}
@@ -83,6 +85,7 @@ services:
     working_dir: /workspace
     command: >
       sh -lc "npm install -g pnpm@10.28.1 &&
+      if [ \"$${CODEX_RUNNER_MODE:-disabled}\" = \"codex\" ]; then npm install -g @openai/codex@$${CODEX_CLI_VERSION:-0.141.0}; fi &&
       pnpm install --frozen-lockfile=false &&
       pnpm --filter @open-feedback-factory/worker dev"
     depends_on:
@@ -92,7 +95,8 @@ services:
       API_BASE_URL: ${WORKER_API_BASE_URL:-http://api:4100}
       APPROVAL_MODE: ${APPROVAL_MODE:-manual}
       CODEX_AUTH_MODE: ${CODEX_AUTH_MODE:-cli}
-      CODEX_CLI: ${CODEX_CLI:-codex}
+      CODEX_CLI: ${DOCKER_CODEX_CLI:-codex}
+      CODEX_CLI_VERSION: ${CODEX_CLI_VERSION:-0.141.0}
       CODEX_EFFORT: ${CODEX_EFFORT:-extra-high}
       CODEX_MANAGE_GIT: ${CODEX_MANAGE_GIT:-false}
       CODEX_MODEL: ${CODEX_MODEL:-gpt-5.5}
@@ -114,6 +118,7 @@ services:
       GITHUB_OWNER: ${GITHUB_OWNER:-joewilsonai}
       GITHUB_REPO: ${GITHUB_REPO:-open-feedback-factory}
       GITHUB_PR_BASE: ${GITHUB_PR_BASE:-main}
+      OFF_WORKER_CONTAINER: "true"
       RUNNER_WORKSPACE: ${RUNNER_WORKSPACE:-/workspace}
       WORKER_NAME: ${WORKER_NAME:-docker-worker}
       WORKER_POLL_INTERVAL_MS: ${WORKER_POLL_INTERVAL_MS:-5000}

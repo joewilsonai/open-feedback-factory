@@ -13,6 +13,7 @@ import {
 import pg from "pg";
 
 const { Pool } = pg;
+const SAMPLE_ONLY_FEEDBACK_SOURCES = ["demo_seed", "sample_seed"];
 
 export interface FeedbackIntakeResult {
   feedbackId: string;
@@ -672,6 +673,12 @@ export class OpenFeedbackStore {
            where status = 'planned'
              and ($1::text is null or id = $1)
              and ($2::numeric is null or (cost_estimate ->> 'amountUsd')::numeric <= $2)
+             and exists (
+               select 1
+               from feedback_signals fs
+               where fs.cluster_key = work_items.cluster_key
+                 and fs.source <> all($3::text[])
+             )
            order by created_at asc
            for update skip locked
            limit 1
@@ -693,7 +700,7 @@ export class OpenFeedbackStore {
                    null::jsonb as latest_actual_cost,
                    null::text as latest_branch_name,
                    wi.created_at, wi.updated_at`,
-        [workItemId ?? null, maxFeatureCostUsd ?? null],
+        [workItemId ?? null, maxFeatureCostUsd ?? null, SAMPLE_ONLY_FEEDBACK_SOURCES],
       );
 
       const row = result.rows[0];
