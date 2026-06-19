@@ -115,10 +115,14 @@ The control center shows a GitHub App install wizard at
 manifest-based App registration flow. GitHub still requires a confirmation
 screen, then it returns to the local callback page where you can generate and
 copy the `GITHUB_MODE=app` env values for Docker. GitHub will not create a
-manifest-based App from `localhost` URLs. For local testing, run an HTTPS tunnel
-such as `tailscale funnel --bg --yes 4100` or
-`cloudflared tunnel --url http://localhost:4100`, set `PUBLIC_BASE_URL` to that
-tunnel URL, restart Docker, then use the wizard.
+manifest-based App from `localhost` URLs. For local testing, run
+`pnpm run tunnel:tailscale`, set `PUBLIC_BASE_URL` to the printed HTTPS URL,
+restart Docker, then use the wizard. The helper maps `/` to the demo app and
+keeps `/sdk`, `/admin`, `/runner`, `/doctor`, `/health`, and `/github` pointed
+at the API so the public demo and GitHub webhook callback work on one hostname.
+If Tailscale Funnel is not available, `cloudflared tunnel --url
+http://localhost:4100` can expose the API-only wizard path, but it will not serve
+the demo app unless you add equivalent routing.
 
 The API also exposes `/github/app/manifest`, `/github/app/setup`,
 `/github/app/installed`, and `/github/webhook` for the App installation and

@@ -12,6 +12,7 @@
     "docker:up": "docker compose up --build",
     "doctor": "node scripts/doctor.mjs",
     "render:prd": "node scripts/render-prd-html.mjs",
+    "tunnel:tailscale": "node scripts/tailscale-funnel.mjs",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck"
   },

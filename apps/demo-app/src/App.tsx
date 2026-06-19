@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createOpenFeedbackClient, type SubmitFeedbackResult } from "@open-feedback-factory/sdk";
 import "./styles.css";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4100";
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 
 const presets = [
   "Please add dark mode to settings",

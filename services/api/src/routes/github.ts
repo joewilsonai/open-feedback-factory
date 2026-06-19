@@ -29,7 +29,7 @@ export async function registerGithubRoutes(app: FastifyInstance, deps: AppDeps):
     <main>
       <h1>Prepare GitHub App Setup</h1>
       <p>GitHub will not create a manifest-based App from localhost URLs. Start a public HTTPS tunnel, set <code>PUBLIC_BASE_URL</code> to that tunnel URL, restart Docker, then return here.</p>
-      <pre>tailscale funnel --bg --yes 4100
+      <pre>pnpm run tunnel:tailscale
 tailscale funnel status</pre>
       <p>Cloudflared also works if Tailscale Funnel is not enabled:</p>
       <pre>cloudflared tunnel --url http://localhost:4100</pre>

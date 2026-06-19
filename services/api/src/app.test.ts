@@ -220,7 +220,7 @@ test("GitHub App manifest disables webhooks for localhost setup", async () => {
 
   const setup = await app.inject({ method: "GET", url: "/github/app/setup" });
   assert.match(setup.body, /GitHub will not create a manifest-based App from localhost URLs/);
-  assert.match(setup.body, /tailscale funnel --bg --yes 4100/);
+  assert.match(setup.body, /pnpm run tunnel:tailscale/);
   assert.match(setup.body, /cloudflared tunnel --url http:\/\/localhost:4100/);
   assert.doesNotMatch(setup.body, /https:\/\/github\.com\/settings\/apps\/new/);
 

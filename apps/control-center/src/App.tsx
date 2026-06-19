@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import "./styles.css";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4100";
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 
 interface Snapshot {
   counts: {
