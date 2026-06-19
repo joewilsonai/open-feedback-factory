@@ -39,7 +39,7 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(duplicateBeforeRun.createdWorkItem, false);
     assert.equal(duplicateBeforeRun.workItemId, intake.workItemId);
     assert.equal(duplicateBeforeRun.status.state, "grouped");
-    assert.match(duplicateBeforeRun.status.message, /matching request/);
+    assert.match(duplicateBeforeRun.status.message, /matching feedback/);
     assert.equal(await store.getFeedbackClusterSignalCount(decision.clusterKey), 2);
 
     const usageId = await store.recordFeatureUsage({
