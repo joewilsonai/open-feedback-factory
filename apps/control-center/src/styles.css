@@ -455,6 +455,47 @@ small {
   background: rgba(37, 91, 199, 0.08);
 }
 
+.demand-memory-panel {
+  min-height: 22rem;
+}
+
+.demand-stack {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.demand-row {
+  display: grid;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgba(22, 26, 31, 0.1);
+  padding-bottom: 0.75rem;
+}
+
+.demand-row strong,
+.demand-row span {
+  display: block;
+}
+
+.demand-row span {
+  margin-top: 0.25rem;
+  color: #52605a;
+  line-height: 1.4;
+}
+
+.demand-row dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  background: rgba(22, 26, 31, 0.13);
+}
+
+.demand-row dl div {
+  min-height: 4.25rem;
+  padding: 0.65rem;
+  background: #ffffff;
+}
+
 .detail-panel {
   min-height: 24rem;
 }
@@ -646,6 +687,10 @@ code {
 
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .demand-row dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .setup-grid {

@@ -35,6 +35,7 @@ export interface AppStore {
   getControlRoomSnapshot(): Promise<ControlRoomSnapshot>;
   getApprovalMode(defaultMode: ApiConfig["approvalMode"]): Promise<ApiConfig["approvalMode"]>;
   getCodexAuthMode(defaultMode: ApiConfig["codexAuthMode"]): Promise<ApiConfig["codexAuthMode"]>;
+  getFeedbackClusterSignalCount(clusterKey: string): Promise<number>;
   getUserFeedbackStatus(feedbackId: string): Promise<UserFeedbackStatus | null>;
   getWorkItem(id: string): Promise<WorkItemRow | null>;
   getWorkItemDetail(id: string): Promise<WorkItemDetail | null>;

@@ -38,6 +38,7 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(duplicateBeforeRun.workItemId, intake.workItemId);
     assert.equal(duplicateBeforeRun.status.state, "grouped");
     assert.match(duplicateBeforeRun.status.message, /matching request/);
+    assert.equal(await store.getFeedbackClusterSignalCount(decision.clusterKey), 2);
 
     const usageId = await store.recordFeatureUsage({
       action: "enabled",
@@ -51,6 +52,12 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(snapshot.counts.feedbackSignals > 0, true);
     assert.equal(snapshot.counts.featureUsageEvents > 0, true);
     assert.equal(snapshot.workItems.length > 0, true);
+    assert.equal(
+      snapshot.feedbackClusters.some(
+        (cluster) => cluster.clusterKey === decision.clusterKey && cluster.signalCount >= 2,
+      ),
+      true,
+    );
 
     const claimed = await store.claimNextWorkItem("db-test-worker", intake.workItemId ?? undefined);
     assert.equal(claimed?.id, intake.workItemId);

@@ -11,11 +11,25 @@ interface Snapshot {
     featureUsageEvents: number;
     openWorkItems: number;
   };
+  feedbackClusters: FeedbackCluster[];
   recentAgentRuns: Array<Record<string, unknown>>;
   recentAssumptions: Array<Record<string, unknown>>;
   recentFeedback: Array<Record<string, unknown>>;
   recentUsage: Array<Record<string, unknown>>;
   workItems: WorkItem[];
+}
+
+interface FeedbackCluster {
+  activeWorkItemId: string | null;
+  activeWorkItemStatus: string | null;
+  category: string;
+  clusterKey: string;
+  latestSignalAt: string;
+  latestStatus: string | null;
+  latestUserMessage: string | null;
+  signalCount: number;
+  title: string;
+  updatedAt: string;
 }
 
 interface WorkItem {
@@ -165,6 +179,7 @@ const emptySnapshot: Snapshot = {
     featureUsageEvents: 0,
     openWorkItems: 0,
   },
+  feedbackClusters: [],
   recentAgentRuns: [],
   recentAssumptions: [],
   recentFeedback: [],
@@ -487,6 +502,8 @@ export function App() {
             <p className="empty">No work items yet. Submit feedback from a connected app.</p>
           )}
         </div>
+
+        <DemandMemoryPanel clusters={snapshot.feedbackClusters} />
 
         <div className="panel detail-panel">
           <div className="panel-heading">
@@ -933,6 +950,37 @@ function ReconciliationPanel(props: { onRun: () => void }) {
   );
 }
 
+function DemandMemoryPanel(props: { clusters: FeedbackCluster[] }) {
+  return (
+    <div className="panel demand-memory-panel">
+      <div className="panel-heading">
+        <p className="eyebrow">Demand memory</p>
+        <h2>Backlog signals</h2>
+      </div>
+      {props.clusters.length ? (
+        <div className="demand-stack">
+          {props.clusters.slice(0, 8).map((cluster) => (
+            <article className="demand-row" key={cluster.clusterKey}>
+              <div>
+                <strong>{cluster.title}</strong>
+                <span>{cluster.latestUserMessage ?? "Signal recorded."}</span>
+              </div>
+              <dl>
+                <Detail label="Signals" value={String(cluster.signalCount)} />
+                <Detail label="Decision" value={demandDecisionLabel(cluster)} />
+                <Detail label="Category" value={titleCase(cluster.category)} />
+                <Detail label="Work item" value={cluster.activeWorkItemId ? workStatusLabel(cluster.activeWorkItemStatus ?? "") : "Waiting"} />
+              </dl>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="empty">No demand clusters yet.</p>
+      )}
+    </div>
+  );
+}
+
 function EvidenceLedgerPanel(props: {
   evidence: WorkItemEvidence | null;
   loading: boolean;
@@ -1179,6 +1227,15 @@ function workStatusLabel(status: string): string {
   if (status === "failed") return "Needs human review";
   if (status === "not_planned") return "Not planned";
   return titleCase(status);
+}
+
+function demandDecisionLabel(cluster: FeedbackCluster): string {
+  if (cluster.activeWorkItemId) return "Promoted to work";
+  if (cluster.latestStatus === "needs_more_signal") return `Needs ${Math.max(0, 2 - cluster.signalCount)} more`;
+  if (cluster.latestStatus === "blocked") return "Blocked";
+  if (cluster.latestStatus === "not_planned") return "Not planned";
+  if (cluster.latestStatus) return userStatusLabel(cluster.latestStatus);
+  return "Recorded";
 }
 
 function codexAuthModeLabel(mode: string): string {

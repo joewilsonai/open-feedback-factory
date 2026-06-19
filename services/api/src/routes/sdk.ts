@@ -1,4 +1,4 @@
-import { routeFeedback, sanitizeFeedback, type FeedbackInput } from "@open-feedback-factory/core";
+import { clusterKeyForFeedback, routeFeedback, sanitizeFeedback, type FeedbackInput } from "@open-feedback-factory/core";
 import type { GitHubIssueInput } from "@open-feedback-factory/runner";
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
@@ -32,9 +32,12 @@ export async function registerSdkRoutes(app: FastifyInstance, deps: AppDeps): Pr
       userId: request.body.userId,
     };
     const sanitized = sanitizeFeedback(feedback);
+    const clusterKey = clusterKeyForFeedback(sanitized);
+    const previousSignalCount = await deps.store.getFeedbackClusterSignalCount(clusterKey);
     const decision = routeFeedback({
       model: "gpt-5.5",
       sanitized,
+      signalCount: previousSignalCount + 1,
     });
     const intake = await deps.store.createFeedbackIntake({ decision, feedback, sanitized });
     let githubIssueError: string | null = null;
