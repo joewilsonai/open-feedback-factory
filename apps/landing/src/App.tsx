@@ -1,14 +1,15 @@
 const githubUrl = "https://github.com/joewilsonai/open-feedback-factory";
+const demoRepoUrl = "https://github.com/joewilsonai/launchbrief-demo";
 const betaMailto =
   "mailto:hello@openfeedbackfactory.com?subject=Open%20Feedback%20Factory%20private%20beta";
-const hostedDemoUrl = "https://demo-app-production-9a5a.up.railway.app";
-const hostedControlCenterUrl = "https://control-center-production-02f0.up.railway.app/ops/";
+const hostedDemoUrl = "https://launchbrief-demo.vercel.app";
+const hostedControlCenterUrl = "https://app.openfeedbackfactory.com/ops/";
 
 const lifecycle = [
   {
     step: "01",
-    title: "Capture the real request",
-    body: "Drop a small SDK suggestion button into your app and collect beta feedback with enough context to act.",
+    title: "Connect a real repo",
+    body: "Start with a clean app repo, then let OFF create the SDK-install PR instead of pretending the integration already exists.",
   },
   {
     step: "02",
@@ -88,7 +89,7 @@ export function App() {
           </div>
           <div className="hero-proof" aria-label="Live product proof">
             <span className="signal live">live hosted control center</span>
-            <span>real queued Daybook request, runner paused by policy</span>
+            <span>clean LaunchBrief repo, SDK install is the next real PR</span>
           </div>
         </div>
       </section>
@@ -165,11 +166,12 @@ export function App() {
           </p>
           <div className="control-links">
             <a href={hostedControlCenterUrl}>Private hosted control center</a>
-            <a href={hostedDemoUrl}>Hosted Daybook demo</a>
+            <a href={hostedDemoUrl}>Hosted LaunchBrief app</a>
+            <a href={demoRepoUrl}>LaunchBrief repo</a>
           </div>
         </div>
         <div className="operator-panel" aria-label="Control center states">
-          <img src="/control-center-live.png" alt="Live hosted Open Feedback Factory control center with one queued Daybook feature request" />
+          <img src="/control-center-live.png" alt="Live hosted Open Feedback Factory control center" />
         </div>
       </section>
 
@@ -198,8 +200,8 @@ export function App() {
           <p className="eyebrow">SDK button</p>
           <h2 id="sdk-title">A tiny button with enough context to matter.</h2>
           <p>
-            The app-side SDK captures the screen, intent, and requesting user so
-            your team can connect shipped work back to the people who asked for it.
+            The demo app starts without this button. The product moment is
+            connecting the repo and letting OFF open the PR that installs it.
           </p>
         </div>
         <div className="sdk-card" aria-label="SDK event preview">

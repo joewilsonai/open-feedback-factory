@@ -24,6 +24,11 @@ Default local URLs:
 - Demo app: `http://localhost:5174`
 - Postgres: `localhost:55432`
 
+Hosted Demo Alpha uses the separate `joewilsonai/launchbrief-demo` repo and
+`https://launchbrief-demo.vercel.app`. LaunchBrief intentionally starts without
+the OFF SDK installed. Do not pre-wire the SDK into that repo unless the task is
+the real SDK-install PR/demo step.
+
 Private dogfood auth:
 
 - `ADMIN_TOKEN` protects `/admin/*` and control-center mutations when set.

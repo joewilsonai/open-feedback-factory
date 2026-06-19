@@ -13,6 +13,9 @@ describe("control center UI contract", () => {
     expect(source).toContain("authorization");
     expect(source).toContain("localStorage");
     expect(source).toContain("Install wizard");
+    expect(source).toContain("Hosted demo alpha");
+    expect(source).toContain("LaunchBrief repo loop");
+    expect(source).toContain("SDK-install PR");
     expect(source).toContain("Create GitHub App");
     expect(source).toContain("Webhooks");
     expect(source).toContain("Work items");

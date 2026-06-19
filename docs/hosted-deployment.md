@@ -23,7 +23,7 @@ Vercel:
 | Landing | `https://openfeedbackfactory.com` | Public landing page |
 | API | `https://api.openfeedbackfactory.com` | Feedback intake, admin API, runner API, GitHub App setup, doctor/health |
 | Control center | `https://app.openfeedbackfactory.com/ops/` | Private operator UI |
-| Demo app | `https://demo.openfeedbackfactory.com` | Hosted Daybook SDK demo |
+| Demo app | `https://launchbrief-demo.vercel.app` | Clean LaunchBrief app with no OFF SDK installed |
 | Worker | Railway private service | Deployed but disabled until real runner credentials are configured |
 | Postgres | Railway private service | Hosted V1 database |
 
@@ -32,7 +32,7 @@ Temporary provider URLs still exist for recovery/debugging:
 - landing: `https://open-feedback-factory.vercel.app`;
 - API: `https://api-production-d6ee.up.railway.app`;
 - control center: `https://control-center-production-02f0.up.railway.app/ops/`;
-- demo app: `https://demo-app-production-9a5a.up.railway.app`.
+- legacy Daybook demo app: `https://demo-app-production-9a5a.up.railway.app`.
 
 The local hosted admin token is stored outside git at:
 
@@ -52,7 +52,7 @@ Use Vercel for the public landing page and Railway for the app/runtime services:
 | `www.openfeedbackfactory.com` | Vercel landing page or redirect to apex |
 | `app.openfeedbackfactory.com` | Railway control center |
 | `api.openfeedbackfactory.com` | Railway API |
-| `demo.openfeedbackfactory.com` | Railway hosted Daybook demo |
+| `demo.openfeedbackfactory.com` | Railway hosted Daybook demo, legacy/internal |
 | `openfeedbackfactory.dev` | Redirect or developer docs later |
 | `openfeedbackfactory.org` | Redirect later |
 
@@ -110,6 +110,20 @@ This means hosted feedback can be received, sanitized, clustered, cost-estimated
 and shown in the control center. It should not claim agent implementation,
 GitHub issue creation, PR creation, cost actuals, release proof, or shipped
 status until the relevant real integrations are configured.
+
+## Hosted Demo Alpha
+
+The current demo app for the near-term hosted demo is LaunchBrief:
+
+- app: `https://launchbrief-demo.vercel.app`;
+- repo: `https://github.com/joewilsonai/launchbrief-demo`.
+
+LaunchBrief intentionally starts without the OFF SDK installed. The demo should
+show OFF connecting to this repo and creating a real PR that adds the SDK
+launcher. Keep Daybook available as an internal SDK smoke app, but do not use it
+as the main demo story.
+
+See [Hosted Demo Alpha](./hosted-demo-alpha.md).
 
 ## Landing Page
 

@@ -50,8 +50,9 @@ are configured.
 - Hosted trial/sandbox path for developers who want to test before installing.
 - Web SDK first, including a floating suggestion launcher with automatic
   in-widget request status tracking.
-- Hosted landing page and hosted Daybook demo for developers who need to see
-  the loop before self-hosting.
+- Hosted landing page and hosted LaunchBrief demo for developers who need to
+  see the loop before self-hosting. LaunchBrief intentionally starts without
+  the OFF SDK so the demo can show a real SDK-install PR.
 - Postgres database.
 - GitHub App integration.
 - Codex-only built-in runner.
@@ -372,6 +373,7 @@ in-progress work.
 - [Agent install guide](docs/agent-install.md)
 - [Agent runner setup](docs/agent-runner-setup.md)
 - [Hosted deployment](docs/hosted-deployment.md)
+- [Hosted Demo Alpha](docs/hosted-demo-alpha.md)
 - [V1 dogfood build checklist](docs/v1-dogfood-build-checklist.md)
 - [V1 test strategy](docs/v1-test-strategy.md)
 - [PRD](docs/feedback-to-feature-platform-prd.md)

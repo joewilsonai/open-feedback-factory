@@ -209,6 +209,65 @@ small {
   min-height: 14rem;
 }
 
+.hosted-demo-panel {
+  grid-column: 1 / -1;
+  min-height: 18rem;
+}
+
+.demo-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin: 1rem 0;
+}
+
+.demo-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid rgba(22, 26, 31, 0.16);
+  background: rgba(22, 26, 31, 0.16);
+}
+
+.demo-stage {
+  display: grid;
+  gap: 0.4rem;
+  min-height: 8rem;
+  padding: 0.9rem;
+  background: #ffffff;
+}
+
+.demo-stage strong {
+  color: #65706c;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.demo-stage h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.demo-stage p {
+  color: #65706c;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.demo-stage.ready {
+  box-shadow: inset 0 3px 0 #0f6b4f;
+}
+
+.demo-stage.waiting {
+  box-shadow: inset 0 3px 0 #b08b21;
+}
+
+.demo-stage.blocked {
+  box-shadow: inset 0 3px 0 #8a4f00;
+}
+
 .admin-access-panel.blocked {
   box-shadow: inset 0 0 0 2px #8a4f00;
 }
@@ -846,6 +905,10 @@ code {
     grid-template-columns: 1fr;
   }
 
+  .demo-stage-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .secret-row {
     grid-template-columns: 1fr;
   }
@@ -859,6 +922,12 @@ code {
   }
 
   .lifecycle-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .demo-stage-grid {
     grid-template-columns: 1fr;
   }
 }

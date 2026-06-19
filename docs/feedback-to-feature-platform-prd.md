@@ -2380,15 +2380,17 @@ There should also be a hosted trial/sandbox path available in parallel with the
 self-hosted install. Many indie developers will not be ready to configure
 Docker, tunnels, GitHub Apps, workers, and secrets just to understand the loop.
 The hosted version should let them connect a test repo or starter repo, install
-the SDK snippet, submit real feedback, watch the lifecycle, and see a guarded
-PR path without pretending work shipped. This is both an onboarding path and a
-demo surface.
+the SDK snippet through a real repository change, submit real feedback, watch
+the lifecycle, and see a guarded PR path without pretending work shipped. This
+is both an onboarding path and a demo surface.
 
 Private V1 hosted architecture:
 
-- Railway hosts the API, control center, hosted demo app, disabled-by-default
-  worker, and Postgres.
+- Railway hosts the API, control center, legacy/internal Daybook SDK smoke app,
+  disabled-by-default worker, and Postgres.
 - Vercel hosts the public landing page from `apps/landing`.
+- Vercel hosts the LaunchBrief demo app, which intentionally starts without
+  the OFF SDK installed so the demo can show the SDK-install PR.
 - Hostinger owns DNS for `openfeedbackfactory.com`, `openfeedbackfactory.dev`,
   and `openfeedbackfactory.org`.
 
@@ -2398,7 +2400,8 @@ Target domain map:
 - `www.openfeedbackfactory.com`: redirect or alias to the landing page;
 - `app.openfeedbackfactory.com`: hosted control center;
 - `api.openfeedbackfactory.com`: hosted API;
-- `demo.openfeedbackfactory.com`: hosted Daybook demo;
+- `demo.openfeedbackfactory.com`: legacy/internal Daybook demo;
+- `launchbrief-demo.vercel.app`: clean hosted LaunchBrief demo app;
 - `openfeedbackfactory.dev`: developer docs or redirect later;
 - `openfeedbackfactory.org`: redirect later.
 
@@ -2451,8 +2454,10 @@ actually connected.
   credential-backed actions.
 - Agent playbook registry with native product, engineering, design, security,
   QA, release, docs, and retro/learning playbooks.
-- Real Daybook demo app and seed scenario with no fake PRs, fake costs, fake
-  releases, or fake shipped states.
+- Real LaunchBrief hosted demo app and repo that start without the OFF SDK so
+  the product can demo a real SDK-install PR.
+- Real Daybook local/internal SDK smoke app and seed scenario with no fake PRs,
+  fake costs, fake releases, or fake shipped states.
 - Sample seed/reset path that keeps dry-run installs honest and prevents
   integration-test rows from polluting the control center.
 - Maintenance/doctor command.
@@ -3060,7 +3065,9 @@ with an open-source wedge and GitHub-native developer workflow.
 
 ## 24. First Demo Script
 
-The demo should use a tiny real app, not a mock dashboard.
+The demo should use a tiny real app, not a mock dashboard. The near-term hosted
+demo app is LaunchBrief: a clean product-launch workspace with no OFF SDK
+installed at the start.
 
 The first demo has two modes:
 
@@ -3073,16 +3080,24 @@ The first demo has two modes:
 
 Scenario:
 
-1. A beta user says: "Please add note search so I can find older notes."
-2. The control center receives and clusters the request.
-3. The system estimates cost and marks it safe.
-4. A sanitized GitHub issue is created.
-5. The agent opens a PR adding note search.
-6. Tests pass.
-7. Reviewer, check, policy, cost, and provenance gates pass.
-8. The PR merges only if the configured merge mode allows it.
-9. A release marker or deployment detector proves the change is available.
-10. The user sees: "Shipped: note search is now available."
+1. Open `https://launchbrief-demo.vercel.app`.
+2. Show LaunchBrief is a normal app: tasks, beta signals, no feedback launcher,
+   and no OFF SDK dependency.
+3. Open the OFF control center and show the Hosted Demo Alpha panel.
+4. Connect the `joewilsonai/launchbrief-demo` repo through the OFF GitHub App.
+5. Approve the SDK-install work item.
+6. OFF creates a real sanitized issue or PR lane for adding the SDK launcher.
+7. The worker opens a PR against the LaunchBrief repo.
+8. Tests pass.
+9. Reviewer, check, policy, cost, and provenance gates pass.
+10. The PR merges only if the configured merge mode allows it.
+11. Vercel redeploys LaunchBrief from the repo.
+12. The user submits real feedback through the newly installed launcher.
+13. The control center receives and clusters the request.
+14. The system estimates cost, routes the item, records assumptions, and shows
+    any missing GitHub, worker, release-proof, or cost-capture configuration.
+15. A release marker or deployment detector proves a later feature change is
+    available before the user sees a shipped status.
 
 The demo must also show a negative path:
 

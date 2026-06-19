@@ -3,6 +3,8 @@ import "./styles.css";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 const adminTokenStorageKey = "open-feedback-factory.admin-token";
+const launchBriefAppUrl = "https://launchbrief-demo.vercel.app";
+const launchBriefRepoUrl = "https://github.com/joewilsonai/launchbrief-demo";
 const liveSyncIntervalMs = 4_000;
 
 interface Snapshot {
@@ -607,6 +609,7 @@ export function App() {
       </section>
 
       <section className="console-grid">
+        <HostedDemoAlphaPanel doctor={doctor} feedbackCount={snapshot.counts.feedbackSignals} openWorkCount={snapshot.counts.openWorkItems} />
         <AdminAccessPanel
           adminAuthBlocked={adminAuthBlocked}
           adminTokenInput={adminTokenInput}
@@ -754,6 +757,65 @@ export function App() {
         <ActivityPanel title="Feature usage" rows={snapshot.recentUsage} />
       </section>
     </main>
+  );
+}
+
+function HostedDemoAlphaPanel(props: { doctor: Doctor | null; feedbackCount: number; openWorkCount: number }) {
+  const githubReady = Boolean(props.doctor?.githubAppConfigured && props.doctor.githubMode === "app");
+  const workerReady = Boolean(props.doctor?.codexRunnerMode === "codex" && credentialsReady(props.doctor));
+
+  return (
+    <div className="panel hosted-demo-panel">
+      <div className="panel-heading">
+        <p className="eyebrow">Hosted demo alpha</p>
+        <h2>LaunchBrief repo loop</h2>
+      </div>
+      <p className="mode-note">
+        LaunchBrief is the clean app for the demo. It intentionally starts without the OFF SDK so the demo can show the
+        factory connecting the repo and creating a real SDK-install PR.
+      </p>
+      <div className="demo-link-row">
+        <a className="button-link primary" href={launchBriefAppUrl}>
+          Open LaunchBrief
+        </a>
+        <a className="button-link" href={launchBriefRepoUrl}>
+          View repo
+        </a>
+      </div>
+      <div className="demo-stage-grid">
+        <DemoStage title="Clean app" state="Live" detail="No OFF SDK installed yet" tone="ready" />
+        <DemoStage title="Repo" state="Live" detail="Private GitHub repo created" tone="ready" />
+        <DemoStage
+          title="GitHub App"
+          state={githubReady ? "Ready" : "Needed"}
+          detail={githubReady ? "Can create sanitized issues/PRs" : "Connect app before mutation"}
+          tone={githubReady ? "ready" : "blocked"}
+        />
+        <DemoStage
+          title="Worker"
+          state={workerReady ? "Ready" : "Disabled"}
+          detail={workerReady ? "Can run approved work" : "Prepared but not attached"}
+          tone={workerReady ? "ready" : "blocked"}
+        />
+        <DemoStage title="SDK install" state="Next" detail="OFF should create this PR" tone="waiting" />
+        <DemoStage
+          title="Feedback loop"
+          state={props.feedbackCount ? "Active" : "Waiting"}
+          detail={`${props.feedbackCount} signals, ${props.openWorkCount} open work items`}
+          tone={props.feedbackCount ? "ready" : "waiting"}
+        />
+      </div>
+    </div>
+  );
+}
+
+function DemoStage(props: { detail: string; state: string; title: string; tone: "blocked" | "ready" | "waiting" }) {
+  return (
+    <article className={`demo-stage ${props.tone}`}>
+      <strong>{props.state}</strong>
+      <h3>{props.title}</h3>
+      <p>{props.detail}</p>
+    </article>
   );
 }
 

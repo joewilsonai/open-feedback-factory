@@ -2516,12 +2516,14 @@ feedback-factory demo</code></pre>
 <li>priority support.</li>
 </ul>
 <p>The open-source product should remain credible and useful. The hosted product should win on setup, reliability, observability, and scale.</p>
-<p>There should also be a hosted trial/sandbox path available in parallel with the self-hosted install. Many indie developers will not be ready to configure Docker, tunnels, GitHub Apps, workers, and secrets just to understand the loop. The hosted version should let them connect a test repo or starter repo, install the SDK snippet, submit real feedback, watch the lifecycle, and see a guarded PR path without pretending work shipped. This is both an onboarding path and a demo surface.</p>
+<p>There should also be a hosted trial/sandbox path available in parallel with the self-hosted install. Many indie developers will not be ready to configure Docker, tunnels, GitHub Apps, workers, and secrets just to understand the loop. The hosted version should let them connect a test repo or starter repo, install the SDK snippet through a real repository change, submit real feedback, watch the lifecycle, and see a guarded PR path without pretending work shipped. This is both an onboarding path and a demo surface.</p>
 <p>Private V1 hosted architecture:</p>
 <ul>
-<li>Railway hosts the API, control center, hosted demo app, disabled-by-default</li>
-<p>worker, and Postgres.</p>
+<li>Railway hosts the API, control center, legacy/internal Daybook SDK smoke app,</li>
+<p>disabled-by-default worker, and Postgres.</p>
 <li>Vercel hosts the public landing page from <code>apps/landing</code>.</li>
+<li>Vercel hosts the LaunchBrief demo app, which intentionally starts without</li>
+<p>the OFF SDK installed so the demo can show the SDK-install PR.</p>
 <li>Hostinger owns DNS for <code>openfeedbackfactory.com</code>, <code>openfeedbackfactory.dev</code>,</li>
 <p>and <code>openfeedbackfactory.org</code>.</p>
 </ul>
@@ -2531,7 +2533,8 @@ feedback-factory demo</code></pre>
 <li><code>www.openfeedbackfactory.com</code>: redirect or alias to the landing page;</li>
 <li><code>app.openfeedbackfactory.com</code>: hosted control center;</li>
 <li><code>api.openfeedbackfactory.com</code>: hosted API;</li>
-<li><code>demo.openfeedbackfactory.com</code>: hosted Daybook demo;</li>
+<li><code>demo.openfeedbackfactory.com</code>: legacy/internal Daybook demo;</li>
+<li><code>launchbrief-demo.vercel.app</code>: clean hosted LaunchBrief demo app;</li>
 <li><code>openfeedbackfactory.dev</code>: developer docs or redirect later;</li>
 <li><code>openfeedbackfactory.org</code>: redirect later.</li>
 </ul>
@@ -2575,8 +2578,10 @@ feedback-factory demo</code></pre>
 <p>credential-backed actions.</p>
 <li>Agent playbook registry with native product, engineering, design, security,</li>
 <p>QA, release, docs, and retro/learning playbooks.</p>
-<li>Real Daybook demo app and seed scenario with no fake PRs, fake costs, fake</li>
-<p>releases, or fake shipped states.</p>
+<li>Real LaunchBrief hosted demo app and repo that start without the OFF SDK so</li>
+<p>the product can demo a real SDK-install PR.</p>
+<li>Real Daybook local/internal SDK smoke app and seed scenario with no fake PRs,</li>
+<p>fake costs, fake releases, or fake shipped states.</p>
 <li>Sample seed/reset path that keeps dry-run installs honest and prevents</li>
 <p>integration-test rows from polluting the control center.</p>
 <li>Maintenance/doctor command.</li>
@@ -2893,7 +2898,7 @@ feedback-factory demo</code></pre>
 <li>Whether to add a public roadmap, changelog widget, or voting board.</li>
 </ul>
 <h2 id="24-first-demo-script"><a class="heading-anchor" href="#24-first-demo-script" aria-label="Link to 24. First Demo Script">#</a>24. First Demo Script</h2>
-<p>The demo should use a tiny real app, not a mock dashboard.</p>
+<p>The demo should use a tiny real app, not a mock dashboard. The near-term hosted demo app is LaunchBrief: a clean product-launch workspace with no OFF SDK installed at the start.</p>
 <p>The first demo has two modes:</p>
 <ul>
 <li>dry-run demo: local education mode with seeded/sample data clearly labeled,</li>
@@ -2903,16 +2908,24 @@ feedback-factory demo</code></pre>
 </ul>
 <p>Scenario:</p>
 <ol>
-<li>A beta user says: &quot;Please add note search so I can find older notes.&quot;</li>
-<li>The control center receives and clusters the request.</li>
-<li>The system estimates cost and marks it safe.</li>
-<li>A sanitized GitHub issue is created.</li>
-<li>The agent opens a PR adding note search.</li>
+<li>Open <code>https://launchbrief-demo.vercel.app</code>.</li>
+<li>Show LaunchBrief is a normal app: tasks, beta signals, no feedback launcher,</li>
+<p>and no OFF SDK dependency.</p>
+<li>Open the OFF control center and show the Hosted Demo Alpha panel.</li>
+<li>Connect the <code>joewilsonai/launchbrief-demo</code> repo through the OFF GitHub App.</li>
+<li>Approve the SDK-install work item.</li>
+<li>OFF creates a real sanitized issue or PR lane for adding the SDK launcher.</li>
+<li>The worker opens a PR against the LaunchBrief repo.</li>
 <li>Tests pass.</li>
 <li>Reviewer, check, policy, cost, and provenance gates pass.</li>
 <li>The PR merges only if the configured merge mode allows it.</li>
-<li>A release marker or deployment detector proves the change is available.</li>
-<li>The user sees: &quot;Shipped: note search is now available.&quot;</li>
+<li>Vercel redeploys LaunchBrief from the repo.</li>
+<li>The user submits real feedback through the newly installed launcher.</li>
+<li>The control center receives and clusters the request.</li>
+<li>The system estimates cost, routes the item, records assumptions, and shows</li>
+<p>any missing GitHub, worker, release-proof, or cost-capture configuration.</p>
+<li>A release marker or deployment detector proves a later feature change is</li>
+<p>available before the user sees a shipped status.</p>
 </ol>
 <p>The demo must also show a negative path:</p>
 <ol>
