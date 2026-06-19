@@ -1,8 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createOpenFeedbackClient, type SubmitFeedbackResult } from "@open-feedback-factory/sdk";
 import "./styles.css";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
+const themeStorageKey = "open-feedback-factory-demo-theme";
+
+type ThemePreference = "light" | "dark";
 
 const presets = [
   "Please add dark mode to settings",
@@ -10,11 +13,31 @@ const presets = [
   "Make the dashboard more delightful",
 ];
 
+function readThemePreference(): ThemePreference {
+  if (typeof window === "undefined") return "light";
+
+  try {
+    return window.localStorage.getItem(themeStorageKey) === "dark" ? "dark" : "light";
+  } catch {
+    return "light";
+  }
+}
+
+function writeThemePreference(theme: ThemePreference) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(themeStorageKey, theme);
+  } catch {
+    // The visual theme should still work when browser storage is unavailable.
+  }
+}
+
 export function App() {
   const [message, setMessage] = useState(presets[0] ?? "");
   const [result, setResult] = useState<SubmitFeedbackResult | null>(null);
   const [status, setStatus] = useState<string>("Ready");
-  const [darkModeUsed, setDarkModeUsed] = useState(false);
+  const [theme, setTheme] = useState<ThemePreference>(() => readThemePreference());
   const client = useMemo(
     () =>
       createOpenFeedbackClient({
@@ -28,6 +51,11 @@ export function App() {
       }),
     [],
   );
+  const darkModeEnabled = theme === "dark";
+
+  useEffect(() => {
+    writeThemePreference(theme);
+  }, [theme]);
 
   async function submitFeedback() {
     setStatus("Sending feedback...");
@@ -46,19 +74,29 @@ export function App() {
     setStatus(next.label);
   }
 
-  async function trackUsage() {
-    await client.trackFeatureUsage({
-      action: "enabled",
-      featureId: "dark-mode",
-      metadata: {
-        source: "demo-button",
-      },
-    });
-    setDarkModeUsed(true);
+  function trackDarkModeUsage() {
+    void client
+      .trackFeatureUsage({
+        action: "enabled",
+        featureId: "dark-mode",
+        metadata: {
+          source: "demo-theme-toggle",
+        },
+      })
+      .catch(() => undefined);
+  }
+
+  function toggleDarkMode() {
+    const nextTheme = darkModeEnabled ? "light" : "dark";
+    setTheme(nextTheme);
+
+    if (nextTheme === "dark") {
+      trackDarkModeUsage();
+    }
   }
 
   return (
-    <main className={darkModeUsed ? "app dark" : "app"}>
+    <main className={darkModeEnabled ? "app dark" : "app"}>
       <section className="workspace" aria-labelledby="demo-title">
         <div className="product-pane">
           <p className="eyebrow">Toy product</p>
@@ -73,12 +111,21 @@ export function App() {
               <p className="mini-label">Current feature</p>
               <h2>Calm writing mode</h2>
               <p>
-                A focused editor shell with a future appearance toggle. The demo request
-                asks the factory to add that dark mode path safely.
+                A focused editor shell with a saved appearance toggle. The demo request
+                asks the factory to keep that dark mode path durable.
               </p>
             </div>
-            <button className="icon-button" type="button" onClick={trackUsage}>
-              {darkModeUsed ? "Dark mode used" : "Use dark mode"}
+            <button
+              className="theme-toggle"
+              type="button"
+              role="switch"
+              aria-checked={darkModeEnabled}
+              onClick={toggleDarkMode}
+            >
+              <span>{darkModeEnabled ? "Dark mode on" : "Dark mode off"}</span>
+              <span className="toggle-track" aria-hidden="true">
+                <span className="toggle-thumb" />
+              </span>
             </button>
           </div>
         </div>

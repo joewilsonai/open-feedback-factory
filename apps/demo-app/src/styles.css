@@ -18,6 +18,7 @@ textarea {
 }
 
 .app {
+  color-scheme: light;
   min-height: 100vh;
   padding: clamp(1rem, 4vw, 3rem);
   background:
@@ -28,6 +29,7 @@ textarea {
 }
 
 .app.dark {
+  color-scheme: dark;
   color: #f5f6ef;
   background:
     linear-gradient(90deg, rgba(245, 246, 239, 0.05) 1px, transparent 1px) 0 0 / 46px 46px,
@@ -169,18 +171,64 @@ button:hover {
   transform: translateY(-1px);
 }
 
-.primary-action,
-.icon-button {
+.primary-action {
   color: white;
   background: #171a1f;
   border-color: #171a1f;
 }
 
-.dark .primary-action,
-.dark .icon-button {
+.dark .primary-action {
   color: #11161f;
   background: #7ae4be;
   border-color: #7ae4be;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  justify-self: start;
+  min-width: 11rem;
+  border-color: rgba(23, 26, 31, 0.34);
+  color: #f5f6ef;
+  font-weight: 850;
+  background: #171a1f;
+}
+
+.dark .theme-toggle {
+  border-color: #7ae4be;
+  color: #11161f;
+  background: #7ae4be;
+}
+
+.toggle-track {
+  display: inline-flex;
+  align-items: center;
+  width: 2.7rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  padding: 0.2rem;
+  background: rgba(255, 255, 255, 0.22);
+  transition: background 180ms ease;
+}
+
+.toggle-thumb {
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.theme-toggle[aria-checked="true"] .toggle-track {
+  background: rgba(17, 22, 31, 0.22);
+}
+
+.theme-toggle[aria-checked="true"] .toggle-thumb {
+  transform: translateX(1.25rem);
+  background: #11161f;
 }
 
 .preset-row {
