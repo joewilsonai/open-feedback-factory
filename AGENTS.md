@@ -62,7 +62,16 @@ These rules must survive context loss, compaction, new agents, and new sessions.
    calls, spec fidelity, and the final gate on demo- or trust-facing work. Route
    taste, honesty, and vision calls to Luna; Codex drives planning and
    mechanical execution.
-6. **Current Round Context:** The durable demo is an onboarding handoff: a user
+6. **Research First / Do Not Assume:** Before implementing anything that touches
+   established libraries, APIs, platform integrations, auth flows, data-fetching
+   patterns, security controls, or recognized best practices, do a current
+   research pass using primary sources or a dedicated research agent. Build from
+   the findings, not from memory or habit. Record the conclusion and any rejected
+   alternatives in the plan, PR, or run output. Apply this especially to Codex
+   runner auth, GitHub/Vercel/Railway integration, and control-center data
+   fetching; prefer proven patterns such as stale-while-revalidate libraries
+   over hand-rolled polling when they fit the codebase.
+7. **Current Round Context:** The durable demo is an onboarding handoff: a user
    points a clean SDK-less plant-care app repo at OFF, and OFF does the rest.
    Prepare public distribution for only `@open-feedback-factory/sdk`; keep the
    OFF repo private. Hold the actual SDK publish for Joe.
