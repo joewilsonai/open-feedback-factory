@@ -8,7 +8,7 @@ export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 export async function claimJob(config: WorkerConfig, fetchImpl: FetchLike = fetch): Promise<WorkItemRow | null> {
   const response = await fetchImpl(`${config.apiBaseUrl}/runner/jobs/claim`, {
     body: JSON.stringify({ workItemId: config.workItemId, workerName: config.workerName }),
-    headers: { "content-type": "application/json" },
+    headers: runnerHeaders(config),
     method: "POST",
   });
   if (!response.ok) throw new Error(`Failed to claim runner job: ${response.status} ${await response.text()}`);
@@ -41,7 +41,7 @@ export async function completeJob(
       status: result.status,
       summary: result.summary,
     }),
-    headers: { "content-type": "application/json" },
+    headers: runnerHeaders(config),
     method: "POST",
   });
   if (!response.ok) throw new Error(`Failed to complete runner job: ${response.status} ${await response.text()}`);
@@ -158,6 +158,13 @@ async function fetchRuntimeSettings(
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function runnerHeaders(config: WorkerConfig): HeadersInit {
+  return {
+    "content-type": "application/json",
+    ...(config.runnerToken ? { "x-off-runner-token": config.runnerToken } : {}),
+  };
 }
 
 function buildRunnerAssumptionRecord(result: RunnerResult, config: WorkerConfig): Record<string, unknown> {

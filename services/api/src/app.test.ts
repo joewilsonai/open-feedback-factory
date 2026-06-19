@@ -335,6 +335,7 @@ test("doctor exposes setup wizard links", async () => {
   const response = await app.inject({ method: "GET", url: "/doctor" });
 
   assert.equal(response.statusCode, 200);
+  assert.equal(response.json().adminAuthRequired, false);
   assert.equal(response.json().controlCenterUrl, "http://control.test");
   assert.equal(response.json().approvalMode, "auto");
   assert.equal(response.json().codexAuthMode, "cli");
@@ -342,10 +343,107 @@ test("doctor exposes setup wizard links", async () => {
   assert.equal(response.json().githubAppSetupUrl, "http://api.test/github/app/setup");
   assert.equal(response.json().githubWebhookUrl, "http://api.test/github/webhook");
   assert.equal(response.json().githubWebhooksEnabled, true);
+  assert.equal(response.json().runnerAuthRequired, false);
   assert.equal(response.json().runnerInstall.recommendedMode, "host_cli");
   assert.equal(response.json().runnerInstall.hostCli.installCommand, "pnpm worker:install:host");
   assert.equal(response.json().runnerInstall.hostCli.statusCommand, "pnpm worker:status:host");
   assert.equal(response.json().runnerInstall.dockerApiKey.startCommand, "docker compose up -d --build worker");
+
+  await app.close();
+});
+
+test("admin routes require the configured admin token without leaking it through doctor", async () => {
+  const app = await buildApp({
+    config: { ...config, adminToken: "admin-test-token" },
+    store: new MemoryStore(),
+  });
+
+  const blocked = await app.inject({ method: "GET", url: "/admin/control-room" });
+  assert.equal(blocked.statusCode, 401);
+  assert.equal(blocked.json().error, "admin_auth_required");
+
+  const bad = await app.inject({
+    headers: { "x-off-admin-token": "wrong-token" },
+    method: "GET",
+    url: "/admin/control-room",
+  });
+  assert.equal(bad.statusCode, 401);
+
+  const allowed = await app.inject({
+    headers: { authorization: "Bearer admin-test-token" },
+    method: "GET",
+    url: "/admin/control-room",
+  });
+  assert.equal(allowed.statusCode, 200);
+
+  const doctor = await app.inject({ method: "GET", url: "/doctor" });
+  assert.equal(doctor.statusCode, 200);
+  assert.equal(doctor.json().adminAuthRequired, true);
+  assert.equal("adminToken" in doctor.json(), false);
+
+  await app.close();
+});
+
+test("runner routes require the configured runner token", async () => {
+  const store = new MemoryStore();
+  store.approvalMode = "auto";
+  const app = await buildApp({
+    config: { ...config, runnerToken: "runner-test-token" },
+    store,
+  });
+
+  await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add search so I can find older notes",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+
+  const blocked = await app.inject({
+    method: "POST",
+    payload: { workerName: "worker-test" },
+    url: "/runner/jobs/claim",
+  });
+  assert.equal(blocked.statusCode, 401);
+  assert.equal(blocked.json().error, "runner_auth_required");
+
+  const claim = await app.inject({
+    headers: { "x-off-runner-token": "runner-test-token" },
+    method: "POST",
+    payload: { workerName: "worker-test" },
+    url: "/runner/jobs/claim",
+  });
+  assert.equal(claim.statusCode, 200);
+  const workItemId = claim.json().job.id;
+
+  const completeBlocked = await app.inject({
+    method: "POST",
+    payload: {
+      agentName: "worker-test",
+      status: "succeeded",
+      summary: "Implemented by worker.",
+    },
+    url: `/runner/jobs/${workItemId}/complete`,
+  });
+  assert.equal(completeBlocked.statusCode, 401);
+
+  const complete = await app.inject({
+    headers: { authorization: "Bearer runner-test-token" },
+    method: "POST",
+    payload: {
+      agentName: "worker-test",
+      status: "succeeded",
+      summary: "Implemented by worker.",
+    },
+    url: `/runner/jobs/${workItemId}/complete`,
+  });
+  assert.equal(complete.statusCode, 200);
+
+  const doctor = await app.inject({ method: "GET", url: "/doctor" });
+  assert.equal(doctor.json().runnerAuthRequired, true);
+  assert.equal("runnerToken" in doctor.json(), false);
 
   await app.close();
 });

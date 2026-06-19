@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
+import { accessControlStatus } from "../auth.js";
 import { getCodexApiKeyStatus } from "../secrets.js";
 import { githubWebhooksEnabledForBaseUrl } from "./github.js";
 
@@ -13,7 +14,9 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
     const approvalMode = await deps.store.getApprovalMode(deps.config.approvalMode);
     const codexAuthMode = await deps.store.getCodexAuthMode(deps.config.codexAuthMode);
     const codexApiKeyStatus = await getCodexApiKeyStatus(deps.config);
+    const accessControls = accessControlStatus(deps.config);
     return {
+      ...accessControls,
       api: "ok",
       approvalMode,
       autoMergeEnabled: deps.config.autoMergeEnabled,

@@ -24,7 +24,7 @@ capture, release proof, and agent assumptions.
 | Core policy | Sanitization, clustering, routing, demand thresholds, cost estimates, status copy, auto-merge gates, assumption blocking |
 | API | SDK feedback, user-safe status, feature usage, admin config, control-room snapshots, runner claims, release markers, GitHub webhooks |
 | Database | Migrations, feedback, clusters, work items, agent runs, assumptions, costs, GitHub artifacts, releases, notifications, usage, audit events, workspace scope, RLS policies when enabled |
-| Security | Workspace/tenant isolation, RBAC, raw-feedback permissions, secret masking/storage, webhook signatures, prompt injection, SSRF/tunnel URL rejection, GitHub App installation boundaries, path traversal, command injection, branch-name injection, SQL injection, CSRF/CORS, rate limits, replay/idempotency, package-script sandboxing, token scope, audit tamper resistance, retention/delete |
+| Security | Workspace/tenant isolation, RBAC, raw-feedback permissions, admin token gate, runner token gate, secret masking/storage, webhook signatures, prompt injection, SSRF/tunnel URL rejection, GitHub App installation boundaries, path traversal, command injection, branch-name injection, SQL injection, CSRF/CORS, rate limits, replay/idempotency, package-script sandboxing, token scope, audit tamper resistance, retention/delete |
 | SDK | Feedback submission, status polling, feature usage, privacy-safe metadata |
 | Runner | Disabled mode, manual approval, auto approval, Codex CLI args, `cli` auth, `api_key` auth, host worker installer generation, Docker API-key worker snippet, sanitized prompt, JSONL parsing, usage/cost capture, skipped checks, assumptions |
 | GitHub | App manifest, localhost rejection, webhook reachability, signature validation, sanitized issue body, PR artifact storage, branch cleanup, guarded merge refusal |
@@ -48,6 +48,9 @@ capture, release proof, and agent assumptions.
   user-safe status only.
 - Non-owner roles cannot rotate secrets, enable auto-merge, broaden protected
   paths, raise cost caps, toggle the kill switch, or weaken policy.
+- When configured, `ADMIN_TOKEN` is required for `/admin/*` routes and
+  `RUNNER_TOKEN` is required for `/runner/*` routes; `/doctor` exposes only
+  auth-required booleans and never returns token values.
 - GitHub webhook requests without a valid signature are rejected and do not
   write artifacts.
 - GitHub App tokens are installation-scoped, and the product refuses to mutate

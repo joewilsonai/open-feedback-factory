@@ -238,6 +238,18 @@ admin writes, runner claim/complete, and GitHub webhook/setup paths. Rate-limit
 responses must be explicit, user-safe, and observable; they should never
 silently drop feedback or pretend work was queued.
 
+For private dogfood V1, admin and runner routes should support simple shared
+token gates before a full multi-user auth system exists:
+
+- `ADMIN_TOKEN` protects `/admin/*` and control-center mutations when set;
+- `RUNNER_TOKEN` protects `/runner/*` job claim and completion routes when set;
+- `/doctor` may expose whether those gates are required, but must never expose
+  token values;
+- local-only development may leave the tokens blank, but any public tunnel or
+  shared dogfood URL should require both tokens;
+- helper scripts that expose `/admin` or `/runner` routes should refuse to start
+  public tunnels while those tokens are missing.
+
 Postgres is the only V1 database. SQLite is intentionally deferred until after
 the private dogfood loop works, because supporting two persistence paths would
 increase migration, test, and support complexity before the core product is
@@ -1855,6 +1867,10 @@ V1 defaults:
 - product name: Open Feedback Factory;
 - visibility: private internal dogfood;
 - database: Postgres only;
+- admin access: local-open by default, `ADMIN_TOKEN` required before tunnels or
+  shared URLs;
+- runner access: local-open by default, `RUNNER_TOKEN` required before tunnels
+  or shared URLs;
 - install path: Docker Compose;
 - GitHub path: GitHub App required, with `gh` fallback for internal dogfood;
 - built-in runner: Codex only;

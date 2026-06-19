@@ -39,6 +39,18 @@ checks.push({
 });
 
 checks.push({
+  label: "Admin access token",
+  ok: true,
+  detail: env.ADMIN_TOKEN ? "configured" : "local-only; required before exposing a tunnel",
+});
+
+checks.push({
+  label: "Runner access token",
+  ok: true,
+  detail: env.RUNNER_TOKEN ? "configured" : "local-only; required before exposing a tunnel",
+});
+
+checks.push({
   label: "Approval mode",
   ok: ["auto", "manual"].includes(env.APPROVAL_MODE ?? "manual"),
   detail: env.APPROVAL_MODE ?? "manual",

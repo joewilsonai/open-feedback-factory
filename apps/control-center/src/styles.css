@@ -157,6 +157,29 @@ small {
   min-height: 22rem;
 }
 
+.admin-access-panel {
+  min-height: 14rem;
+}
+
+.admin-access-panel.blocked {
+  box-shadow: inset 0 0 0 2px #8a4f00;
+}
+
+.admin-access-panel input {
+  min-height: 42px;
+  min-width: 0;
+  border: 1px solid rgba(22, 26, 31, 0.22);
+  border-radius: 7px;
+  padding: 0.65rem 0.85rem;
+  color: inherit;
+  background: #ffffff;
+  font: inherit;
+}
+
+.admin-access-panel .wizard-actions {
+  margin-top: 0.8rem;
+}
+
 .worker-install-panel {
   min-height: 22rem;
 }

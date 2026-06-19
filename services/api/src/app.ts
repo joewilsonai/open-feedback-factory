@@ -2,6 +2,7 @@ import cors from "@fastify/cors";
 import { type AgentAssumptionRecord, type FeedbackInput, type UserFeedbackStatus } from "@open-feedback-factory/core";
 import type { ControlRoomSnapshot, ReconciliationResult, WorkItemRow } from "@open-feedback-factory/db";
 import Fastify, { type FastifyInstance } from "fastify";
+import { registerAccessControls } from "./auth.js";
 import type { ApiConfig } from "./config.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerGithubRoutes } from "./routes/github.js";
@@ -97,6 +98,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   await registerRateLimits(app, deps.config);
+  await registerAccessControls(app, deps.config);
   await registerHealthRoutes(app, deps);
   await registerSdkRoutes(app, deps);
   await registerAdminRoutes(app, deps);

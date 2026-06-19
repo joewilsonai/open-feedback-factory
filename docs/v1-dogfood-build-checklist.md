@@ -56,6 +56,8 @@ Use this for the real internal test.
 Required behavior:
 
 - GitHub App configured, or explicit `GITHUB_MODE=gh` internal fallback;
+- `ADMIN_TOKEN` and `RUNNER_TOKEN` configured before using any tunnel or shared
+  network URL;
 - Codex configured through local CLI subscription or server-side API key;
 - worker attached with `CODEX_RUNNER_MODE=codex`;
 - approval mode selected in the control center;
@@ -123,6 +125,8 @@ At minimum, V1 must include tests for:
 - prompt-injection attempts inside feedback;
 - GitHub App installation/repo permission boundaries;
 - secret storage, masking, and no-leak behavior;
+- admin and runner token gates when configured, including `/doctor` no-token
+  leakage;
 - routing, demand thresholds, and not-built decisions;
 - user-safe statuses for positive and negative outcomes;
 - cost estimate and actual/token capture;
@@ -177,6 +181,8 @@ docker compose up --build
 
 - Dry-run mode works and never fakes success.
 - Private dogfood mode can run one real safe request end to end.
+- Tunnels refuse to expose admin/runner paths unless admin and runner tokens are
+  configured.
 - A real GitHub issue and PR are created from sanitized context.
 - Codex produces a real result with actual usage capture.
 - Cost estimate and actual/token-only actual are recorded honestly.

@@ -52,6 +52,19 @@ pnpm run doctor
 docker compose up -d --build
 ```
 
+For local-only setup, `ADMIN_TOKEN` and `RUNNER_TOKEN` may stay blank. Before
+exposing the stack through Tailscale Funnel, Cloudflare Tunnel, or any shared
+network URL, set both values in `.env` and restart Docker:
+
+```bash
+ADMIN_TOKEN=replace-with-a-long-random-admin-token
+RUNNER_TOKEN=replace-with-a-long-random-runner-token
+```
+
+The control center asks for `ADMIN_TOKEN` when `/doctor` reports
+`adminAuthRequired=true`. Workers send `RUNNER_TOKEN` automatically when the
+value is present in `.env`.
+
 Wait for the stack:
 
 ```bash
@@ -105,10 +118,13 @@ Use the control center wizard as the primary path. GitHub will not create a
 manifest-based App from `localhost` URLs, so local installs need a public HTTPS
 tunnel first.
 
-1. Start the Tailscale demo/control/API tunnel: `pnpm run tunnel:tailscale`.
+1. Set `ADMIN_TOKEN` and `RUNNER_TOKEN` in `.env`, restart Docker, then start
+   the Tailscale demo/control/API tunnel: `pnpm run tunnel:tailscale`.
 2. Get the HTTPS URL from the printed `tailscale funnel status` output.
 3. Put the printed HTTPS URL in `.env` as `PUBLIC_BASE_URL`.
-4. If Tailscale Funnel is not enabled, use `cloudflared tunnel --url http://localhost:4100` for the API-only wizard path.
+4. If Tailscale Funnel is not enabled, use `cloudflared tunnel --url http://localhost:4100` for the API-only wizard path,
+   but still set `ADMIN_TOKEN` and `RUNNER_TOKEN` before exposing admin or
+   runner routes.
 5. Restart Docker: `docker compose up -d --build`.
 6. Open `http://localhost:5173` locally or `/ops` on the public Funnel URL.
 7. In **Install wizard**, click **Create GitHub App**.
@@ -247,6 +263,8 @@ After installation, report:
 - the control center and demo app URLs;
 - which verification commands passed;
 - whether GitHub App mode is configured;
+- whether `ADMIN_TOKEN` and `RUNNER_TOKEN` are configured before any public
+  tunnel is used;
 - whether approval mode is `manual` or `auto`;
 - whether Codex auth mode is `cli` or `api_key`;
 - whether runner mode is `disabled` or `codex`;

@@ -14,6 +14,13 @@ const controlCenterPort = Number(env.CONTROL_CENTER_PORT || 5173);
 const demoPort = Number(env.DEMO_APP_PORT || 5174);
 const controlCenterTarget = `http://127.0.0.1:${controlCenterPort}/ops/`;
 const demoTarget = `http://127.0.0.1:${demoPort}`;
+if (!env.ADMIN_TOKEN || !env.RUNNER_TOKEN) {
+  console.error(
+    "Refusing to expose the local dogfood stack without ADMIN_TOKEN and RUNNER_TOKEN. Set both in .env, restart Docker, then rerun pnpm run tunnel:tailscale.",
+  );
+  process.exit(1);
+}
+
 const routes = [
   ["/", demoTarget],
   ["/ops", controlCenterTarget],

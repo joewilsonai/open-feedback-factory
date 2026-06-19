@@ -79,8 +79,26 @@ Safety defaults:
 - runner mode defaults to disabled, so feedback is queued until a real runner is attached;
 - Codex auth can use either the local Codex CLI subscription path or a
   server-side OpenAI API key saved outside git.
+- admin and runner token gates are available through `ADMIN_TOKEN` and
+  `RUNNER_TOKEN`; set both before exposing a tunnel or shared dogfood URL.
 - SDK, admin, runner, and GitHub endpoints have separate fixed-window rate-limit
   defaults that can be tuned from `.env`.
+
+## Private Access Gates
+
+Local-only development can leave `ADMIN_TOKEN` and `RUNNER_TOKEN` blank. Before
+using Tailscale Funnel, Cloudflare Tunnel, or any shared network URL, set both
+values in `.env` and restart the stack.
+`pnpm run tunnel:tailscale` refuses to expose the local stack until both tokens
+are present.
+
+`ADMIN_TOKEN` protects `/admin/*` routes and the control center queue/settings
+actions. The control center reads `/doctor`, asks for the token when required,
+stores it in local browser storage, and sends it as a bearer token for admin
+requests.
+
+`RUNNER_TOKEN` protects `/runner/*` claim and completion routes. Docker and host
+workers read the same `.env` value and send it as `x-off-runner-token`.
 
 ## Approval And Credential Modes
 

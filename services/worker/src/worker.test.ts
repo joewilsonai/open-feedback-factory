@@ -52,6 +52,23 @@ test("claimJob posts worker identity and optional target work item", async () =>
   assert.equal(await claimJob(config, fetchImpl), null);
 });
 
+test("claimJob sends the configured runner token", async () => {
+  const config = readWorkerConfig({
+    API_BASE_URL: "http://api.test",
+    RUNNER_TOKEN: "runner-test-token",
+    WORKER_NAME: "worker-a",
+  });
+  const fetchImpl: FetchLike = async (_url, init) => {
+    const headers = init?.headers as Record<string, string>;
+    assert.equal(headers["content-type"], "application/json");
+    assert.equal(headers["x-off-runner-token"], "runner-test-token");
+    return jsonResponse({ job: null });
+  };
+
+  assert.equal(config.runnerToken, "runner-test-token");
+  assert.equal(await claimJob(config, fetchImpl), null);
+});
+
 test("runWorkerOnce leaves work queued when runner is disabled", async () => {
   const calls: Array<{ body: unknown; url: string }> = [];
   const config = readWorkerConfig({ API_BASE_URL: "http://api.test" });
