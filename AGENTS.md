@@ -71,7 +71,13 @@ These rules must survive context loss, compaction, new agents, and new sessions.
    runner auth, GitHub/Vercel/Railway integration, and control-center data
    fetching; prefer proven patterns such as stale-while-revalidate libraries
    over hand-rolled polling when they fit the codebase.
-7. **Current Round Context:** The durable demo is an onboarding handoff: a user
+7. **Railway Auth Hygiene:** Before mutating Railway from an agent shell, source
+   `~/.luna/secrets/keys.env`, explicitly unset stale `RAILWAY_TOKEN` and
+   `RAILWAY_PROJECT_TOKEN`, and use the account-scoped `RAILWAY_API_TOKEN`.
+   Verify `railway whoami --json` and the target project/service before deploy.
+   If Railway reports unauthorized, check env shadowing before assuming the new
+   token is bad. Never echo or log token values.
+8. **Current Round Context:** The durable demo is an onboarding handoff: a user
    points a clean SDK-less plant-care app repo at OFF, and OFF does the rest.
    Prepare public distribution for only `@open-feedback-factory/sdk`; keep the
    OFF repo private. Hold the actual SDK publish for Joe.
