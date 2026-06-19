@@ -39,6 +39,8 @@ describe("control center UI contract", () => {
     expect(source).toContain("Reconciliation");
     expect(source).toContain("Run reconciliation");
     expect(source).toContain("Auto-merge");
+    expect(source).toContain("Mark not planned");
+    expect(source).toContain("Block work");
     expect(source).toContain("Manual approval required");
     expect(source).toContain("Auto approval");
     expect(source).toContain("Switch to auto");
@@ -75,6 +77,7 @@ describe("control center UI contract", () => {
     expect(source).toContain("/run");
     expect(source).toContain("/automerge");
     expect(source).toContain("/release");
+    expect(source).toContain("/decision");
     expect(source).toContain("/admin/reconciliation/run");
   });
 });

@@ -191,6 +191,11 @@ routes repeated unclear requests into a guarded work item once the V1 threshold
 is reached. The control center's demand-memory panel shows these clusters,
 their latest safe decision, and whether they have promoted into work.
 
+Operators can also record explicit not-planned or blocked decisions from the
+control center. That updates the work item, writes a user-safe notification for
+matching requesters, and stores an audit event so rejected work is explained
+instead of silently disappearing.
+
 ## Rate Limits
 
 V1 includes local fixed-window HTTP rate limits. Defaults are intentionally high

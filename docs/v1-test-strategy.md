@@ -22,7 +22,7 @@ capture, release proof, and agent assumptions.
 | Area | Required coverage |
 | --- | --- |
 | Core policy | Sanitization, clustering, routing, demand thresholds, cost estimates, status copy, auto-merge gates, assumption blocking |
-| API | SDK feedback, user-safe status, feature usage, admin config, control-room snapshots, demand-memory promotion, work-item evidence ledger, runner claims, release markers, GitHub webhooks |
+| API | SDK feedback, user-safe status, feature usage, admin config, control-room snapshots, explicit not-planned/blocked decisions, demand-memory promotion, work-item evidence ledger, runner claims, release markers, GitHub webhooks |
 | Database | Migrations, feedback, clusters, signal counts, work items, work-item evidence detail, agent runs, assumptions, costs, GitHub artifacts, releases, notifications, usage, audit events, workspace scope, RLS policies when enabled |
 | Security | Workspace/tenant isolation, RBAC, raw-feedback permissions, admin token gate, runner token gate, secret masking/storage, webhook signatures, prompt injection, SSRF/tunnel URL rejection, GitHub App installation boundaries, path traversal, command injection, branch-name injection, SQL injection, CSRF/CORS, rate limits, replay/idempotency, package-script sandboxing, token scope, audit tamper resistance, retention/delete |
 | SDK | Feedback submission, status polling, feature usage, privacy-safe metadata |
@@ -122,6 +122,8 @@ capture, release proof, and agent assumptions.
   dollars instead of fake actual spend.
 - Not-planned, unsafe, duplicate, already-available, and below-threshold
   decisions produce user-safe explanations and decision categories.
+- Admin not-planned and blocked decisions update the work item, notify matching
+  requesters, and write audit evidence.
 - Repeated below-threshold feedback uses stored cluster signal counts and
   promotes into backlog or guarded work when the configured threshold is met.
 - Assumptions affecting privacy, cost, merge safety, or release status prevent

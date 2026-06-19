@@ -40,6 +40,13 @@ export interface AppStore {
   getWorkItem(id: string): Promise<WorkItemRow | null>;
   getWorkItemDetail(id: string): Promise<WorkItemDetail | null>;
   listWorkItems(): Promise<WorkItemRow[]>;
+  markWorkItemDecision(input: {
+    actor?: string;
+    decisionCategory?: string;
+    message: string;
+    status: "blocked" | "not_planned";
+    workItemId: string;
+  }): Promise<void>;
   markWorkItemReleased(workItemId: string, message?: string): Promise<void>;
   reconcileWorkItems(input?: { actor?: string; staleAfterMinutes?: number }): Promise<ReconciliationResult>;
   recordAgentRun(input: {

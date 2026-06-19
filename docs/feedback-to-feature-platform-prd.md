@@ -2256,6 +2256,11 @@ It must avoid raw feedback leakage while still showing sanitized summaries,
 agent run results, estimate-vs-actual cost, unresolved assumptions, release
 proof, and user-safe follow-up status.
 
+When an operator decides not to build something, the system should provide an
+explicit decision action. That action must update the work item, notify matching
+requesters with a user-safe explanation, store the decision category, and add an
+audit event. Rejected work should never disappear as an unspoken queue change.
+
 Admin auth and roles are required so raw feedback, secrets, policy changes,
 approvals, deletion, billing, and kill-switch access are not all controlled by
 one undifferentiated admin permission.

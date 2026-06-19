@@ -105,7 +105,8 @@ Required behavior:
 8. Release/user follow-up:
    add explicit release marker in V1, prevent merged work from being called
    shipped until release proof exists, and return safe user statuses for every
-   outcome.
+   outcome. Not-planned and blocked operator decisions should update matching
+   requesters and create audit evidence.
 
 9. Reconciliation:
    clean stale workspaces/branches, recover interrupted runs, record failure
