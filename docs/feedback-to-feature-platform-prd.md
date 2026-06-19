@@ -759,6 +759,12 @@ Examples:
 - pause the runner when CI failure rate crosses a threshold;
 - pause auto-merge when rollback or production incident signals are active.
 
+V1 should persist the core merge guardrails in policy config: policy-level
+auto-merge allowance, max safe diff lines, and protected path fragments. These
+settings should be visible in `/doctor`, editable in the control center, and
+used by the auto-merge evaluator. The environment-level `AUTO_MERGE_ENABLED`
+switch remains a hard kill switch above the live policy.
+
 Cost controls should be explicit and visible before work starts.
 
 Examples:

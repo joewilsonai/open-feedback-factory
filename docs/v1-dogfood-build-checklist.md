@@ -193,6 +193,9 @@ docker compose up --build
 - Cost estimate and actual/token-only actual are recorded honestly.
 - Auto approval and auto-merge are separate and visibly explained.
 - Safe auto-merge is possible only when every gate passes.
+- Cost caps, max diff lines, protected paths, and policy-level auto-merge
+  allowance are live control-center policy, with the env auto-merge switch as a
+  hard kill switch.
 - Reviewer approval is recorded as a durable work-item decision before
   auto-merge can pass; the system never trusts a request-body shortcut.
 - A release marker is required before a user sees shipped.

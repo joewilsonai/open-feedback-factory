@@ -208,9 +208,12 @@ control center. That updates the work item, writes a user-safe notification for
 matching requesters, and stores an audit event so rejected work is explained
 instead of silently disappearing.
 
-The control center can update the max feature cost cap. `/doctor`, manual runs,
-runner claims, and safe auto-merge all read the live cap from policy config, so
-over-budget work stays queued instead of spending model time.
+The control center can update the max feature cost cap, max safe diff size,
+protected path fragments, and policy-level auto-merge allowance. `/doctor`,
+manual runs, runner claims, and safe auto-merge all read live policy config, so
+over-budget work stays queued instead of spending model time and over-broad PRs
+stay blocked. `AUTO_MERGE_ENABLED=false` remains the hard env kill switch even
+when the policy-level auto-merge allowance is on.
 
 ## Rate Limits
 
