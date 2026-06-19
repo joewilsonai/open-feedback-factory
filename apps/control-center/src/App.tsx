@@ -659,6 +659,7 @@ export function App() {
         </div>
 
         <DemandMemoryPanel clusters={snapshot.feedbackClusters} />
+        <LifecycleOverviewPanel evidence={evidence} loading={evidenceLoading} selected={selected} />
 
         <div className="panel detail-panel">
           <div className="panel-heading">
@@ -684,7 +685,6 @@ export function App() {
                 {selected.githubIssueUrl ? <a href={selected.githubIssueUrl}>GitHub issue</a> : <span>No issue yet</span>}
                 {selected.githubPrUrl ? <a href={selected.githubPrUrl}>Pull request</a> : <span>No PR yet</span>}
               </div>
-              <FeatureLifecycleView evidence={evidence} item={selected} />
               <AssumptionList assumptions={selected.unresolvedAssumptions ?? []} />
               <label className="feature-id-field" htmlFor="release-feature-id">
                 Feature usage id
@@ -1499,63 +1499,240 @@ function EvidenceLedgerPanel(props: {
   );
 }
 
-function FeatureLifecycleView(props: { evidence: WorkItemEvidence | null; item: WorkItem }) {
-  const item = props.item;
-  const evidence = props.evidence;
-  const hasIssue = Boolean(
-    item.githubIssueUrl ?? evidence?.githubArtifacts.some((artifact) => artifact.artifactType === "issue"),
+type LifecycleTone = "active" | "blocked" | "passed" | "skipped" | "waiting";
+
+interface LifecycleStep {
+  detail: string;
+  evidence: string;
+  label: string;
+  tone: LifecycleTone;
+}
+
+function LifecycleOverviewPanel(props: { evidence: WorkItemEvidence | null; loading: boolean; selected: WorkItem | null }) {
+  const selected = props.selected;
+  const steps = selected ? featureLifecycleSteps(selected, props.evidence) : [];
+  const activeStep = steps.find((step) => step.tone === "active") ?? steps.find((step) => step.tone === "waiting");
+  const passedCount = steps.filter((step) => step.tone === "passed").length;
+  const blockedStep = steps.find((step) => step.tone === "blocked" || step.tone === "skipped");
+
+  return (
+    <div className="panel lifecycle-panel">
+      <div className="panel-heading lifecycle-heading">
+        <div>
+          <p className="eyebrow">Feature lifecycle</p>
+          <h2>{selected ? selected.title : "Waiting for feedback"}</h2>
+        </div>
+        {selected ? <StatePill tone={blockedStep ? blockedStep.tone : activeStep?.tone ?? "waiting"}>{blockedStep ? blockedStep.detail : activeStep?.detail ?? "Queued"}</StatePill> : null}
+      </div>
+      {selected ? (
+        <>
+          <div className="lifecycle-summary-grid">
+            <LifecycleStat label="Current stage" value={blockedStep?.label ?? activeStep?.label ?? "Complete"} />
+            <LifecycleStat label="Evidence" value={props.loading ? "Syncing" : lifecycleEvidenceLabel(props.evidence)} />
+            <LifecycleStat label="Progress" value={`${passedCount}/${steps.length} checkpoints`} />
+            <LifecycleStat label="User status" value={userStatusLabel(selected.userStatus)} />
+          </div>
+          <div className="lifecycle-map" aria-label="Selected feature lifecycle">
+            {steps.map((step, index) => (
+              <details className={`lifecycle-node ${step.tone}`} key={`${step.label}-${index}`} open={step.tone === "active"}>
+                <summary>
+                  <span className="lifecycle-index">{String(index + 1).padStart(2, "0")}</span>
+                  <strong>{step.label}</strong>
+                  <StatePill tone={step.tone}>{lifecycleToneLabel(step.tone)}</StatePill>
+                  <p>{step.detail}</p>
+                </summary>
+                <div className="lifecycle-evidence">
+                  <span>{step.evidence}</span>
+                </div>
+              </details>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="empty">No feature lifecycle yet. Submit feedback from a connected app to create the first real trail.</p>
+      )}
+    </div>
   );
+}
+
+function LifecycleStat(props: { label: string; value: string }) {
+  return (
+    <div>
+      <span>{props.label}</span>
+      <strong>{props.value}</strong>
+    </div>
+  );
+}
+
+function StatePill(props: { children: ReactNode; tone: LifecycleTone }) {
+  return <span className={`state-pill ${props.tone}`}>{props.children}</span>;
+}
+
+function featureLifecycleSteps(item: WorkItem, evidence: WorkItemEvidence | null): LifecycleStep[] {
   const hasPr = Boolean(
     item.githubPrUrl ?? evidence?.githubArtifacts.some((artifact) => artifact.artifactType === "pull_request"),
   );
-  const hasAgentRun = Boolean(evidence?.agentRuns.length);
+  const implementationRuns = evidence?.agentRuns.filter((run) => run.runType === "implementation") ?? [];
+  const latestImplementationRun = implementationRuns[0] ?? null;
+  const hasImplementationRun = Boolean(latestImplementationRun);
+  const implementationSucceeded = latestImplementationRun?.status === "succeeded";
+  const implementationFailed = latestImplementationRun?.status === "failed";
   const hasReview = Boolean(item.reviewDecision);
   const hasRelease = item.status === "shipped" || Boolean(evidence?.releaseEvents.length);
+  const hasUsage = Boolean(evidence?.usageAttribution.length);
+  const finalNotification = evidence?.userNotifications.find(
+    (notification) =>
+      notification.status === "shipped" ||
+      notification.status === "not_planned" ||
+      notification.status === "blocked" ||
+      notification.status === "implemented",
+  );
+  const hasNotification = Boolean(finalNotification);
+  const hasChecks = Boolean(evidence?.assumptions.some((assumption) => assumption.checksRun.length || assumption.checksSkipped.length));
   const terminalBlocked = item.status === "blocked" || item.status === "not_planned";
+  const stoppedTone: LifecycleTone = item.status === "not_planned" ? "skipped" : "blocked";
+  const queuedActive = item.status === "planned" && !terminalBlocked;
+  const implementingActive = item.status === "in_progress" || (hasImplementationRun && !implementationSucceeded && !implementationFailed);
+  const implemented = item.status === "implemented" || item.status === "shipped" || implementationSucceeded || hasPr;
+  const checksPassed = hasChecks || hasPr || hasReview || hasRelease;
+  const prActive = implemented && !hasPr && !terminalBlocked;
+  const reviewActive = hasPr && !hasReview && !terminalBlocked;
+  const mergeActive = hasReview && !hasRelease && !terminalBlocked;
+  const releaseActive = hasRelease && !hasNotification && !terminalBlocked;
+  const notificationActive = hasNotification && !hasUsage && !terminalBlocked;
+  const postQueueTone: LifecycleTone = terminalBlocked ? stoppedTone : "waiting";
 
-  const steps: Array<{ detail: string; label: string; state: "done" | "active" | "waiting" | "blocked" }> = [
+  return [
     {
       detail: sourceLabel(item.signalSources),
-      label: "Signal",
-      state: "done",
+      evidence: item.summary,
+      label: "Feedback",
+      tone: "passed",
+    },
+    {
+      detail: item.signalSources.length > 1 ? `${item.signalSources.length} sources grouped` : "Single request captured",
+      evidence: `Category: ${titleCase(item.category)}`,
+      label: "Clustered",
+      tone: "passed",
+    },
+    {
+      detail: terminalBlocked ? workStatusLabel(item.status) : riskTierLabel(item.riskTier),
+      evidence: item.autoMergeEligible ? "Safe lane is eligible if merge gates pass." : "Guardrails require review before shipping.",
+      label: "Decision",
+      tone: terminalBlocked ? stoppedTone : "passed",
+    },
+    {
+      detail: item.id,
+      evidence: `User-facing status: ${userStatusLabel(item.userStatus)}`,
+      label: "Work item",
+      tone: terminalBlocked ? stoppedTone : "passed",
+    },
+    {
+      detail: `${formatMoney(item.costEstimate.amountUsd)} estimate`,
+      evidence: `${item.costEstimate.model} / ${item.costEstimate.confidence} confidence`,
+      label: "Cost estimate",
+      tone: terminalBlocked ? stoppedTone : "passed",
     },
     {
       detail: workStatusLabel(item.status),
-      label: "Triage",
-      state: terminalBlocked ? "blocked" : item.status === "planned" ? "active" : "done",
+      evidence: item.status === "planned" ? "Queued until an approved worker claims it." : "No longer waiting in the queue.",
+      label: "Queued",
+      tone: terminalBlocked ? stoppedTone : queuedActive ? "active" : "passed",
     },
     {
-      detail: hasIssue ? "Issue recorded" : "Waiting for GitHub",
-      label: "Issue",
-      state: hasIssue ? "done" : terminalBlocked ? "blocked" : "waiting",
+      detail: evidence?.assumptions.length ? `${evidence.assumptions.length} assumptions recorded` : "Waiting for plan evidence",
+      evidence: evidence?.assumptions[0]?.notes ?? "Agent assumptions will appear here after planning.",
+      label: "Planning",
+      tone: terminalBlocked ? stoppedTone : evidence?.assumptions.length ? "passed" : queuedActive ? "waiting" : implementingActive ? "active" : "waiting",
     },
     {
-      detail: hasAgentRun ? latestAgentRunLabel(evidence) : "Waiting for worker",
-      label: "Agent work",
-      state: hasAgentRun ? (item.status === "in_progress" ? "active" : "done") : terminalBlocked ? "blocked" : "waiting",
+      detail: latestImplementationRun ? `${workStatusLabel(latestImplementationRun.status)} / ${dateLabel(latestImplementationRun.completedAt ?? latestImplementationRun.createdAt)}` : "Waiting for worker",
+      evidence: latestImplementationRun?.summary ?? "A live implementation worker has not recorded code changes yet.",
+      label: "Implementing",
+      tone: implementationFailed ? "blocked" : implementationSucceeded ? "passed" : implementingActive ? "active" : postQueueTone,
     },
     {
-      detail: hasPr ? "PR available" : hasReview ? reviewDecisionLabel(item.reviewDecision) : "Waiting for review",
+      detail: hasChecks ? "Checks recorded" : "Waiting for check evidence",
+      evidence: checksEvidenceLabel(evidence),
+      label: "Checks",
+      tone: checksPassed ? "passed" : terminalBlocked ? stoppedTone : implemented ? "active" : "waiting",
+    },
+    {
+      detail: hasPr ? "Pull request available" : "Waiting for PR",
+      evidence: item.githubPrUrl ?? githubArtifactUrl(evidence, "pull_request") ?? "No pull request has been recorded for this work item.",
+      label: "PR",
+      tone: hasPr ? "passed" : terminalBlocked ? stoppedTone : prActive ? "active" : "waiting",
+    },
+    {
+      detail: hasReview ? reviewDecisionLabel(item.reviewDecision) : "Waiting for review",
+      evidence: item.reviewDecision?.summary ?? "Reviewer approval or rejection has not been recorded.",
       label: "Review",
-      state: hasPr || hasReview ? "done" : terminalBlocked ? "blocked" : "waiting",
+      tone: hasReview ? "passed" : terminalBlocked ? stoppedTone : reviewActive ? "active" : "waiting",
     },
     {
-      detail: terminalBlocked ? workStatusLabel(item.status) : hasRelease ? "Release proof recorded" : "Not shipped yet",
-      label: "Outcome",
-      state: terminalBlocked ? "blocked" : hasRelease ? "done" : "waiting",
+      detail: hasRelease ? "Merge/release path complete" : "Waiting for merge proof",
+      evidence: hasRelease ? "Release proof is available for this work item." : "OFF will not mark shipped from a PR URL alone.",
+      label: "Merge",
+      tone: hasRelease ? "passed" : terminalBlocked ? stoppedTone : mergeActive ? "active" : "waiting",
+    },
+    {
+      detail: hasRelease ? "Release proof recorded" : "Not shipped yet",
+      label: "Release proof",
+      evidence: evidence?.releaseEvents[0] ? `Release event: ${userStatusLabel(evidence.releaseEvents[0].status)}` : "Release proof is required before users see this as shipped.",
+      tone: hasRelease ? "passed" : terminalBlocked ? stoppedTone : releaseActive ? "active" : "waiting",
+    },
+    {
+      detail: hasNotification ? "User follow-up recorded" : "Waiting for follow-up",
+      evidence: finalNotification?.message ?? "The requesting user has not received a final shipped, blocked, or not-planned update yet.",
+      label: "User notified",
+      tone: hasNotification ? "passed" : terminalBlocked ? stoppedTone : notificationActive ? "active" : "waiting",
+    },
+    {
+      detail: hasUsage ? "Usage attributed" : "No usage attributed yet",
+      evidence: evidence?.usageAttribution[0]
+        ? `${evidence.usageAttribution[0].eventCount} events from ${evidence.usageAttribution[0].uniqueUsers} users`
+        : "Feature usage events will prove whether the shipped request mattered.",
+      label: "Usage",
+      tone: hasUsage ? "passed" : terminalBlocked ? stoppedTone : hasRelease ? "active" : "waiting",
     },
   ];
+}
 
-  return (
-    <section className="lifecycle-strip" aria-label="Feature lifecycle">
-      {steps.map((step) => (
-        <article className={`lifecycle-step ${step.state}`} key={step.label}>
-          <strong>{step.label}</strong>
-          <span>{step.detail}</span>
-        </article>
-      ))}
-    </section>
+function lifecycleEvidenceLabel(evidence: WorkItemEvidence | null): string {
+  if (!evidence) return "No evidence loaded";
+  const count =
+    evidence.agentRuns.length +
+    evidence.assumptions.length +
+    evidence.costRecords.length +
+    evidence.githubArtifacts.length +
+    evidence.releaseEvents.length +
+    evidence.userNotifications.length +
+    evidence.usageAttribution.length;
+  return `${count} records`;
+}
+
+function lifecycleToneLabel(tone: LifecycleTone): string {
+  if (tone === "passed") return "Passed";
+  if (tone === "active") return "Active";
+  if (tone === "blocked") return "Blocked";
+  if (tone === "skipped") return "Skipped";
+  return "Waiting";
+}
+
+function githubArtifactUrl(evidence: WorkItemEvidence | null, artifactType: string): string | null {
+  return evidence?.githubArtifacts.find((artifact) => artifact.artifactType === artifactType)?.url ?? null;
+}
+
+function checksEvidenceLabel(evidence: WorkItemEvidence | null): string {
+  const assumptionWithChecks = evidence?.assumptions.find(
+    (assumption) => assumption.checksRun.length || assumption.checksSkipped.length,
   );
+  if (!assumptionWithChecks) return "No check results or skipped-check assumptions are recorded yet.";
+  const ran = assumptionWithChecks.checksRun.length ? `Ran: ${assumptionWithChecks.checksRun.join(", ")}` : "No checks run.";
+  const skipped = assumptionWithChecks.checksSkipped.length
+    ? `Skipped: ${assumptionWithChecks.checksSkipped.join(", ")}`
+    : "No skipped checks recorded.";
+  return `${ran} ${skipped}`;
 }
 
 function LedgerSection(props: { children: ReactNode; title: string }) {
