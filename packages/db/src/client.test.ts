@@ -280,11 +280,13 @@ test("schema migration enables workspace RLS scaffolding", { skip: !databaseUrl 
       "audit_events",
     ];
     const rowSecurity = await pool.query<{ tablename: string }>(
-      `select tablename
-       from pg_tables
-       where schemaname = 'public'
-         and tablename = any($1)
-         and rowsecurity = true`,
+      `select c.relname as tablename
+       from pg_class c
+       join pg_namespace n on n.oid = c.relnamespace
+       where n.nspname = 'public'
+         and c.relname = any($1)
+         and c.relrowsecurity = true
+         and c.relforcerowsecurity = true`,
       [tables],
     );
     assert.deepEqual(
@@ -309,6 +311,72 @@ test("schema migration enables workspace RLS scaffolding", { skip: !databaseUrl 
   }
 });
 
+test("workspace RLS blocks cross-workspace reads and writes for app roles", { skip: !databaseUrl }, async () => {
+  assert.ok(databaseUrl);
+  await migrateDatabase(databaseUrl);
+  await cleanupDatabaseTestRows(databaseUrl);
+  const uniqueSuffix = Date.now().toString(36).toLowerCase();
+  const roleName = `off_rls_${uniqueSuffix}`;
+  const password = `pw_${uniqueSuffix}`;
+  const adminPool = new Pool({ connectionString: databaseUrl });
+
+  try {
+    await adminPool.query(`drop role if exists ${quoteIdentifier(roleName)}`);
+    await adminPool.query(`create role ${quoteIdentifier(roleName)} login password ${quoteLiteral(password)}`);
+    await adminPool.query(`grant usage on schema public to ${quoteIdentifier(roleName)}`);
+    await adminPool.query(`grant select, insert, update, delete on all tables in schema public to ${quoteIdentifier(roleName)}`);
+
+    const roleUrl = databaseUrlWithCredentials(databaseUrl, roleName, password);
+    const rolePool = new Pool({ connectionString: roleUrl });
+    try {
+      await rolePool.query(`set app.workspace_id = 'workspace_a'`);
+      await rolePool.query(
+        `insert into feedback_clusters (workspace_id, cluster_key, title, category)
+         values ('workspace_a', $1, 'Workspace A request', 'feature_request')`,
+        [`rls.cluster.a.${uniqueSuffix}`],
+      );
+      await rolePool.query(
+        `insert into feedback_signals
+         (id, workspace_id, user_id, source, severity, raw_payload, sanitized_summary, sanitized_payload,
+          privacy_risk, redactions, cluster_key, status, user_message)
+         values ($1, 'workspace_a', 'rls-user-a', 'test_rls', 'medium', '{}'::jsonb, 'Workspace A feedback',
+                 '{}'::jsonb, 'low', '[]'::jsonb, $2, 'planned', 'Queued')`,
+        [`feedback_rls_a_${uniqueSuffix}`, `rls.cluster.a.${uniqueSuffix}`],
+      );
+
+      const visibleInA = await rolePool.query<{ count: string }>(
+        `select count(*)::text as count from feedback_signals where source = 'test_rls'`,
+      );
+      assert.equal(visibleInA.rows[0]?.count, "1");
+
+      await rolePool.query(`set app.workspace_id = 'workspace_b'`);
+      const hiddenInB = await rolePool.query<{ count: string }>(
+        `select count(*)::text as count from feedback_signals where source = 'test_rls'`,
+      );
+      assert.equal(hiddenInB.rows[0]?.count, "0");
+
+      await assert.rejects(
+        rolePool.query(
+          `insert into feedback_signals
+           (id, workspace_id, user_id, source, severity, raw_payload, sanitized_summary, sanitized_payload,
+            privacy_risk, redactions, cluster_key, status, user_message)
+           values ($1, 'workspace_a', 'rls-user-b', 'test_rls', 'medium', '{}'::jsonb, 'Cross workspace write',
+                   '{}'::jsonb, 'low', '[]'::jsonb, $2, 'planned', 'Queued')`,
+          [`feedback_rls_cross_${uniqueSuffix}`, `rls.cluster.a.${uniqueSuffix}`],
+        ),
+        /row-level security policy|violates row-level security/i,
+      );
+    } finally {
+      await rolePool.end();
+    }
+  } finally {
+    await cleanupDatabaseTestRows(databaseUrl);
+    await adminPool.query(`drop owned by ${quoteIdentifier(roleName)}`);
+    await adminPool.query(`drop role if exists ${quoteIdentifier(roleName)}`);
+    await adminPool.end();
+  }
+});
+
 async function cleanupDatabaseTestRows(url: string): Promise<void> {
   const pool = new Pool({ connectionString: url });
   const client = await pool.connect();
@@ -316,6 +384,8 @@ async function cleanupDatabaseTestRows(url: string): Promise<void> {
 
   try {
     await client.query("begin");
+    await client.query(`delete from feedback_signals where source = 'test_rls'`);
+    await client.query(`delete from feedback_clusters where cluster_key like 'rls.cluster.%'`);
     const sourceClusters = await ids(
       client,
       `select distinct cluster_key as id
@@ -389,4 +459,19 @@ async function cleanupDatabaseTestRows(url: string): Promise<void> {
 async function ids(client: PoolClient, sql: string, params: unknown[]): Promise<string[]> {
   const result = await client.query<{ id: string }>(sql, params);
   return result.rows.map((row) => row.id);
+}
+
+function databaseUrlWithCredentials(url: string, username: string, password: string): string {
+  const parsed = new URL(url);
+  parsed.username = username;
+  parsed.password = password;
+  return parsed.toString();
+}
+
+function quoteIdentifier(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+function quoteLiteral(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
 }

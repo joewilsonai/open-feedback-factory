@@ -203,6 +203,19 @@ alter table feature_usage_events enable row level security;
 alter table policy_configs enable row level security;
 alter table audit_events enable row level security;
 
+alter table feedback_signals force row level security;
+alter table feedback_clusters force row level security;
+alter table work_items force row level security;
+alter table agent_runs force row level security;
+alter table agent_assumptions force row level security;
+alter table cost_records force row level security;
+alter table github_artifacts force row level security;
+alter table release_events force row level security;
+alter table user_notifications force row level security;
+alter table feature_usage_events force row level security;
+alter table policy_configs force row level security;
+alter table audit_events force row level security;
+
 drop policy if exists feedback_signals_workspace_isolation on feedback_signals;
 create policy feedback_signals_workspace_isolation on feedback_signals using (workspace_id = off_workspace_id()) with check (workspace_id = off_workspace_id());
 drop policy if exists feedback_clusters_workspace_isolation on feedback_clusters;
