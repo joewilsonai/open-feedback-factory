@@ -6,6 +6,7 @@ export interface ApiConfig {
   codexAuthMode: "api_key" | "cli";
   codexApiKeyConfigured: boolean;
   codexRunnerMode: "codex" | "disabled";
+  codexSecretsPath: string;
   controlCenterUrl: string;
   databaseUrl: string;
   githubMode: "app" | "disabled" | "gh";
@@ -32,6 +33,7 @@ export function readConfig(env = process.env): ApiConfig {
     codexAuthMode: env.CODEX_AUTH_MODE === "api_key" ? "api_key" : "cli",
     codexApiKeyConfigured: Boolean(env.OPENAI_API_KEY),
     codexRunnerMode: env.CODEX_RUNNER_MODE === "codex" ? "codex" : "disabled",
+    codexSecretsPath: env.CODEX_SECRETS_PATH ?? ".off/secrets.env",
     controlCenterUrl: stripTrailingSlash(env.CONTROL_CENTER_URL ?? `http://localhost:${env.CONTROL_CENTER_PORT ?? 5173}`),
     databaseUrl: env.DATABASE_URL ?? env.DOCKER_DATABASE_URL ?? "",
     githubMode: githubModeFromEnv(env.GITHUB_MODE),

@@ -9,4 +9,5 @@ coverage/
 .turbo/
 .cache/
 .pnpm-store/
+.off/
 *.log

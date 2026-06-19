@@ -72,6 +72,7 @@ export interface ControlRoomSnapshot {
 }
 
 export type ApprovalMode = "auto" | "manual";
+export type CodexAuthMode = "api_key" | "cli";
 
 export class OpenFeedbackStore {
   private readonly pool: pg.Pool;
@@ -584,6 +585,42 @@ export class OpenFeedbackStore {
     }
   }
 
+  async getCodexAuthMode(defaultMode: CodexAuthMode): Promise<CodexAuthMode> {
+    const result = await this.pool.query<{ mode: string | null }>(
+      `select value ->> 'mode' as mode
+       from policy_configs
+       where key = 'codex_auth_mode'
+       limit 1`,
+    );
+    return codexAuthModeFromValue(result.rows[0]?.mode) ?? defaultMode;
+  }
+
+  async setCodexAuthMode(mode: CodexAuthMode, actor = "operator"): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("begin");
+      await client.query(
+        `insert into policy_configs (id, key, value)
+         values ($1, 'codex_auth_mode', $2)
+         on conflict (key) do update
+         set value = excluded.value,
+             updated_at = now()`,
+        [`policy_${randomUUID()}`, JSON.stringify({ mode })],
+      );
+      await client.query(
+        `insert into audit_events (id, actor, event, target_type, target_id, metadata)
+         values ($1, $2, 'codex_auth_mode_updated', 'policy_config', 'codex_auth_mode', $3)`,
+        [`audit_${randomUUID()}`, actor, JSON.stringify({ mode })],
+      );
+      await client.query("commit");
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async getControlRoomSnapshot(): Promise<ControlRoomSnapshot> {
     const [counts, workItems, recentFeedback, recentAgentRuns, recentUsage] = await Promise.all([
       this.pool.query<{
@@ -743,5 +780,10 @@ function githubNumberFromUrl(url: string): number | undefined {
 
 function approvalModeFromValue(value: string | null | undefined): ApprovalMode | null {
   if (value === "auto" || value === "manual") return value;
+  return null;
+}
+
+function codexAuthModeFromValue(value: string | null | undefined): CodexAuthMode | null {
+  if (value === "api_key" || value === "cli") return value;
   return null;
 }

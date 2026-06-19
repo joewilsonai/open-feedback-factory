@@ -82,8 +82,11 @@ selecting a specific work item. It still uses real runners, real PRs, and real
 guardrails.
 
 `CODEX_AUTH_MODE=cli` uses the signed-in local Codex CLI subscription path.
-`CODEX_AUTH_MODE=api_key` is reserved for a server-side API-key runner and is
-shown in setup as unavailable until that runner exists.
+
+`CODEX_AUTH_MODE=api_key` can be selected from the control center, and the
+control center can save a server-side OpenAI API key to
+`CODEX_SECRETS_PATH` without echoing it back to the browser. The API-key
+runner lane is still blocked in V1 until the server-side runner is implemented.
 
 ## Runner Modes
 

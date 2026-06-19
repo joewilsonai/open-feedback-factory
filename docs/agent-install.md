@@ -159,6 +159,12 @@ GITHUB_CREATE_PR=true
 Use `GITHUB_MODE=app` for installable GitHub App auth, or `GITHUB_MODE=gh` for
 local dogfood with the GitHub CLI.
 
+The control center can also save a server-side OpenAI API key to
+`CODEX_SECRETS_PATH` and switch `CODEX_AUTH_MODE` between `cli` and `api_key`.
+The key is masked in the UI and is never returned to the browser. In V1, the
+API-key execution lane remains blocked until the API-backed runner is
+implemented; the live runner path is the local Codex CLI.
+
 ## What To Report Back
 
 After installation, report:

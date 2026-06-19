@@ -3,12 +3,15 @@ import { CodexCliRunner } from "@open-feedback-factory/runner";
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
 import { buildGithubClient } from "../githubClient.js";
+import { getCodexApiKeyStatus, removeCodexApiKey, saveCodexApiKey } from "../secrets.js";
 
 export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   app.get("/admin/control-room", async () => deps.store.getControlRoomSnapshot());
 
   app.get("/admin/settings", async () => ({
     approvalMode: await deps.store.getApprovalMode(deps.config.approvalMode),
+    codexApiKey: await getCodexApiKeyStatus(deps.config),
+    codexAuthMode: await deps.store.getCodexAuthMode(deps.config.codexAuthMode),
   }));
 
   app.patch<{ Body: { approvalMode?: unknown } }>("/admin/settings/approval-mode", async (request, reply) => {
@@ -20,6 +23,31 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
     await deps.store.setApprovalMode(approvalMode, "control-center");
     return { approvalMode, status: "updated" };
   });
+
+  app.patch<{ Body: { codexAuthMode?: unknown } }>("/admin/settings/codex-auth-mode", async (request, reply) => {
+    const codexAuthMode = request.body?.codexAuthMode;
+    if (codexAuthMode !== "api_key" && codexAuthMode !== "cli") {
+      return reply.code(400).send({ error: "codexAuthMode must be cli or api_key" });
+    }
+
+    await deps.store.setCodexAuthMode(codexAuthMode, "control-center");
+    return { codexAuthMode, status: "updated" };
+  });
+
+  app.put<{ Body: { apiKey?: unknown } }>("/admin/settings/codex-api-key", async (request, reply) => {
+    const apiKey = typeof request.body?.apiKey === "string" ? request.body.apiKey : "";
+    try {
+      const codexApiKey = await saveCodexApiKey(deps.config, apiKey);
+      return { codexApiKey, status: "saved" };
+    } catch (error) {
+      return reply.code(400).send({ error: error instanceof Error ? error.message : "invalid API key" });
+    }
+  });
+
+  app.delete("/admin/settings/codex-api-key", async () => ({
+    codexApiKey: await removeCodexApiKey(deps.config),
+    status: "removed",
+  }));
 
   app.get<{ Params: { id: string } }>("/admin/work-items/:id", async (request, reply) => {
     const workItem = await deps.store.getWorkItem(request.params.id);
@@ -37,10 +65,13 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
         status: "blocked",
       });
     }
-    if (deps.config.codexAuthMode !== "cli") {
+    const codexAuthMode = await deps.store.getCodexAuthMode(deps.config.codexAuthMode);
+    if (codexAuthMode !== "cli") {
+      const codexApiKey = await getCodexApiKeyStatus(deps.config);
       return reply.code(409).send({
+        codexApiKeyConfigured: codexApiKey.configured,
         error: "codex api key runner not implemented",
-        mode: deps.config.codexAuthMode,
+        mode: codexAuthMode,
         status: "blocked",
       });
     }

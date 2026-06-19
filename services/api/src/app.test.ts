@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
 import type { UserFeedbackStatus } from "@open-feedback-factory/core";
 import type { ControlRoomSnapshot, WorkItemRow } from "@open-feedback-factory/db";
@@ -16,6 +19,7 @@ const config: ApiConfig = {
   codexApiKeyConfigured: false,
   codexAuthMode: "cli",
   codexRunnerMode: "disabled",
+  codexSecretsPath: ".off/test-secrets.env",
   controlCenterUrl: "http://control.test",
   databaseUrl: "postgres://example",
   githubMode: "disabled",
@@ -31,6 +35,7 @@ const config: ApiConfig = {
 
 class MemoryStore implements AppStore {
   approvalMode: ApiConfig["approvalMode"] | null = null;
+  codexAuthMode: ApiConfig["codexAuthMode"] | null = null;
   feedbackStatuses = new Map<string, UserFeedbackStatus>();
   usageCount = 0;
   workItems: WorkItemRow[] = [];
@@ -91,6 +96,14 @@ class MemoryStore implements AppStore {
 
   async setApprovalMode(mode: ApiConfig["approvalMode"]) {
     this.approvalMode = mode;
+  }
+
+  async getCodexAuthMode(defaultMode: ApiConfig["codexAuthMode"]): Promise<ApiConfig["codexAuthMode"]> {
+    return this.codexAuthMode ?? defaultMode;
+  }
+
+  async setCodexAuthMode(mode: ApiConfig["codexAuthMode"]) {
+    this.codexAuthMode = mode;
   }
 
   async claimNextWorkItem(_workerName?: string, workItemId?: string) {
@@ -255,6 +268,64 @@ test("admin can change approval mode without restarting the API", async () => {
   assert.equal(invalid.statusCode, 400);
 
   await app.close();
+});
+
+test("admin can configure Codex auth mode and save a masked API key", async () => {
+  const store = new MemoryStore();
+  const secretsDir = await mkdtemp(path.join(tmpdir(), "off-api-key-"));
+  const secretsPath = path.join(secretsDir, "secrets.env");
+  const previousOpenAiKey = process.env.OPENAI_API_KEY;
+  delete process.env.OPENAI_API_KEY;
+
+  const app = await buildApp({ config: { ...config, codexSecretsPath: secretsPath }, store });
+
+  try {
+    const initialSettings = await app.inject({ method: "GET", url: "/admin/settings" });
+    assert.equal(initialSettings.statusCode, 200);
+    assert.equal(initialSettings.json().codexAuthMode, "cli");
+    assert.equal(initialSettings.json().codexApiKey.configured, false);
+    assert.equal("apiKey" in initialSettings.json().codexApiKey, false);
+
+    const mode = await app.inject({
+      method: "PATCH",
+      payload: { codexAuthMode: "api_key" },
+      url: "/admin/settings/codex-auth-mode",
+    });
+    assert.equal(mode.statusCode, 200);
+    assert.equal(mode.json().codexAuthMode, "api_key");
+
+    const invalidKey = await app.inject({
+      method: "PUT",
+      payload: { apiKey: "short" },
+      url: "/admin/settings/codex-api-key",
+    });
+    assert.equal(invalidKey.statusCode, 400);
+
+    const save = await app.inject({
+      method: "PUT",
+      payload: { apiKey: "sk-test_1234567890abcdef" },
+      url: "/admin/settings/codex-api-key",
+    });
+    assert.equal(save.statusCode, 200);
+    assert.equal(save.json().codexApiKey.configured, true);
+    assert.equal(save.json().codexApiKey.fingerprint, "sk-test...cdef");
+    assert.equal("apiKey" in save.json().codexApiKey, false);
+    assert.match(await readFile(secretsPath, "utf8"), /OPENAI_API_KEY=/);
+
+    const doctor = await app.inject({ method: "GET", url: "/doctor" });
+    assert.equal(doctor.json().codexAuthMode, "api_key");
+    assert.equal(doctor.json().codexApiKeyConfigured, true);
+    assert.equal(doctor.json().codexApiKeyFingerprint, "sk-test...cdef");
+
+    const remove = await app.inject({ method: "DELETE", url: "/admin/settings/codex-api-key" });
+    assert.equal(remove.statusCode, 200);
+    assert.equal(remove.json().codexApiKey.configured, false);
+  } finally {
+    await app.close();
+    if (previousOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousOpenAiKey;
+    await rm(secretsDir, { force: true, recursive: true });
+  }
 });
 
 test("API exposes GitHub App manifest seam", async () => {

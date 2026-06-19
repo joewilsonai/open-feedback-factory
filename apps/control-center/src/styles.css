@@ -153,6 +153,10 @@ small {
   min-height: 17rem;
 }
 
+.credentials-panel {
+  min-height: 22rem;
+}
+
 .mode-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -222,6 +226,48 @@ small {
 .mode-note {
   margin-top: 0.9rem;
   font-weight: 700;
+}
+
+.secret-form {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.secret-form label {
+  color: #65706c;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.secret-form input {
+  min-height: 42px;
+  min-width: 0;
+  border: 1px solid rgba(22, 26, 31, 0.22);
+  border-radius: 7px;
+  padding: 0.65rem 0.85rem;
+  color: inherit;
+  background: #ffffff;
+  font: inherit;
+}
+
+.secret-form input:focus {
+  border-color: #255bc7;
+  outline: 2px solid rgba(37, 91, 199, 0.18);
+}
+
+.secret-form p {
+  color: #52605a;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.secret-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.7rem;
 }
 
 .wizard-rail {
@@ -409,6 +455,10 @@ code {
   }
 
   .mode-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .secret-row {
     grid-template-columns: 1fr;
   }
 }

@@ -19,6 +19,9 @@ describe("control center UI contract", () => {
     expect(source).toContain("Switch to auto");
     expect(source).toContain("Switch modes here");
     expect(source).toContain("Agent credentials");
+    expect(source).toContain("Codex auth");
+    expect(source).toContain("OpenAI API key");
+    expect(source).toContain("Save key");
     expect(source).toContain("Health");
     expect(source).toContain("Codex CLI");
   });
@@ -26,6 +29,8 @@ describe("control center UI contract", () => {
   it("can trigger run, auto-merge, and release actions", () => {
     expect(source).toContain("/doctor");
     expect(source).toContain("/admin/settings/approval-mode");
+    expect(source).toContain("/admin/settings/codex-auth-mode");
+    expect(source).toContain("/admin/settings/codex-api-key");
     expect(source).toContain("/github/app/setup");
     expect(source).toContain("/github/app/manifest");
     expect(source).toContain("/run");

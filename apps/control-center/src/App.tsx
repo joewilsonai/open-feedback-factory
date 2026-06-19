@@ -39,8 +39,12 @@ interface Doctor {
   approvalMode: string;
   autoMergeEnabled: boolean;
   codexApiKeyConfigured: boolean;
+  codexApiKeyFingerprint: string | null;
+  codexApiKeySource: string;
   codexAuthMode: string;
   codexRunnerMode: string;
+  codexSecretStorageWritable: boolean;
+  codexSecretsPath: string;
   controlCenterUrl: string;
   databaseConfigured: boolean;
   githubAppConfigured: boolean;
@@ -66,6 +70,8 @@ const emptySnapshot: Snapshot = {
 };
 
 export function App() {
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [credentialUpdating, setCredentialUpdating] = useState(false);
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [modeUpdating, setModeUpdating] = useState(false);
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
@@ -118,6 +124,64 @@ export function App() {
       setStatus(error instanceof Error ? error.message : "Mode change failed");
     } finally {
       setModeUpdating(false);
+    }
+  }
+
+  async function setCodexAuthMode(codexAuthMode: "api_key" | "cli") {
+    setCredentialUpdating(true);
+    setStatus(`Switching to ${codexAuthModeLabel(codexAuthMode)}`);
+    try {
+      const response = await fetch(`${apiBaseUrl}/admin/settings/codex-auth-mode`, {
+        body: JSON.stringify({ codexAuthMode }),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      });
+      const body = await response.json().catch(() => ({}));
+      await refresh();
+      setStatus(
+        response.ok
+          ? `Credentials set to ${codexAuthModeLabel(codexAuthMode)}`
+          : `Credential mode blocked: ${String(body.error ?? "not saved")}`,
+      );
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Credential mode failed");
+    } finally {
+      setCredentialUpdating(false);
+    }
+  }
+
+  async function saveCodexApiKey() {
+    setCredentialUpdating(true);
+    setStatus("Saving API key");
+    try {
+      const response = await fetch(`${apiBaseUrl}/admin/settings/codex-api-key`, {
+        body: JSON.stringify({ apiKey: apiKeyInput }),
+        headers: { "content-type": "application/json" },
+        method: "PUT",
+      });
+      const body = await response.json().catch(() => ({}));
+      if (response.ok) setApiKeyInput("");
+      await refresh();
+      setStatus(response.ok ? "API key saved" : `API key blocked: ${String(body.error ?? "not saved")}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "API key save failed");
+    } finally {
+      setCredentialUpdating(false);
+    }
+  }
+
+  async function removeCodexApiKey() {
+    setCredentialUpdating(true);
+    setStatus("Removing saved API key");
+    try {
+      const response = await fetch(`${apiBaseUrl}/admin/settings/codex-api-key`, { method: "DELETE" });
+      const body = await response.json().catch(() => ({}));
+      await refresh();
+      setStatus(response.ok ? "Saved API key removed" : `Remove blocked: ${String(body.error ?? "not removed")}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "API key remove failed");
+    } finally {
+      setCredentialUpdating(false);
     }
   }
 
@@ -251,6 +315,15 @@ export function App() {
         </div>
 
         <ExecutionPanel doctor={doctor} modeUpdating={modeUpdating} onSetApprovalMode={setApprovalMode} />
+        <AgentCredentialsPanel
+          apiKeyInput={apiKeyInput}
+          credentialUpdating={credentialUpdating}
+          doctor={doctor}
+          onApiKeyInput={setApiKeyInput}
+          onRemoveApiKey={removeCodexApiKey}
+          onSaveApiKey={saveCodexApiKey}
+          onSetCodexAuthMode={setCodexAuthMode}
+        />
         <SetupWizard doctor={doctor} />
         <ActivityPanel title="Recent feedback" rows={snapshot.recentFeedback} />
         <SetupPanel doctor={doctor} />
@@ -315,6 +388,85 @@ function SetupWizard(props: { doctor: Doctor | null }) {
         {appReady
           ? "GitHub App mode is ready for sanitized issue and PR work."
           : "After GitHub returns, convert the temporary code, add the generated values to .env, and restart Docker."}
+      </div>
+    </div>
+  );
+}
+
+function AgentCredentialsPanel(props: {
+  apiKeyInput: string;
+  credentialUpdating: boolean;
+  doctor: Doctor | null;
+  onApiKeyInput: (value: string) => void;
+  onRemoveApiKey: () => void;
+  onSaveApiKey: () => void;
+  onSetCodexAuthMode: (mode: "api_key" | "cli") => void;
+}) {
+  const doctor = props.doctor;
+  const cliActive = doctor?.codexAuthMode !== "api_key";
+  const apiKeyActive = doctor?.codexAuthMode === "api_key";
+  const disabled = props.credentialUpdating || !doctor;
+  const apiKeyReady = Boolean(doctor?.codexApiKeyConfigured);
+
+  return (
+    <div className="panel credentials-panel">
+      <div className="panel-heading">
+        <p className="eyebrow">Agent credentials</p>
+        <h2>Codex auth</h2>
+      </div>
+      <div className="mode-grid">
+        <ModeCard
+          active={cliActive}
+          actionLabel={cliActive ? "Current mode" : "Use local CLI"}
+          detail="Uses the signed-in Codex CLI on the worker machine."
+          disabled={disabled || cliActive}
+          label="Codex CLI"
+          onSelect={() => props.onSetCodexAuthMode("cli")}
+          state={cliActive ? "Active" : "Available"}
+        />
+        <ModeCard
+          active={apiKeyActive}
+          actionLabel={apiKeyActive ? "Current mode" : "Use API key"}
+          detail={apiKeyReady ? "A server-side key is saved and masked." : "Save a key before using API-key mode."}
+          disabled={disabled || apiKeyActive}
+          label="API key"
+          onSelect={() => props.onSetCodexAuthMode("api_key")}
+          state={apiKeyReady ? "Configured" : "Needed"}
+        />
+      </div>
+      <div className="secret-form">
+        <label htmlFor="codex-api-key">OpenAI API key</label>
+        <div className="secret-row">
+          <input
+            autoComplete="off"
+            disabled={disabled || doctor?.codexSecretStorageWritable === false}
+            id="codex-api-key"
+            placeholder="sk-..."
+            type="password"
+            value={props.apiKeyInput}
+            onChange={(event) => props.onApiKeyInput(event.target.value)}
+          />
+          <button
+            disabled={disabled || props.apiKeyInput.trim().length < 20}
+            type="button"
+            onClick={props.onSaveApiKey}
+          >
+            Save key
+          </button>
+          <button disabled={disabled || !apiKeyReady} type="button" onClick={props.onRemoveApiKey}>
+            Remove
+          </button>
+        </div>
+        <p>
+          {apiKeyReady
+            ? `Saved ${doctor?.codexApiKeyFingerprint ?? "and masked"} from ${credentialSourceLabel(
+                doctor?.codexApiKeySource,
+              )}.`
+            : "No API key is saved."}{" "}
+          Stored at <code>{doctor?.codexSecretsPath ?? ".off/secrets.env"}</code>; the key is never sent back to the
+          browser.
+        </p>
+        <p>API-key execution is configured here, but the API-backed runner lane is not implemented yet.</p>
       </div>
     </div>
   );
@@ -457,6 +609,11 @@ function approvalModeLabel(mode: string): string {
   return "Manual approval";
 }
 
+function codexAuthModeLabel(mode: string): string {
+  if (mode === "api_key") return "API key";
+  return "Codex CLI";
+}
+
 function runnerModeLabel(doctor: Doctor): string {
   if (doctor.codexRunnerMode === "codex" && doctor.codexAuthMode === "cli") return "Codex CLI";
   if (doctor.codexRunnerMode === "codex" && doctor.codexAuthMode === "api_key") return "API runner unavailable";
@@ -464,7 +621,7 @@ function runnerModeLabel(doctor: Doctor): string {
 }
 
 function credentialModeLabel(doctor: Doctor): string {
-  if (doctor.codexAuthMode === "api_key") return doctor.codexApiKeyConfigured ? "API key" : "API key missing";
+  if (doctor.codexAuthMode === "api_key") return doctor.codexApiKeyConfigured ? "API key configured" : "API key missing";
   return "Codex CLI";
 }
 
@@ -472,10 +629,16 @@ function credentialDetail(doctor: Doctor | null): string {
   if (!doctor) return "Waiting for setup health";
   if (doctor.codexAuthMode === "api_key") {
     return doctor.codexApiKeyConfigured
-      ? "API key is present, but the API-backed runner is not implemented yet"
-      : "Add OPENAI_API_KEY after the API-backed runner is implemented";
+      ? "API key is saved, but the API-backed runner is not implemented yet"
+      : "Save a server-side API key in the Agent credentials panel";
   }
   return "Uses the signed-in local Codex CLI subscription path";
+}
+
+function credentialSourceLabel(source: string | undefined): string {
+  if (source === "env") return "environment";
+  if (source === "local_file") return "local secrets file";
+  return "local setup";
 }
 
 function canRunSelectedItem(doctor: Doctor | null): boolean {

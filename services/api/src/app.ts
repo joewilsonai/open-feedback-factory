@@ -31,6 +31,7 @@ export interface AppStore {
   }): Promise<string>;
   getControlRoomSnapshot(): Promise<ControlRoomSnapshot>;
   getApprovalMode(defaultMode: ApiConfig["approvalMode"]): Promise<ApiConfig["approvalMode"]>;
+  getCodexAuthMode(defaultMode: ApiConfig["codexAuthMode"]): Promise<ApiConfig["codexAuthMode"]>;
   getUserFeedbackStatus(feedbackId: string): Promise<UserFeedbackStatus | null>;
   getWorkItem(id: string): Promise<WorkItemRow | null>;
   listWorkItems(): Promise<WorkItemRow[]>;
@@ -58,6 +59,7 @@ export interface AppStore {
     workItemId: string;
   }): Promise<string>;
   setApprovalMode(mode: ApiConfig["approvalMode"], actor?: string): Promise<void>;
+  setCodexAuthMode(mode: ApiConfig["codexAuthMode"], actor?: string): Promise<void>;
 }
 
 export interface AppDeps {
