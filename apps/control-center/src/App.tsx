@@ -273,17 +273,17 @@ export function App() {
     return fetch(`${apiBaseUrl}${path}`, { ...init, headers });
   }
 
-  async function loadWorkItemEvidence(id: string) {
-    setEvidenceLoading(true);
+  async function loadWorkItemEvidence(id: string, options: { silent?: boolean } = {}) {
+    if (!options.silent) setEvidenceLoading(true);
     try {
       const response = await adminFetch(`/admin/work-items/${id}/evidence`);
       if (!response.ok) {
-        setEvidence(null);
+        if (!options.silent) setEvidence(null);
         return;
       }
       setEvidence((await response.json()) as WorkItemEvidence);
     } finally {
-      setEvidenceLoading(false);
+      if (!options.silent) setEvidenceLoading(false);
     }
   }
 
@@ -301,17 +301,17 @@ export function App() {
       setAdminAuthBlocked(true);
       setSnapshot(emptySnapshot);
       setStatus(nextDoctor.adminAuthRequired ? "Admin token required" : "Admin access blocked");
-      setLastSyncedAt(timeLabel(new Date()));
+      if (!options.silent) setLastSyncedAt(timeLabel(new Date()));
       return;
     }
     setAdminAuthBlocked(false);
     const nextSnapshot = (await snapshotResponse.json()) as Snapshot;
     setSnapshot(nextSnapshot);
     const evidenceId = selectedId ?? nextSnapshot.workItems[0]?.id ?? null;
-    if (evidenceId) await loadWorkItemEvidence(evidenceId);
+    if (evidenceId) await loadWorkItemEvidence(evidenceId, { silent: options.silent });
     else setEvidence(null);
     setStatus("Live");
-    setLastSyncedAt(timeLabel(new Date()));
+    if (!options.silent) setLastSyncedAt(timeLabel(new Date()));
   }
 
   async function runWorkItem(id: string) {
@@ -1528,7 +1528,7 @@ function LifecycleOverviewPanel(props: { evidence: WorkItemEvidence | null; load
         <>
           <div className="lifecycle-summary-grid">
             <LifecycleStat label="Current stage" value={blockedStep?.label ?? activeStep?.label ?? "Complete"} />
-            <LifecycleStat label="Evidence" value={props.loading ? "Syncing" : lifecycleEvidenceLabel(props.evidence)} />
+            <LifecycleStat label="Evidence" value={lifecycleEvidenceLabel(props.evidence)} />
             <LifecycleStat label="Progress" value={`${passedCount}/${steps.length} checkpoints`} />
             <LifecycleStat label="User status" value={userStatusLabel(selected.userStatus)} />
           </div>

@@ -102,4 +102,12 @@ describe("control center UI contract", () => {
     expect(source).toContain("/decision");
     expect(source).toContain("/admin/reconciliation/run");
   });
+
+  it("keeps background polling stale while revalidating evidence", () => {
+    expect(source).toContain("loadWorkItemEvidence(evidenceId, { silent: options.silent })");
+    expect(source).toContain("if (!options.silent) setEvidenceLoading(true)");
+    expect(source).toContain("if (!options.silent) setEvidence(null)");
+    expect(source).toContain("if (!options.silent) setLastSyncedAt(timeLabel(new Date()))");
+    expect(source).not.toContain('props.loading ? "Syncing"');
+  });
 });
