@@ -782,8 +782,8 @@ function HostedDemoAlphaPanel(props: { doctor: Doctor | null; feedbackCount: num
         <h2>LaunchBrief repo loop</h2>
       </div>
       <p className="mode-note">
-        LaunchBrief is the clean app for the demo. It intentionally starts without the OFF SDK so the demo can show the
-        factory connecting the repo and creating a real SDK-install PR.
+        LaunchBrief is the repo-connected demo app. The launcher was installed through a real PR, and new suggestions
+        should now create real sanitized work items in this control center.
       </p>
       <div className="demo-link-row">
         <a className="button-link primary" href={launchBriefAppUrl}>
@@ -794,7 +794,7 @@ function HostedDemoAlphaPanel(props: { doctor: Doctor | null; feedbackCount: num
         </a>
       </div>
       <div className="demo-stage-grid">
-        <DemoStage title="Clean app" state="Live" detail="No OFF SDK installed yet" tone="ready" />
+        <DemoStage title="App" state="Live" detail="LaunchBrief is deployed on Vercel" tone="ready" />
         <DemoStage title="Repo" state="Live" detail="Private GitHub repo created" tone="ready" />
         <DemoStage
           title="GitHub App"
@@ -808,7 +808,7 @@ function HostedDemoAlphaPanel(props: { doctor: Doctor | null; feedbackCount: num
           detail={workerReady ? "Can run approved work" : "Prepared but not attached"}
           tone={workerReady ? "ready" : "blocked"}
         />
-        <DemoStage title="SDK install" state="Next" detail="OFF should create this PR" tone="waiting" />
+        <DemoStage title="Feedback launcher" state="Installed" detail="Added through a real LaunchBrief PR" tone="ready" />
         <DemoStage
           title="Feedback loop"
           state={props.feedbackCount ? "Active" : "Waiting"}
