@@ -901,6 +901,17 @@ test("doctor exposes setup wizard links", async () => {
       "DOCKER_CODEX_CLI=codex",
       "CODEX_CLI_VERSION=0.141.0",
     ]);
+    assert.equal(response.json().codexConnection.activeMode, "cli");
+    assert.equal(response.json().codexConnection.subscription.supported, true);
+    assert.equal(response.json().codexConnection.subscription.status, "trusted_worker_required");
+    assert.equal(response.json().codexConnection.subscription.localLoginCommand, "codex login --device-auth");
+    assert.equal(response.json().codexConnection.subscription.statusCommand, "codex login status");
+    assert.equal(response.json().codexConnection.subscription.hostedDelegation.supported, false);
+    assert.equal(response.json().codexConnection.subscription.hostedDelegation.status, "not_supported");
+    assert.match(response.json().codexConnection.subscription.hostedDelegation.summary, /trusted runner/);
+    assert.equal(response.json().codexConnection.apiKey.supported, true);
+    assert.equal(response.json().codexConnection.apiKey.configured, false);
+    assert.equal(response.json().codexConnection.apiKey.status, "missing");
   } finally {
     await app.close();
     if (previousOpenAiKey === undefined) {

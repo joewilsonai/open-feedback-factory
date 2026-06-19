@@ -40,12 +40,24 @@ allows a running worker to claim work.
 ## Codex Auth Modes
 
 `cli` uses the signed-in Codex CLI subscription path on the worker machine.
+This is the $0 incremental-cost lane for indie developers who already have
+Codex access through ChatGPT. OFF does not store the user's ChatGPT session in
+the control plane; the trusted worker machine owns the Codex login.
 
 `api_key` uses a server-side OpenAI API key. The control center saves the key to
 `CODEX_SECRETS_PATH`, defaulting to `.off/secrets.env` for direct local runs and
 `/workspace/.off/secrets.env` in Docker Compose. This path is ignored by git.
 The key is masked in the UI and is never returned to the browser. The worker
 injects it only into the Codex process for API-key runs.
+
+The control center exposes both paths in **Agent credentials**:
+
+- **Codex subscription:** run a trusted host worker where Codex is already
+  signed in. Use `codex login --device-auth` when a browser callback is brittle,
+  and `codex login status` to verify the session.
+- **OpenAI API key:** save a BYO API key for a paid server-side worker. This is
+  useful for Docker or managed workers, but it is billed through the user's
+  OpenAI Platform account.
 
 For hosted control-plane installs, `cli` still means "the worker machine has a
 signed-in Codex CLI session." It does not mean Railway, Docker, or a public
@@ -67,6 +79,13 @@ Generic hosted/container workers cannot use a developer's local Codex
 subscription session. Those workers should stay disabled or use the Docker
 API-key lane until a provider-supported delegated subscription token flow is
 available for the target account type.
+
+Current official Codex auth surfaces support ChatGPT login for local CLI/app
+flows, API-key auth for usage-based workflows, device-code login for local
+clients, and Business/Enterprise access tokens for trusted automation. Do not
+describe hosted Plus/Pro subscription delegation as available until OpenAI or
+another supported provider exposes an appropriate delegated token path for that
+account type.
 
 ## Manual One-Item Run
 

@@ -162,6 +162,7 @@ interface Doctor {
   codexRunnerMode: string;
   codexSecretStorageWritable: boolean;
   codexSecretsPath: string;
+  codexConnection: CodexConnectionPlan;
   controlCenterUrl: string;
   databaseConfigured: boolean;
   githubAppConfigured: boolean;
@@ -175,6 +176,33 @@ interface Doctor {
   publicBaseUrl: string;
   runnerInstall: RunnerInstallPlan;
   runnerAuthRequired: boolean;
+}
+
+interface CodexConnectionPlan {
+  activeMode: string;
+  apiKey: {
+    configured: boolean;
+    fingerprint: string | null;
+    label: string;
+    source: string;
+    status: string;
+    summary: string;
+    supported: boolean;
+  };
+  subscription: {
+    hostedDelegation: {
+      status: string;
+      summary: string;
+      supported: boolean;
+    };
+    label: string;
+    localLoginCommand: string;
+    status: string;
+    statusCommand: string;
+    summary: string;
+    supported: boolean;
+    workerRequirement: string;
+  };
 }
 
 interface RunnerInstallPlan {
@@ -228,6 +256,34 @@ const defaultRunnerInstallPlan: RunnerInstallPlan = {
     uninstallCommand: "pnpm worker:uninstall:host",
   },
   recommendedMode: "host_cli",
+};
+
+const defaultCodexConnectionPlan: CodexConnectionPlan = {
+  activeMode: "cli",
+  apiKey: {
+    configured: false,
+    fingerprint: null,
+    label: "OpenAI API key",
+    source: "local_file",
+    status: "missing",
+    summary: "Save a BYO OpenAI API key before using the Docker API-key worker.",
+    supported: true,
+  },
+  subscription: {
+    hostedDelegation: {
+      status: "not_supported",
+      summary:
+        "Hosted subscription delegation needs a trusted runner or provider-supported delegated token path before Open Feedback Factory can use a user's Codex subscription from a hosted worker.",
+      supported: false,
+    },
+    label: "Codex subscription",
+    localLoginCommand: "codex login --device-auth",
+    status: "trusted_worker_required",
+    statusCommand: "codex login status",
+    summary: "Uses the signed-in Codex CLI on a trusted host worker machine.",
+    supported: true,
+    workerRequirement: "Install the host worker on the trusted host worker where Codex is signed in.",
+  },
 };
 
 function OffMark() {
@@ -960,6 +1016,7 @@ function AgentCredentialsPanel(props: {
   const apiKeyActive = doctor?.codexAuthMode === "api_key";
   const disabled = props.credentialUpdating || !doctor;
   const apiKeyReady = Boolean(doctor?.codexApiKeyConfigured);
+  const connection = doctor?.codexConnection ?? defaultCodexConnectionPlan;
 
   return (
     <div className="panel credentials-panel">
@@ -971,21 +1028,33 @@ function AgentCredentialsPanel(props: {
         <ModeCard
           active={cliActive}
           actionLabel={cliActive ? "Current mode" : "Use local CLI"}
-          detail="Uses the signed-in Codex CLI on the worker machine."
+          detail={connection.subscription.summary}
           disabled={disabled || cliActive}
-          label="Codex CLI"
+          label={connection.subscription.label}
           onSelect={() => props.onSetCodexAuthMode("cli")}
-          state={cliActive ? "Active" : "Available"}
+          state={cliActive ? "Trusted worker" : "Available"}
         />
         <ModeCard
           active={apiKeyActive}
           actionLabel={apiKeyActive ? "Current mode" : "Use API key"}
-          detail={apiKeyReady ? "A server-side key is saved and masked." : "Save a key before using API-key mode."}
+          detail={connection.apiKey.summary}
           disabled={disabled || apiKeyActive}
-          label="API key"
+          label={connection.apiKey.label}
           onSelect={() => props.onSetCodexAuthMode("api_key")}
-          state={apiKeyReady ? "Configured" : "Needed"}
+          state={apiKeyReady ? "Configured" : "Paid lane"}
         />
+      </div>
+      <div className="secret-form credential-guidance">
+        <label>Subscription worker</label>
+        <p>{connection.subscription.workerRequirement}</p>
+        <CommandList
+          commands={[
+            connection.subscription.localLoginCommand,
+            connection.subscription.statusCommand,
+            doctor?.runnerInstall.hostCli.installCommand ?? defaultRunnerInstallPlan.hostCli.installCommand,
+          ]}
+        />
+        <p>{connection.subscription.hostedDelegation.summary}</p>
       </div>
       <div className="secret-form">
         <label htmlFor="codex-api-key">OpenAI API key</label>
@@ -1894,11 +1963,11 @@ function demandDecisionLabel(cluster: FeedbackCluster): string {
 
 function codexAuthModeLabel(mode: string): string {
   if (mode === "api_key") return "API key";
-  return "Codex CLI";
+  return "Codex subscription";
 }
 
 function runnerModeLabel(doctor: Doctor): string {
-  if (doctor.codexRunnerMode === "codex" && doctor.codexAuthMode === "cli") return "Codex CLI";
+  if (doctor.codexRunnerMode === "codex" && doctor.codexAuthMode === "cli") return "Codex subscription";
   if (doctor.codexRunnerMode === "codex" && doctor.codexAuthMode === "api_key") {
     return doctor.codexApiKeyConfigured ? "Codex API key" : "API key missing";
   }
@@ -1907,7 +1976,7 @@ function runnerModeLabel(doctor: Doctor): string {
 
 function credentialModeLabel(doctor: Doctor): string {
   if (doctor.codexAuthMode === "api_key") return doctor.codexApiKeyConfigured ? "API key configured" : "API key missing";
-  return "Codex CLI";
+  return "Codex subscription";
 }
 
 function credentialDetail(doctor: Doctor | null): string {
@@ -1917,7 +1986,7 @@ function credentialDetail(doctor: Doctor | null): string {
       ? "API key is saved for a server-side Codex worker"
       : "Save a server-side API key in the Agent credentials panel";
   }
-  return "Uses the signed-in local Codex CLI subscription path";
+  return "Uses a signed-in Codex CLI subscription on a trusted host worker";
 }
 
 function credentialSourceLabel(source: string | undefined): string {
