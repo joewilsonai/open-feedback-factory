@@ -12,6 +12,7 @@ Follow AGENTS.md and docs/agent-install.md.
 Use Docker Compose for the local stack.
 Do not commit secrets or enable live GitHub mutation unless I explicitly ask.
 Report the local URLs, verification commands, and any blocker.
+Record assumptions made during install and verification.
 ```
 
 ## Preconditions
@@ -178,6 +179,7 @@ After installation, report:
 - whether Codex auth mode is `cli` or `api_key`;
 - whether runner mode is `disabled` or `codex`;
 - any required human action, especially GitHub confirmation screens.
+- assumptions made, defaults chosen, checks skipped, and unresolved questions.
 
 Never include secrets, private keys, tokens, or raw user feedback in the report.
 Never fake demo results. Report queued or blocked states when the real runner,

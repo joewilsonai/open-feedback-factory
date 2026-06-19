@@ -20,6 +20,8 @@
 - Raw feedback stays private; GitHub, agents, PR comments, and user-facing messages use sanitized summaries.
 - Auto-merge exists only for `safe_auto_merge`, explicitly enabled repos, allowed paths, clean checks, reviewer approval, and cost-cap compliance.
 - Feature usage attribution is required in V1.
+- Every planner, builder, reviewer, and release task must record assumptions, defaults chosen, alternatives skipped, checks not run, and unresolved human questions.
+- If an assumption affects privacy, cost, merge safety, or release status, the work item must not auto-merge until it is resolved.
 
 ---
 
@@ -37,6 +39,7 @@
 - `apps/demo-app`: Vite React Daybook notepad/todo app that submits feedback, reads status, and records feature usage.
 - `scripts/doctor.mjs`: local environment and safety checker.
 - `scripts/render-prd-html.mjs`: existing PRD renderer.
+- `docs/v1-test-strategy.md`: required test matrix for implementation agents.
 
 ## Task 1: Workspace Scaffold And Runtime Configuration
 
@@ -63,6 +66,7 @@
 - [ ] Add Docker Compose with Postgres, API, worker, control center, and demo app.
 - [ ] Add `.env.example` with safe defaults and disabled real Codex/GitHub mutations by default.
 - [ ] Update README with local quickstart and the selected V1 ports.
+- [ ] Confirm the implementation tracks the required coverage in `docs/v1-test-strategy.md`.
 - [ ] Run `pnpm install`.
 - [ ] Run `pnpm typecheck` and verify the empty scaffold compiles.
 
@@ -87,11 +91,13 @@
 - Produces `estimateFeatureCost(input): FeatureCostEstimate`.
 - Produces `evaluateAutoMerge(input): AutoMergeEvaluation`.
 - Produces `buildUserStatus(input): UserFeedbackStatus`.
+- Produces `buildAssumptionRecord(input): AgentAssumptionRecord`.
 
 - [ ] Write tests for redaction of emails, phone numbers, obvious secrets, and raw screenshots/transcripts.
 - [ ] Write tests for deterministic clustering of phrasing variants like dark mode/color/theme requests.
 - [ ] Write tests for routing safe feature requests, blocked unsafe/private requests, and needs-more-signal requests.
 - [ ] Write tests for auto-merge gate failures and one passing safe lane.
+- [ ] Write tests that assumption records block auto-merge when they affect privacy, cost, merge safety, or release status.
 - [ ] Implement core logic until tests pass.
 - [ ] Run `pnpm --filter @open-feedback-factory/core test`.
 
@@ -108,11 +114,12 @@
 
 **Interfaces:**
 - Produces `migrateDatabase(databaseUrl): Promise<void>`.
-- Produces `OpenFeedbackStore` with methods for feedback signals, clusters, work items, agent runs, cost records, GitHub artifacts, release events, notifications, feature usage, policy configs, and audit events.
+- Produces `OpenFeedbackStore` with methods for feedback signals, clusters, work items, agent runs, assumption records, cost records, GitHub artifacts, release events, notifications, feature usage, policy configs, and audit events.
 
 - [ ] Add schema tables from the V1 design.
 - [ ] Implement migration runner using `pg`.
 - [ ] Implement store methods with JSONB metadata and timestamp normalization.
+- [ ] Persist agent assumptions on agent runs and expose unresolved assumptions on work items.
 - [ ] Add tests that run store logic against a temporary schema when `TEST_DATABASE_URL` is available and skip with a clear message otherwise.
 - [ ] Run `pnpm --filter @open-feedback-factory/db test`.
 
@@ -189,7 +196,8 @@
 
 - [ ] Write tests for disabled runner behavior and Codex CLI command construction.
 - [ ] Keep the default runner disabled so queued work cannot be reported as implemented.
-- [ ] Implement Codex CLI runner path using local `codex exec --json` and no OpenAI API key.
+- [ ] Implement Codex CLI runner path using local `codex exec --json` with `cli` auth by default and `api_key` auth only when configured.
+- [ ] Require structured runner output to include `outcome`, `summary`, `assumptions`, `checksRun`, `checksSkipped`, `costSummary`, and `userMessage`.
 - [ ] Implement GitHub client seam using `gh` commands for internal dogfood mode.
 - [ ] Run `pnpm --filter @open-feedback-factory/runner test`.
 
@@ -226,10 +234,10 @@
 
 **Interfaces:**
 - Consumes `/admin/control-room` and `/admin/work-items/:id`.
-- Produces operator console for setup health, feedback inbox, queue, work items, agent runs, PR/release status, costs, auto-merge state, follow-ups, and feature usage.
+- Produces operator console for setup health, feedback inbox, queue, work items, agent runs, assumption records, PR/release status, costs, auto-merge state, follow-ups, and feature usage.
 
 - [ ] Build focused operator console with dense but readable sections.
-- [ ] Add setup health, queue, work items, agent runs, cost, user follow-up, and feature usage panels.
+- [ ] Add setup health, queue, work items, agent runs, assumptions, cost, user follow-up, and feature usage panels.
 - [ ] Add run/release action buttons that call admin endpoints.
 - [ ] Run `pnpm --filter @open-feedback-factory/control-center test`.
 
@@ -252,6 +260,9 @@
 - [ ] Run `pnpm demo:seed` against local API.
 - [ ] Run `pnpm test`, `pnpm typecheck`, and `pnpm build`.
 - [ ] Run `docker compose up --build` and verify API, demo app, and control center URLs.
+- [ ] Verify dry-run demo never shows fake PRs, fake costs, fake releases, fake shipped states, or fake agent runs.
+- [ ] Verify private dogfood mode blocks with explicit missing requirements until GitHub, Codex, cost settings, and release proof are truly configured.
+- [ ] Record which tests are deterministic CI tests and which are opt-in private dogfood tests.
 
 ## Task 10: Finish, Commit, Push, And Keep Goal Active If Not Fully Verified
 
@@ -262,6 +273,7 @@
 - Produces pushed implementation branch and verification notes.
 
 - [ ] Run final gates: `pnpm test`, `pnpm typecheck`, `pnpm build`, `pnpm run doctor`, `git diff --check`.
+- [ ] Confirm `docs/v1-test-strategy.md` coverage has no unassigned V1 must-have areas.
 - [ ] Commit coherent implementation changes.
 - [ ] Push `codex/open-feedback-factory-v1`.
 - [ ] If Docker Compose and local URLs are fully verified, report them. If not, leave the goal active with exact remaining blockers.

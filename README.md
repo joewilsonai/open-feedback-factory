@@ -10,6 +10,8 @@ measure whether shipped features get used.
 
 V1 is an internal dogfood build. It is designed as an open-source product, but
 the first implementation should prove the loop privately before public launch.
+See [docs/v1-dogfood-build-checklist.md](docs/v1-dogfood-build-checklist.md)
+for the exact private dogfood completion gate.
 
 ## V1 Direction
 
@@ -142,7 +144,7 @@ issues, PR creation, PR comments, branch cleanup, and guarded merges use
 installation tokens instead of a personal GitHub CLI session.
 
 The control center shows a GitHub App install wizard at
-`http://localhost:5173` locally and `/ops` through the Tailscale public demo.
+`http://localhost:5173` locally and `/ops` through the Tailscale HTTPS demo URL.
 Use **Create GitHub App** to start GitHub's
 manifest-based App registration flow. GitHub still requires a confirmation
 screen, then it returns to the local callback page where you can generate and
@@ -151,8 +153,8 @@ manifest-based App from `localhost` URLs. For local testing, run
 `pnpm run tunnel:tailscale`, set `PUBLIC_BASE_URL` to the printed HTTPS URL,
 restart Docker, then use the wizard. The helper maps `/` to the demo app and
 `/ops` to the control center, while keeping `/sdk`, `/admin`, `/runner`,
-`/doctor`, `/health`, and `/github` pointed at the API so the public demo,
-control center, and GitHub webhook callback work on one hostname.
+`/doctor`, `/health`, and `/github` pointed at the API so the demo app, control
+center, and GitHub webhook callback work on one hostname.
 If Tailscale Funnel is not available, `cloudflared tunnel --url
 http://localhost:4100` can expose the API-only wizard path, but it will not serve
 the demo app unless you add equivalent routing.
@@ -172,6 +174,8 @@ until `AUTO_MERGE_ENABLED=true` and GitHub mutation mode are explicitly set.
 
 - [Agent instructions](AGENTS.md)
 - [Agent install guide](docs/agent-install.md)
+- [V1 dogfood build checklist](docs/v1-dogfood-build-checklist.md)
+- [V1 test strategy](docs/v1-test-strategy.md)
 - [PRD](docs/feedback-to-feature-platform-prd.md)
 - [Polished PRD HTML](docs/feedback-to-feature-platform-prd.html)
 - [V1 design](docs/superpowers/specs/2026-06-19-open-feedback-factory-v1-design.md)

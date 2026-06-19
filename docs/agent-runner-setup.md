@@ -87,8 +87,8 @@ pnpm --filter @open-feedback-factory/worker dev
 The worker polls `/doctor` for live settings, polls `/runner/jobs/claim`, runs
 `codex exec --json`, commits real
 changes when `CODEX_MANAGE_GIT=true`, optionally opens a PR, records actual
-token usage, records cost when pricing rates are configured, and posts the run
-result back to the API.
+token usage, records cost when pricing rates are configured, records assumptions
+and skipped checks, and posts the run result back to the API.
 
 ## Cost Capture
 
@@ -115,3 +115,5 @@ dollar estimate as a low-confidence amount.
 - If a worker is not attached, say queued.
 - If credentials are missing, say blocked and show the missing requirement.
 - If GitHub is disabled, implement locally but do not pretend a PR exists.
+- Do not omit assumptions. If an assumption affects privacy, cost, merge safety,
+  or release status, block auto-merge until it is resolved.

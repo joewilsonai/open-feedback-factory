@@ -10,6 +10,12 @@ guarded agent work -> PR/release proof -> user-visible outcome.
 If you are an agent installing or evaluating this repo from GitHub, follow
 [docs/agent-install.md](docs/agent-install.md).
 
+If you are building V1 behavior, also follow the private dogfood checklist and
+test matrix:
+
+- [docs/v1-dogfood-build-checklist.md](docs/v1-dogfood-build-checklist.md)
+- [docs/v1-test-strategy.md](docs/v1-test-strategy.md)
+
 Default local URLs:
 
 - API: `http://localhost:4100`
@@ -32,6 +38,10 @@ Default local URLs:
 - Do not bypass guardrails. Safe auto-merge requires the policy gates in
   `packages/core`.
 - Do not run destructive git commands unless the user explicitly asks for them.
+- When building, reviewing, or releasing work, record assumptions as part of the
+  run output. Include defaults chosen, alternatives skipped, files intentionally
+  left untouched, checks that could not be run, and questions that need human
+  confirmation. Do not silently invent product behavior.
 
 ## Development Commands
 
@@ -119,6 +129,21 @@ smoke tests.
 
 Control-center UI should use human-readable labels. Do not show raw internal
 enum names such as `safe_auto_merge` or `planned` as primary visible labels.
+
+## Assumption Records
+
+Every agent run should leave a concise assumption record in the work item, run
+metadata, PR body/comment when safe, and final report. The record should answer:
+
+- What did the agent assume from incomplete context?
+- Which default config values did it rely on?
+- Which safer or larger alternatives did it skip?
+- Which tests/checks were not run, and why?
+- Which follow-up questions still need a human?
+- Does any assumption affect privacy, cost, merge safety, or release status?
+
+If an assumption affects privacy, cost, merge safety, or release status, the work
+must not auto-merge until a reviewer lane or human operator resolves it.
 
 ## Codebase Map
 

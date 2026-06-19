@@ -629,11 +629,11 @@
           </div>
           <div class="panel-row">
             <div class="panel-label">Status</div>
-            <div class="panel-value">Draft v0.1</div>
+            <div class="panel-value">Internal dogfood v0.1</div>
           </div>
           <div class="panel-row">
             <div class="panel-label">Distribution</div>
-            <div class="panel-value">Open-source first; hosted product later</div>
+            <div class="panel-value">Private dogfood first; open-source launch later</div>
           </div>
         </aside>
       </div>
@@ -667,7 +667,7 @@
 
   <div class="layout">
     <aside class="toc" aria-label="Table of contents">
-      <p class="toc-title">Contents <span>73</span></p>
+      <p class="toc-title">Contents <span>77</span></p>
       <a class="toc-link level-2" href="#1-product-thesis" data-for="1-product-thesis">1. Product Thesis</a>
 <a class="toc-link level-2" href="#2-positioning" data-for="2-positioning">2. Positioning</a>
 <a class="toc-link level-2" href="#3-target-users" data-for="3-target-users">3. Target Users</a>
@@ -715,13 +715,15 @@
 <a class="toc-link level-3" href="#15-9-agent-quality-evaluation" data-for="15-9-agent-quality-evaluation">15.9 Agent Quality Evaluation</a>
 <a class="toc-link level-3" href="#15-10-integration-surface-and-webhooks" data-for="15-10-integration-surface-and-webhooks">15.10 Integration Surface and Webhooks</a>
 <a class="toc-link level-3" href="#15-11-config-versioning-and-upgrades" data-for="15-11-config-versioning-and-upgrades">15.11 Config Versioning and Upgrades</a>
-<a class="toc-link level-2" href="#16-open-source-launch-strategy" data-for="16-open-source-launch-strategy">16. Open-Source Launch Strategy</a>
+<a class="toc-link level-3" href="#15-12-testing-and-verification-requirements" data-for="15-12-testing-and-verification-requirements">15.12 Testing and Verification Requirements</a>
+<a class="toc-link level-2" href="#16-private-dogfood-and-open-source-launch-strategy" data-for="16-private-dogfood-and-open-source-launch-strategy">16. Private Dogfood and Open-Source Launch Strategy</a>
 <a class="toc-link level-2" href="#17-installation-and-admin-ui" data-for="17-installation-and-admin-ui">17. Installation and Admin UI</a>
 <a class="toc-link level-3" href="#17-1-installation-paths" data-for="17-1-installation-paths">17.1 Installation Paths</a>
 <a class="toc-link level-3" href="#17-2-admin-ui-onboarding" data-for="17-2-admin-ui-onboarding">17.2 Admin UI Onboarding</a>
 <a class="toc-link level-3" href="#17-3-admin-ui-control-surfaces" data-for="17-3-admin-ui-control-surfaces">17.3 Admin UI Control Surfaces</a>
 <a class="toc-link level-3" href="#17-4-security-defaults" data-for="17-4-security-defaults">17.4 Security Defaults</a>
-<a class="toc-link level-3" href="#17-5-maintenance-commands" data-for="17-5-maintenance-commands">17.5 Maintenance Commands</a>
+<a class="toc-link level-3" href="#17-5-v1-dogfood-defaults" data-for="17-5-v1-dogfood-defaults">17.5 V1 Dogfood Defaults</a>
+<a class="toc-link level-3" href="#17-6-maintenance-commands" data-for="17-6-maintenance-commands">17.6 Maintenance Commands</a>
 <a class="toc-link level-2" href="#18-hosted-product-strategy" data-for="18-hosted-product-strategy">18. Hosted Product Strategy</a>
 <a class="toc-link level-2" href="#19-mvp-requirements" data-for="19-mvp-requirements">19. MVP Requirements</a>
 <a class="toc-link level-3" href="#must-have" data-for="must-have">Must Have</a>
@@ -738,7 +740,9 @@
 <a class="toc-link level-3" href="#feedback-tools" data-for="feedback-tools">Feedback tools</a>
 <a class="toc-link level-3" href="#error-tools" data-for="error-tools">Error tools</a>
 <a class="toc-link level-3" href="#differentiation" data-for="differentiation">Differentiation</a>
-<a class="toc-link level-2" href="#23-open-questions" data-for="23-open-questions">23. Open Questions</a>
+<a class="toc-link level-2" href="#23-v1-decisions-and-deferred-questions" data-for="23-v1-decisions-and-deferred-questions">23. V1 Decisions and Deferred Questions</a>
+<a class="toc-link level-3" href="#resolved-v1-decisions" data-for="resolved-v1-decisions">Resolved V1 Decisions</a>
+<a class="toc-link level-3" href="#deferred-post-v1-questions" data-for="deferred-post-v1-questions">Deferred Post-V1 Questions</a>
 <a class="toc-link level-2" href="#24-first-demo-script" data-for="24-first-demo-script">24. First Demo Script</a>
 <a class="toc-link level-2" href="#25-product-principle" data-for="25-product-principle">25. Product Principle</a>
     </aside>
@@ -761,6 +765,7 @@
 <pre><code class="language-text">user feedback -&gt; private signal -&gt; triage -&gt; sanitized issue -&gt; agent work
 -&gt; PR -&gt; review -&gt; merge/deploy -&gt; user follow-up</code></pre>
 <p>The goal is not to replace product judgment. The goal is to make the full loop observable, repeatable, safe, and dramatically faster for small teams.</p>
+<p>V1 is for private internal use and testing. The repo and product should be built as if they will become open source, but publishing the repo, package, hosted service, or launch materials is a later explicit decision after the dogfood loop works with real GitHub, real Codex runs, real costs, and real follow-up.</p>
 <h2 id="2-positioning"><a class="heading-anchor" href="#2-positioning" aria-label="Link to 2. Positioning">#</a>2. Positioning</h2>
 <p>The product is not another coding agent and not another feedback board.</p>
 <p>It is the connective tissue between:</p>
@@ -808,7 +813,8 @@
 <li>Track estimated and actual agent cost per feature.</li>
 <li>Notify users when something ships, already exists, is not planned, needs more</li>
 <p>signal, or is blocked.</p>
-<li>Be open-source and self-hostable from day one.</li>
+<li>Be designed for open-source, self-hostable distribution from day one, while</li>
+<p>keeping V1 private until the internal dogfood loop is proven.</p>
 <li>Provide a demo that feels magical within minutes.</li>
 </ul>
 <h2 id="6-non-goals"><a class="heading-anchor" href="#6-non-goals" aria-label="Link to 6. Non-Goals">#</a>6. Non-Goals</h2>
@@ -821,6 +827,8 @@
 <li>No promise that every user request will be built.</li>
 <li>No general-purpose coding-agent replacement.</li>
 <li>No agent marketplace in V1.</li>
+<li>No public launch, package publishing, hosted-product signup, or external</li>
+<p>promotion until the private dogfood loop is complete and explicitly approved.</p>
 </ul>
 <h2 id="7-core-product-loop"><a class="heading-anchor" href="#7-core-product-loop" aria-label="Link to 7. Core Product Loop">#</a>7. Core Product Loop</h2>
 <ol>
@@ -891,6 +899,7 @@ trackFeatureOutcome({
 <li>decisions and decision reasons;</li>
 <li>GitHub issue and PR links;</li>
 <li>agent runs;</li>
+<li>agent assumptions and unresolved questions;</li>
 <li>estimated and actual cost;</li>
 <li>feature exposure, usage, and outcome events;</li>
 <li>feedback-to-feature impact attribution;</li>
@@ -898,7 +907,7 @@ trackFeatureOutcome({
 <li>release/deploy state;</li>
 <li>user notification history.</li>
 </ul>
-<p>V1 should support Postgres. A lightweight SQLite mode is desirable for local demo and open-source adoption, but it should not block launch.</p>
+<p>Postgres is the only V1 database. SQLite is intentionally deferred until after the private dogfood loop works, because supporting two persistence paths would increase migration, test, and support complexity before the core product is proven.</p>
 <h3 id="8-3-control-center"><a class="heading-anchor" href="#8-3-control-center" aria-label="Link to 8.3 Control Center">#</a>8.3 Control Center</h3>
 <p>A web dashboard for developers.</p>
 <p>Primary views:</p>
@@ -929,7 +938,7 @@ trackFeatureOutcome({
 <li>close issues when shipped or resolved;</li>
 <li>clean up generated branches/workspaces.</li>
 </ul>
-<p>The preferred long-term shape is a GitHub App. The early open-source version may support a GitHub token for setup simplicity.</p>
+<p>V1 should use a GitHub App for installable GitHub integration, narrow permissions, webhook delivery, and auditable merge behavior. <code>GITHUB_MODE=gh</code> can remain an internal dogfood fallback for local testing, but the product should not teach broad personal access tokens as the normal install path.</p>
 <h3 id="8-5-agent-runner"><a class="heading-anchor" href="#8-5-agent-runner" aria-label="Link to 8.5 Agent Runner">#</a>8.5 Agent Runner</h3>
 <p>The runner performs implementation work in an isolated workspace.</p>
 <p>Supported V1 runner modes:</p>
@@ -938,7 +947,7 @@ trackFeatureOutcome({
 <li>GitHub Actions runner;</li>
 <li>optional hosted runner later.</li>
 </ul>
-<p>The runner should be agent-provider agnostic, but the initial implementation can optimize for Codex because Codex already supports noninteractive runs, cloud tasks, GitHub issue/PR workflows, review, MCP, image input, structured output, and usage capture.</p>
+<p>The runner interface should be designed so more agents can be added later, but Codex is the only built-in V1 runner. V1 should optimize for Codex because Codex already supports noninteractive runs, cloud tasks, GitHub issue/PR workflows, review, MCP, image input, structured output, and usage capture. Other agents and gateways are adapter work after the dogfood loop is stable.</p>
 <p>Required runner behavior:</p>
 <ul>
 <li>create a branch or worktree;</li>
@@ -947,6 +956,8 @@ trackFeatureOutcome({
 <li>run an implementation agent;</li>
 <li>run configured tests/checks;</li>
 <li>collect token and cost data when available;</li>
+<li>record assumptions the agent made, defaults it selected, alternatives it</li>
+<p>skipped, and questions that still need human/product confirmation;</p>
 <li>open a PR;</li>
 <li>never merge unless gates allow it;</li>
 <li>clean up temporary workspace state.</li>
@@ -976,6 +987,7 @@ trackFeatureOutcome({
 <p>a human only because a policy, reviewer, CI, release, cost, or risk gate failed or requires explicit approval.</p>
 </ul>
 <p>The desired default for real indie repos is not &quot;a person reviews every PR.&quot; The default should be &quot;agents do the routine implementation and review work; humans handle exceptions.&quot; The PR remains the audit artifact and rollback point, but human review is a policy outcome, not the universal bottleneck.</p>
+<p>Approval to run and approval to merge are separate controls. <code>auto</code> approval allows an attached worker to claim eligible queued work. It does not mean the PR can merge. Auto-merge requires separate reviewer agents, passing checks, guardrail evaluation, provenance checks, and cost/release policy compliance.</p>
 <p>Agent-reviewed auto-merge requires at minimum:</p>
 <ul>
 <li>a separate reviewer agent from the builder agent;</li>
@@ -1006,7 +1018,7 @@ trackFeatureOutcome({
 </ul>
 <p>The follow-up message should be specific enough to feel human and honest, but should not expose internal GitHub links, private reasoning, raw agent output, or other users' feedback.</p>
 <h3 id="8-8-codex-integration-strategy"><a class="heading-anchor" href="#8-8-codex-integration-strategy" aria-label="Link to 8.8 Codex Integration Strategy">#</a>8.8 Codex Integration Strategy</h3>
-<p>Codex should be the default first implementation target, while the product remains agent-provider agnostic.</p>
+<p>Codex is the only built-in V1 implementation runner. The product should keep an adapter boundary so other agents can be added later, but V1 should not claim provider-agnostic implementation before the Codex dogfood loop works.</p>
 <p>As of the June 2026 research pass, useful Codex surfaces include:</p>
 <ul>
 <li>Codex Cloud and GitHub issue/PR delegation for sanitized GitHub issues;</li>
@@ -1016,7 +1028,7 @@ trackFeatureOutcome({
 <li><code>codex exec --json</code> should support both local CLI subscription auth and a</li>
 <p>server-side API-key mode where the saved OpenAI API key is injected only into the worker process;</p>
 <li><code>--output-schema</code> for stable final run summaries such as outcome, PR URL,</li>
-<p>shipped status, cost summary, and user-safe follow-up copy;</p>
+<p>shipped status, cost summary, assumptions, skipped checks, and user-safe follow-up copy;</p>
 <li>Codex SDK as the longer-term server-side control-plane integration after the</li>
 <p>MVP moves beyond shelling out;</p>
 <li>Codex GitHub Action as a CI-native lane for review, release prep, failed CI</li>
@@ -1250,6 +1262,17 @@ trackFeatureOutcome({
 </ul>
 <p>The control center should show whether a work item is blocked by policy, over budget, waiting for approval, safe to run, or eligible for auto-merge.</p>
 <p>Policy decisions should be stored and auditable. When work is blocked by a custom guardrail or cost limit, the original user should receive a respectful product-safe follow-up if the developer exposes feedback status.</p>
+<p>Agent assumptions should be first-class audit data, not buried in logs. Every planner, builder, reviewer, and release agent should emit:</p>
+<ul>
+<li>assumptions made from incomplete product context;</li>
+<li>defaults chosen from configuration;</li>
+<li>alternatives considered and skipped;</li>
+<li>files or surfaces intentionally left untouched;</li>
+<li>tests or checks that could not be run;</li>
+<li>follow-up questions for a human operator;</li>
+<li>confidence level and reason.</li>
+</ul>
+<p>These assumptions should appear on the work item detail screen, be attached to the run record, and be summarized in the PR body or PR comment when safe. If an assumption affects product behavior, privacy, cost, release, or merge safety, it should prevent auto-merge until a reviewer lane or human operator resolves it.</p>
 <h2 id="12-execution-cadence-and-queues"><a class="heading-anchor" href="#12-execution-cadence-and-queues" aria-label="Link to 12. Execution Cadence and Queues">#</a>12. Execution Cadence and Queues</h2>
 <p>Developers should control when feedback turns into agent work. Not every incoming request should immediately wake up an implementation agent.</p>
 <p>The product should support queue modes:</p>
@@ -1461,6 +1484,7 @@ trackFeatureOutcome({
 <li>retention policies by signal source.</li>
 </ul>
 <p>Privacy-sensitive products should be able to purge raw feedback while keeping sanitized clusters, demand counts, and product decision history.</p>
+<p>Even if the first private dogfood is single-tenant, the database model should be designed with workspace/tenant boundaries from the start. Tables that contain feedback, users, work items, runs, costs, GitHub artifacts, release events, notifications, feature usage, policy config, secrets metadata, and audit events should carry a workspace or installation scope. When Postgres row-level security is enabled for a deployed multi-workspace mode, tests must prove cross-workspace reads and writes are denied.</p>
 <h3 id="15-5-rollback-and-failure-handling"><a class="heading-anchor" href="#15-5-rollback-and-failure-handling" aria-label="Link to 15.5 Rollback and Failure Handling">#</a>15.5 Rollback and Failure Handling</h3>
 <p>The system needs a path for bad agent changes.</p>
 <p>Required capabilities:</p>
@@ -1567,29 +1591,148 @@ trackFeatureOutcome({
 <li>compatibility checks for agents, gateways, and database migrations.</li>
 </ul>
 <p>Upgrades must not silently weaken security policies, broaden agent access, or turn on real execution.</p>
-<h2 id="16-open-source-launch-strategy"><a class="heading-anchor" href="#16-open-source-launch-strategy" aria-label="Link to 16. Open-Source Launch Strategy">#</a>16. Open-Source Launch Strategy</h2>
-<p>The open-source repo should be useful without the hosted product.</p>
-<p>Launch package:</p>
+<h3 id="15-12-testing-and-verification-requirements"><a class="heading-anchor" href="#15-12-testing-and-verification-requirements" aria-label="Link to 15.12 Testing and Verification Requirements">#</a>15.12 Testing and Verification Requirements</h3>
+<p>V1 needs tests for the product loop, not only package-level code coverage. The test suite should prove that the system stays honest when integrations are missing, when agents fail, when costs are unavailable, and when a request should not be built.</p>
+<p>Required test tiers:</p>
+<ul>
+<li>unit tests for sanitization, clustering, routing, status generation, demand</li>
+<p>thresholds, cost estimation, auto-merge gates, and assumption-record blocking;</p>
+<li>security tests for workspace/tenant isolation, Postgres row-level security</li>
+<p>policies when enabled, admin RBAC, raw-feedback permissions, secret storage, webhook verification, prompt injection, SSRF/tunnel URL rejection, and GitHub App permission boundaries;</p>
+<li>abuse and hardening tests for path traversal, command injection, branch-name</li>
+<p>injection, SQL injection, admin CSRF/CORS, rate limiting, webhook replay, idempotency, package-script sandboxing, token-scope minimization, audit-log tamper resistance, retention/delete behavior, and secret leakage into artifacts;</p>
+<li>API contract tests for SDK feedback submission, status reads, feature usage,</li>
+<p>control-center snapshots, runner claims, release markers, admin config, and GitHub webhooks;</p>
+<li>Postgres integration tests for migrations, store methods, audit records,</li>
+<p>agent assumptions, cost records, GitHub artifacts, release events, and feature usage attribution, including RLS policy enforcement in a security test schema;</p>
+<li>runner tests for disabled mode, manual approval, auto approval, Codex CLI</li>
+<p>command construction, API-key auth, sanitized prompts, structured output, usage parsing, cost calculation, and skipped-check/assumption capture;</p>
+<li>GitHub integration tests for App manifest generation, webhook reachability,</li>
+<p>signature verification, sanitized issue bodies, PR artifact storage, branch cleanup, and guarded merge refusal;</p>
+<li>control-center tests for setup states, queue states, human-readable labels,</li>
+<p>raw enum hiding, assumption visibility, cost display, user follow-up, and blocked/missing-configuration explanations;</p>
+<li>SDK/demo-app tests for real feedback submission, user-safe status polling,</li>
+<p>feature usage events, and negative outcomes;</p>
+<li>dry-run end-to-end tests that prove the local demo never shows fake PRs, fake</li>
+<p>costs, fake releases, fake shipped states, or fake agent runs;</p>
+<li>private dogfood end-to-end tests that use real GitHub/Codex configuration to</li>
+<p>create a real issue, real branch, real PR, real usage record, real cost or token-only actual, real assumption record, and real release marker;</p>
+<li>reconciliation tests for interrupted runs, stale workspaces, stale branches,</li>
+<p>failed agent runs, failed checks, missing release proof, and rollback pause.</p>
+</ul>
+<p>Required high-value regressions:</p>
+<ul>
+<li>raw feedback never appears in GitHub issue bodies, PR bodies, prompts,</li>
+<p>browser-visible status, logs intended for GitHub, or user follow-up;</p>
+<li>a user, API key, worker, or admin scoped to one workspace cannot read or mutate</li>
+<p>another workspace's feedback, work items, costs, GitHub artifacts, release events, notifications, feature usage, policy config, or audit trail;</p>
+<li>Postgres RLS policies deny cross-workspace access when enabled, including</li>
+<p>direct SQL attempts that bypass application helpers;</p>
+<li>users without raw-feedback permission can see sanitized summaries and status</li>
+<p>only, not raw payloads or private metadata;</p>
+<li>non-owner roles cannot rotate secrets, enable auto-merge, change protected</li>
+<p>paths, change cost caps upward, toggle the kill switch, or weaken policy;</p>
+<li>GitHub webhook requests without a valid signature are rejected and do not write</li>
+<p>artifacts;</p>
+<li>GitHub App tokens are installation-scoped and the product refuses to mutate</li>
+<p>repos outside the configured installation/repo;</p>
+<li>prompt-injection text inside feedback is treated as user content and cannot</li>
+<p>cause the runner to request raw feedback, expose secrets, change policy, or bypass guardrails;</p>
+<li>localhost, private-network, metadata-service, and malformed webhook/tunnel URLs</li>
+<p>are rejected for public GitHub webhook setup unless explicitly in local-only development mode;</p>
+<li>secrets saved through the control center are stored outside git, masked in</li>
+<p>responses, never returned to the browser, and never copied into GitHub artifacts or agent prompts;</p>
+<li>user-controlled strings cannot escape file/path boundaries, create unsafe</li>
+<p>branch names, inject shell arguments, inject SQL, or alter generated YAML, Markdown, PR bodies, issue bodies, or config files in unsafe ways;</p>
+<li>generated branch names, commit messages, issue titles, labels, PR titles, and</li>
+<p>file paths are normalized and length-limited before use in git, GitHub, shell, or filesystem operations;</p>
+<li>admin mutation endpoints require valid admin auth, reject cross-origin writes</li>
+<p>unless explicitly configured, and are protected from CSRF in browser-based deployments;</p>
+<li>feedback, status, feature-usage, and admin endpoints have rate limits or abuse</li>
+<p>controls appropriate for their exposure mode;</p>
+<li>public SDK feedback intake, status polling, and feature-usage endpoints have</li>
+<p>separate per-user, per-device/session, per-IP, per-app/workspace, and burst limits;</p>
+<li>admin write endpoints, policy changes, cost-cap changes, secret operations,</li>
+<p>runner actions, and release-marker operations have stricter rate limits and audit events for throttled attempts;</p>
+<li>runner job claim/complete endpoints have per-worker, per-workspace, and</li>
+<p>concurrency limits so a broken worker cannot claim the queue or create runaway retries;</p>
+<li>GitHub webhook endpoints have replay/idempotency protection plus rate limits</li>
+<p>by delivery id, installation, repo, and source IP/header trust where available;</p>
+<li>model/agent execution has spend and attempt limits separate from HTTP rate</li>
+<p>limits: per work item, per day, per month, per workspace, and per runner;</p>
+<li>rate-limit responses are user-safe and observable. They should not silently</li>
+<p>drop feedback; they should queue, defer, or return a clear retry/status path depending on endpoint type;</p>
+<li>webhook delivery is idempotent and replay-resistant enough that duplicate</li>
+<p>GitHub events cannot create duplicate runs, duplicate costs, duplicate release markers, or duplicate notifications;</p>
+<li>package install/test scripts from target repos are treated as untrusted code</li>
+<p>and cannot access Open Feedback Factory secrets, raw feedback, production databases, or broader network access than the sandbox allows;</p>
+<li>access tokens and GitHub App installation tokens are scoped to the minimum</li>
+<p>required permissions and are not logged, cached longer than necessary, or reused across workspaces/installations;</p>
+<li>audit events for policy changes, secret changes, runner claims, merge</li>
+<p>decisions, release markers, and user notifications are append-only from the application perspective and tamper-evident enough for dogfood debugging;</p>
+<li>raw-feedback retention and deletion tests prove raw payloads are purged while</li>
+<p>sanitized aggregates, demand counts, and audit-safe deletion records remain;</p>
+<li>disabled runner queues work without creating runs, costs, commits, PRs, or</li>
+<p>shipped states;</p>
+<li>auto approval lets an attached worker claim eligible work, but never bypasses</li>
+<p>review/check/policy/provenance/cost/release merge gates;</p>
+<li>merged work remains waiting for release until a release marker or deployment</li>
+<p>detector proves availability;</p>
+<li>missing cost rates show real token usage and low-confidence dollar estimates,</li>
+<p>not invented actual spend;</p>
+<li>unresolved assumptions affecting privacy, cost, merge safety, or release</li>
+<p>status block auto-merge;</p>
+<li>not-planned, unsafe, duplicate, already-available, and below-threshold</li>
+<p>outcomes produce respectful user-safe explanations and decision categories.</p>
+</ul>
+<p>Minimum verification before a dogfood release:</p>
+<pre><code class="language-bash">pnpm test
+pnpm typecheck
+pnpm build
+pnpm run doctor
+git diff --check</code></pre>
+<p>With Docker Postgres running:</p>
+<pre><code class="language-bash">TEST_DATABASE_URL=postgres://off:off@127.0.0.1:55432/open_feedback_factory pnpm --filter @open-feedback-factory/db test
+docker compose up --build</code></pre>
+<p>The control center should surface test and verification state: last test run, last doctor run, required checks for auto-merge, failed checks, skipped checks, and whether a work item is blocked because verification is incomplete.</p>
+<h2 id="16-private-dogfood-and-open-source-launch-strategy"><a class="heading-anchor" href="#16-private-dogfood-and-open-source-launch-strategy" aria-label="Link to 16. Private Dogfood and Open-Source Launch Strategy">#</a>16. Private Dogfood and Open-Source Launch Strategy</h2>
+<p>V1 is a private dogfood build. It should be engineered with open-source distribution in mind, but the repo should not be promoted publicly until the internal loop has been proven against real feedback, real Codex runs, real PRs, real cost records, and honest shipped/not-shipped outcomes.</p>
+<p>The eventual open-source repo should be useful without the hosted product.</p>
+<p>Private dogfood package:</p>
+<ul>
+<li>Docker Compose local setup;</li>
+<li>Daybook sample app;</li>
+<li>local control center;</li>
+<li>local API;</li>
+<li>Postgres Docker Compose;</li>
+<li>Codex-based runner;</li>
+<li>GitHub App setup path, with <code>gh</code> fallback only for internal dogfood;</li>
+<li>clear dry-run mode;</li>
+<li>real dogfood mode with GitHub/Codex connected;</li>
+<li>doctor command;</li>
+<li>security notes and no-fake-demo rules.</li>
+</ul>
+<p>Eventual open-source launch package:</p>
 <ul>
 <li>one-command local setup;</li>
 <li>sample app;</li>
 <li>sample GitHub repo flow;</li>
 <li>local control center;</li>
 <li>Codex-based runner;</li>
-<li>GitHub token setup;</li>
+<li>GitHub App setup;</li>
 <li>Postgres Docker compose;</li>
-<li>demo feedback items;</li>
+<li>clearly labeled sample feedback items;</li>
 <li>security disclosure policy and threat model;</li>
 <li>README with a short video/GIF.</li>
 </ul>
-<p>The viral demo:</p>
+<p>The private dogfood demo:</p>
 <ol>
 <li>Run the sample app.</li>
 <li>Submit feedback as a beta user.</li>
 <li>Watch it appear in the control center.</li>
 <li>See it become a GitHub issue.</li>
 <li>Watch the agent open a PR.</li>
-<li>Merge/deploy.</li>
+<li>Watch reviewer/check/policy gates decide whether it can merge.</li>
 <li>See the user-facing status change to shipped.</li>
 </ol>
 <p>The story should be simple:</p>
@@ -1606,8 +1749,8 @@ trackFeatureOutcome({
 <li>obvious visibility into what agents can access and do.</li>
 </ul>
 <h3 id="17-1-installation-paths"><a class="heading-anchor" href="#17-1-installation-paths" aria-label="Link to 17.1 Installation Paths">#</a>17.1 Installation Paths</h3>
-<h4 id="demo-mode"><a class="heading-anchor" href="#demo-mode" aria-label="Link to Demo Mode">#</a>Demo Mode</h4>
-<p>Demo mode should require no real GitHub mutations, no production secrets, and no model spend.</p>
+<h4 id="dry-run-demo-mode"><a class="heading-anchor" href="#dry-run-demo-mode" aria-label="Link to Dry-Run Demo Mode">#</a>Dry-Run Demo Mode</h4>
+<p>Dry-run demo mode should require no real GitHub mutations, no production secrets, and no model spend. It exists to show the shape of the loop without pretending work happened.</p>
 <p>Example target flow:</p>
 <pre><code class="language-bash">npx create-feedback-factory
 cd my-feedback-factory
@@ -1619,10 +1762,24 @@ pnpm demo</code></pre>
 <li>local API;</li>
 <li>clearly seeded sample feedback, labeled as sample input;</li>
 <li>queued or blocked agent lane unless a real runner is configured;</li>
-<li>real PR lifecycle only after GitHub is configured;</li>
+<li>no fake PR URLs, fake costs, fake agent runs, fake releases, or fake shipped</li>
+<p>state;</p>
 <li>user-facing status updates.</li>
 </ul>
-<p>This is the viral path. A developer should understand the product loop in a few minutes before connecting real infrastructure, without pretending that agent work, PRs, release proof, or costs happened.</p>
+<p>This is the trust-building path. A developer should understand the product loop in a few minutes before connecting real infrastructure, without pretending that agent work, PRs, release proof, or costs happened.</p>
+<h4 id="private-dogfood-demo-mode"><a class="heading-anchor" href="#private-dogfood-demo-mode" aria-label="Link to Private Dogfood Demo Mode">#</a>Private Dogfood Demo Mode</h4>
+<p>Private dogfood demo mode is the real internal test. It connects GitHub, Codex, and cost capture, then runs the Daybook sample app through the same path a customer app would use.</p>
+<p>It should require:</p>
+<ul>
+<li>a configured GitHub App, or explicit internal <code>gh</code> fallback;</li>
+<li>a real target repo and clean branch;</li>
+<li>Codex CLI subscription auth or server-side API-key auth;</li>
+<li>explicit approval mode;</li>
+<li>explicit merge mode;</li>
+<li>configured cost rates or a clearly labeled token-only actual;</li>
+<li>release marker or deployment detector.</li>
+</ul>
+<p>Private dogfood mode must create real GitHub artifacts and record real run results. If any dependency is missing, the UI should say queued, blocked, or waiting for configuration. It must never substitute seeded data for real PRs, costs, releases, or shipped outcomes.</p>
 <h4 id="indie-self-hosted-mode"><a class="heading-anchor" href="#indie-self-hosted-mode" aria-label="Link to Indie Self-Hosted Mode">#</a>Indie Self-Hosted Mode</h4>
 <p>Self-hosted mode should work on common indie-friendly infrastructure.</p>
 <p>Targets:</p>
@@ -1695,8 +1852,9 @@ pnpm demo</code></pre>
 <p>Setup steps:</p>
 <ol>
 <li>Connect GitHub repo.</li>
-<li>Choose install mode: dry-run, PR-only, guarded auto-merge.</li>
-<li>Add model provider, OpenRouter key, Requesty key, or model gateway.</li>
+<li>Choose install mode: dry-run demo, implement-only PR mode,</li>
+<p>agent-reviewed auto-merge, or human-exception-required.</p>
+<li>Add Codex auth mode: local CLI subscription or server-side API key.</li>
 <li>Set cost caps.</li>
 <li>Pick guardrail template: web app, iOS app, SaaS app, or open-source</li>
 <p>library.</p>
@@ -1708,6 +1866,8 @@ pnpm demo</code></pre>
 <li>Submit test feedback.</li>
 <li>Watch it queue, block, or run against real configured integrations.</li>
 <li>Explicitly enable real agent execution.</li>
+<li>Optionally configure OpenRouter, Requesty, or Fusion adapters after the</li>
+<p>direct Codex path works.</p>
 </ol>
 <p>The default path should start disabled and honest. Real GitHub mutations and real model spend should require explicit enabling.</p>
 <h3 id="17-3-admin-ui-control-surfaces"><a class="heading-anchor" href="#17-3-admin-ui-control-surfaces" aria-label="Link to 17.3 Admin UI Control Surfaces">#</a>17.3 Admin UI Control Surfaces</h3>
@@ -1963,7 +2123,37 @@ pnpm demo</code></pre>
 <li>per-run and monthly budget caps;</li>
 <li>full audit log for policy decisions and agent actions.</li>
 </ul>
-<h3 id="17-5-maintenance-commands"><a class="heading-anchor" href="#17-5-maintenance-commands" aria-label="Link to 17.5 Maintenance Commands">#</a>17.5 Maintenance Commands</h3>
+<h3 id="17-5-v1-dogfood-defaults"><a class="heading-anchor" href="#17-5-v1-dogfood-defaults" aria-label="Link to 17.5 V1 Dogfood Defaults">#</a>17.5 V1 Dogfood Defaults</h3>
+<p>New installs should start with conservative defaults that still let our private dogfood run be real once explicitly enabled.</p>
+<p>V1 defaults:</p>
+<ul>
+<li>product name: Open Feedback Factory;</li>
+<li>visibility: private internal dogfood;</li>
+<li>database: Postgres only;</li>
+<li>install path: Docker Compose;</li>
+<li>GitHub path: GitHub App required, with <code>gh</code> fallback for internal dogfood;</li>
+<li>built-in runner: Codex only;</li>
+<li>Codex auth: local CLI subscription first, API-key mode optional;</li>
+<li>runner mode: disabled until explicitly attached;</li>
+<li>approval mode: manual by default;</li>
+<li>merge mode: implement-only by default;</li>
+<li>auto-merge: off until explicitly enabled and still limited to</li>
+<p><code>safe_auto_merge</code>;</p>
+<li>default cadence: manual, with immediate safe lane available only after the</li>
+<p>operator enables real execution;</p>
+<li>default threshold preset: balanced;</li>
+<li>default work-item cap: <code>$5</code> estimated cost;</li>
+<li>default daily cap: <code>$25</code>;</li>
+<li>default monthly cap: <code>$100</code>;</li>
+<li>raw feedback retention: 30 days by default, with sanitized summaries, demand</li>
+<p>counts, decisions, audit logs, and cost records retained longer;</p>
+<li>guardrail templates: web app and open-source library in V1; iOS and SaaS</li>
+<p>templates after the web path works;</p>
+<li>release proof: explicit release marker in V1, deployment integrations later;</li>
+<li>outbound notifications: user-safe status endpoint in V1, outbound webhooks as</li>
+<p>integration surface, native email/Slack/Discord later.</p>
+</ul>
+<h3 id="17-6-maintenance-commands"><a class="heading-anchor" href="#17-6-maintenance-commands" aria-label="Link to 17.6 Maintenance Commands">#</a>17.6 Maintenance Commands</h3>
 <p>The CLI should make maintenance boring.</p>
 <p>Target commands:</p>
 <pre><code class="language-bash">feedback-factory doctor
@@ -2005,6 +2195,8 @@ feedback-factory demo</code></pre>
 <li>Wizard-driven setup and strict dry-run default.</li>
 <li>Triage and dedupe.</li>
 <li>Sanitized GitHub issue creation.</li>
+<li>GitHub App install path and webhook receiver, with <code>gh</code> fallback only for</li>
+<p>internal dogfood.</p>
 <li>Owned work router for risk, budget, agent, and merge decisions.</li>
 <li>Configurable execution cadence and queue modes.</li>
 <li>Demand thresholds for backlog, planning, and implementation promotion.</li>
@@ -2018,9 +2210,13 @@ feedback-factory demo</code></pre>
 <li>Policy-governed merge modes: implement-only, agent-reviewed auto-merge, and</li>
 <p>human-exception-required.</p>
 <li>Estimated and actual cost capture.</li>
-<li>User-safe status endpoint.</li>
-<li>Optional feature usage tracking and feedback-impact attribution.</li>
-<li>Demo app and seed scenario.</li>
+<li>Minimal release marker so merged work is not called shipped until release is</li>
+<p>explicitly proven.</p>
+<li>User-safe status endpoint for shipped, planned, already available, not</li>
+<p>planned, blocked, unsafe, needs more signal, and waiting-for-release states.</p>
+<li>Feature usage tracking and feedback-impact attribution.</li>
+<li>Real Daybook demo app and seed scenario with no fake PRs, fake costs, fake</li>
+<p>releases, or fake shipped states.</p>
 <li>Maintenance/doctor command.</li>
 <li>Versioned config and migration path.</li>
 </ul>
@@ -2028,8 +2224,8 @@ feedback-factory demo</code></pre>
 <ul>
 <li>iOS SDK/example.</li>
 <li>Error capture.</li>
-<li>Release/deploy tracking.</li>
-<li>Feature exposure/usage/outcome tracking.</li>
+<li>Deployment-provider tracking beyond the V1 release marker.</li>
+<li>Advanced feature exposure/usage/outcome reporting.</li>
 <li>Data retention controls.</li>
 <li>Rollback/revert workflow.</li>
 <li>Outbound webhooks.</li>
@@ -2039,12 +2235,11 @@ feedback-factory demo</code></pre>
 <li>Per-category cadence templates.</li>
 <li>User-base-size threshold presets.</li>
 <li>Optional model gateway adapter.</li>
-<li>OpenRouter provider support.</li>
-<li>OpenRouter Fusion deliberation lane support.</li>
-<li>Requesty gateway/provider support.</li>
+<li>OpenRouter provider adapter.</li>
+<li>OpenRouter Fusion deliberation adapter.</li>
+<li>Requesty gateway/provider adapter.</li>
 <li>MCP tool surface for agent-safe access to work items.</li>
 <li>Codex capability health panel.</li>
-<li>GitHub App install path.</li>
 <li>Feature flag/rollout hooks.</li>
 <li>Agent quality reporting.</li>
 <li>OpenTelemetry or similar trace export.</li>
@@ -2097,13 +2292,13 @@ feedback-factory demo</code></pre>
 <p>A web SDK should come first because it is easiest for indie developers to adopt. It should support feedback submission, error capture, and status reads.</p>
 <p>An iOS SDK or example should follow because the story is especially strong for beta mobile apps.</p>
 <p>An API server owns ingestion, auth, sanitization, status reads, control center data, and webhooks.</p>
-<p>The database needs tables for feedback signals, sanitized summaries, clusters, work items, decisions, agent runs, cost estimates, actual cost, policies, GitHub links, release status, feature usage events, impact attribution, and notifications.</p>
+<p>The database needs tables for feedback signals, sanitized summaries, clusters, work items, decisions, agent runs, cost estimates, actual cost, policies, GitHub links, release status, agent assumptions, unresolved questions, feature usage events, impact attribution, and notifications.</p>
 <p>The control center is the developer UI. It shows the queue, clusters, statuses, PRs, agents, costs, guardrails, blocked items, and reconsideration candidates.</p>
 <p>The queue system should support immediate jobs, scheduled batches, threshold queues, manual approval queues, and per-category cadence rules.</p>
 <p>The promotion system should support user-base-size presets and custom thresholds for backlog, planning, and implementation eligibility.</p>
 <p>The GitHub integration should create issues, apply labels, comment status, open PRs, read checks, close resolved issues, and clean up generated branches.</p>
-<p>The agent runner should be abstract. Codex can be first, but the platform should eventually support other agents.</p>
-<p>A Codex runner should use noninteractive runs, structured output, usage capture, and review mode where possible.</p>
+<p>Codex should be the only built-in V1 runner. The runner boundary should still be designed as an adapter interface so the platform can support other agents later without moving product policy out of the work router.</p>
+<p>A Codex runner should use noninteractive runs, structured output, usage capture, assumption records, and review mode where possible.</p>
 <p>The work router should be owned by this product. It decides risk, budget, agent, model tier, review lanes, merge policy, and whether work runs at all.</p>
 <p>The model gateway should be optional and replaceable. It can use direct providers, managed gateways such as OpenRouter or Requesty, or open-source tools for provider routing, fallbacks, rate limits, and low-level spend logs, but product policy should remain in the work router.</p>
 <p>A policy engine enforces guardrails: allowed files, forbidden files, risk tiers, cost caps, model limits, auto-merge settings, and approval rules.</p>
@@ -2199,39 +2394,70 @@ feedback-factory demo</code></pre>
 <p>They are not primarily product-request systems.</p>
 <h3 id="differentiation"><a class="heading-anchor" href="#differentiation" aria-label="Link to Differentiation">#</a>Differentiation</h3>
 <p>This product owns the whole loop between user request and shipped outcome, with an open-source wedge and GitHub-native developer workflow.</p>
-<h2 id="23-open-questions"><a class="heading-anchor" href="#23-open-questions" aria-label="Link to 23. Open Questions">#</a>23. Open Questions</h2>
+<h2 id="23-v1-decisions-and-deferred-questions"><a class="heading-anchor" href="#23-v1-decisions-and-deferred-questions" aria-label="Link to 23. V1 Decisions and Deferred Questions">#</a>23. V1 Decisions and Deferred Questions</h2>
+<h3 id="resolved-v1-decisions"><a class="heading-anchor" href="#resolved-v1-decisions" aria-label="Link to Resolved V1 Decisions">#</a>Resolved V1 Decisions</h3>
 <ul>
-<li>What is the product name?</li>
-<li>Should V1 support only Codex, or a pluggable agent interface from day one?</li>
-<li>Should SQLite be part of V1 for dead-simple local setup?</li>
-<li>Should hosted runners exist at launch, or wait until OSS demand is proven?</li>
-<li>Which OSS model gateway should be the default optional adapter, if any?</li>
-<li>Should OpenRouter be a first-class setup option in V1 or a documented</li>
-<p>provider adapter?</p>
-<li>Should OpenRouter Fusion ship as a visible planning/review button in V1 or</li>
-<p>remain an advanced policy option?</p>
-<li>What default Fusion presets should ship for budget, high-quality, and custom</li>
-<p>review lanes?</p>
-<li>Should Requesty be a first-class setup option in V1, especially as a possible</li>
-<p>early partner integration?</p>
-<li>Which install path should be the launch default: Docker Compose, Railway</li>
-<p>template, GitHub Actions, or all three?</p>
-<li>What sandbox model is strict enough for local and hosted agent execution?</li>
-<li>What admin roles should ship in V1?</li>
-<li>What raw feedback retention default should ship in V1?</li>
-<li>Which feature flag/rollout providers should be first-class integrations?</li>
-<li>Which outbound webhook events should ship in V1?</li>
-<li>What execution cadence should be the default for new installs?</li>
-<li>Which demand threshold preset should be the default for new installs?</li>
-<li>What is the default cost cap for indie developers?</li>
-<li>What guardrail templates should ship by default for web apps, iOS apps,</li>
-<p>open-source libraries, and SaaS products?</p>
-<li>What is the minimum useful iOS SDK?</li>
-<li>Should user notifications be owned by the product or exposed as webhook-only</li>
-<p>in V1?</p>
+<li>Product name: Open Feedback Factory.</li>
+<li>Current phase: private internal dogfood, not public open-source launch.</li>
+<li>Public launch: deferred until the real dogfood loop proves feedback intake,</li>
+<p>GitHub issue creation, Codex implementation, PR creation, gate evaluation, cost capture, release marker, and user follow-up.</p>
+<li>Built-in runner: Codex only.</li>
+<li>Runner extensibility: keep an adapter interface, but do not claim broad agent</li>
+<p>support in V1.</p>
+<li>Database: Postgres only.</li>
+<li>Install default: Docker Compose.</li>
+<li>GitHub integration: GitHub App as the installable path; <code>gh</code> fallback only for</li>
+<p>internal dogfood.</p>
+<li>Hosted runners: deferred.</li>
+<li>Model/gateway default: direct Codex/OpenAI first.</li>
+<li>Codex auth modes: local CLI subscription and server-side API key.</li>
+<li>OpenRouter: documented optional adapter, not a launch blocker.</li>
+<li>Requesty: documented optional adapter and possible early partner path, not a</li>
+<p>launch blocker.</p>
+<li>OpenRouter Fusion: optional policy/deliberation lane, off by default, not the</li>
+<p>primary coding path.</p>
+<li>Sandbox model: local isolated workspace/container plus strict policy checks in</li>
+<p>V1; hosted disposable workers later.</p>
+<li>Admin roles: owner, developer/operator, reviewer, viewer, billing/admin, and</li>
+<p>privacy/admin.</p>
+<li>Raw feedback retention default: 30 days.</li>
+<li>Status ownership: the product owns the user-safe status endpoint and</li>
+<p>notification records in V1.</p>
+<li>Release proof: explicit release marker in V1; deployment-provider</li>
+<p>integrations later.</p>
+<li>Execution cadence default: manual.</li>
+<li>Demand threshold default: balanced.</li>
+<li>Cost defaults: <code>$5</code> per work item, <code>$25</code> per day, <code>$100</code> per month.</li>
+<li>Guardrail templates: web app and open-source library in V1; iOS and SaaS</li>
+<p>templates later.</p>
+<li>Mobile SDK: deferred; web SDK ships first.</li>
+<li>Feature flag providers: generic release marker/webhook hooks first, native</li>
+<p>provider integrations later.</p>
+</ul>
+<h3 id="deferred-post-v1-questions"><a class="heading-anchor" href="#deferred-post-v1-questions" aria-label="Link to Deferred Post-V1 Questions">#</a>Deferred Post-V1 Questions</h3>
+<ul>
+<li>When to publish the repo publicly.</li>
+<li>Whether the first hosted product should use managed runners or only managed</li>
+<p>control-plane hosting.</p>
+<li>Which provider adapter should become first-class first: OpenRouter, Requesty,</li>
+<p>or another gateway.</p>
+<li>Whether Fusion deserves a visible control-center action or should remain a</li>
+<p>policy-only escalation.</p>
+<li>Which Fusion presets should ship for budget, high-quality, and custom review</li>
+<p>lanes.</p>
+<li>When to add mobile SDKs.</li>
+<li>When to add Linear, Jira, Slack, Discord, and email integrations.</li>
+<li>Whether to add a public roadmap, changelog widget, or voting board.</li>
 </ul>
 <h2 id="24-first-demo-script"><a class="heading-anchor" href="#24-first-demo-script" aria-label="Link to 24. First Demo Script">#</a>24. First Demo Script</h2>
 <p>The demo should use a tiny real app, not a mock dashboard.</p>
+<p>The first demo has two modes:</p>
+<ul>
+<li>dry-run demo: local education mode with seeded/sample data clearly labeled,</li>
+<p>no GitHub mutation, no model spend, and no fake PR/cost/release claims;</p>
+<li>private dogfood demo: real internal mode with GitHub and Codex connected,</li>
+<p>real PRs, real run results, real cost records, and release/user status updates only when proven.</p>
+</ul>
 <p>Scenario:</p>
 <ol>
 <li>A beta user says: &quot;Please add note search so I can find older notes.&quot;</li>
@@ -2240,8 +2466,9 @@ feedback-factory demo</code></pre>
 <li>A sanitized GitHub issue is created.</li>
 <li>The agent opens a PR adding note search.</li>
 <li>Tests pass.</li>
-<li>The PR merges.</li>
-<li>The demo app deploys.</li>
+<li>Reviewer, check, policy, cost, and provenance gates pass.</li>
+<li>The PR merges only if the configured merge mode allows it.</li>
+<li>A release marker or deployment detector proves the change is available.</li>
 <li>The user sees: &quot;Shipped: note search is now available.&quot;</li>
 </ol>
 <p>The demo must also show a negative path:</p>
@@ -2253,6 +2480,7 @@ feedback-factory demo</code></pre>
 <li>Repeated similar requests can trigger reconsideration if the category allows</li>
 <p>it.</p>
 </ol>
+<p>If the runner is disabled, the demo should say queued. If GitHub is missing, it should say waiting for GitHub configuration. If Codex auth is missing, it should say waiting for runner configuration. If cost rates are missing, it should show real token usage and a low-confidence dollar estimate rather than invented actual spend.</p>
 <h2 id="25-product-principle"><a class="heading-anchor" href="#25-product-principle" aria-label="Link to 25. Product Principle">#</a>25. Product Principle</h2>
 <p>The product should feel like a trustworthy product operator, not an overeager agent.</p>
 <p>It should be fast, but not reckless. It should be autonomous, but explainable. It should make users feel heard and developers feel in control.</p>
