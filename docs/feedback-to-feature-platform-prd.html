@@ -911,6 +911,35 @@ trackFeatureOutcome({
   outcome,
   metadata,
 });</code></pre>
+<p>The SDK should also provide a default embeddable suggestion launcher for web apps. Indie developers should not have to design the feedback entry point from scratch. The default should be a small floating button that opens the suggestion UI, but the product should not hard-code a plus sign as the identity. The launcher label, icon, placement, copy, source, metadata, and suggested prompts should be configurable.</p>
+<p>V1 web SDK launcher API:</p>
+<pre><code class="language-ts">mountFeedbackLauncher({
+  client,
+  title,
+  description,
+  buttonLabel,
+  buttonIcon,
+  position,
+  source,
+  metadata,
+  suggestions,
+  onSubmitted,
+});</code></pre>
+<p>Launcher requirements:</p>
+<ul>
+<li>appear as a persistent floating affordance on the app UI;</li>
+<li>open a lightweight suggestion/report form;</li>
+<li>support preset suggestions without auto-submitting them;</li>
+<li>submit through the same privacy-safe SDK feedback endpoint;</li>
+<li>attach safe app metadata such as route, surface, app version, and feature</li>
+<p>context;</p>
+<li>expose a submitted callback so the host app can show status or lifecycle</li>
+<p>progress;</p>
+<li>be dismissible and keyboard-accessible;</li>
+<li>avoid collecting screenshots, raw session data, transcripts, secrets, or</li>
+<p>large private payloads by default;</p>
+<li>be visually customizable enough that indie apps can make it feel native.</li>
+</ul>
 <p>The SDK must support privacy-safe metadata and avoid sending secrets, full session recordings, raw screenshots, or large transcripts by default.</p>
 <p>Feature usage tracking should be optional and privacy-safe. It should let the system connect shipped feedback to real adoption without becoming a surveillance tool.</p>
 <p>V1 should support release-linked attribution: when an operator marks a work item shipped, they can attach the app's stable <code>featureId</code>. Later SDK <code>trackFeatureUsage</code> calls for that feature id should be attributed back to the work item, feedback cluster, and requester count in the evidence ledger.</p>

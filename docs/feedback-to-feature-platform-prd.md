@@ -241,6 +241,45 @@ trackFeatureOutcome({
 });
 ```
 
+The SDK should also provide a default embeddable suggestion launcher for web
+apps. Indie developers should not have to design the feedback entry point from
+scratch. The default should be a small floating button that opens the suggestion
+UI, but the product should not hard-code a plus sign as the identity. The
+launcher label, icon, placement, copy, source, metadata, and suggested prompts
+should be configurable.
+
+V1 web SDK launcher API:
+
+```ts
+mountFeedbackLauncher({
+  client,
+  title,
+  description,
+  buttonLabel,
+  buttonIcon,
+  position,
+  source,
+  metadata,
+  suggestions,
+  onSubmitted,
+});
+```
+
+Launcher requirements:
+
+- appear as a persistent floating affordance on the app UI;
+- open a lightweight suggestion/report form;
+- support preset suggestions without auto-submitting them;
+- submit through the same privacy-safe SDK feedback endpoint;
+- attach safe app metadata such as route, surface, app version, and feature
+  context;
+- expose a submitted callback so the host app can show status or lifecycle
+  progress;
+- be dismissible and keyboard-accessible;
+- avoid collecting screenshots, raw session data, transcripts, secrets, or
+  large private payloads by default;
+- be visually customizable enough that indie apps can make it feel native.
+
 The SDK must support privacy-safe metadata and avoid sending secrets, full
 session recordings, raw screenshots, or large transcripts by default.
 

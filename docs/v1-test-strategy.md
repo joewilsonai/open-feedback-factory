@@ -25,7 +25,7 @@ capture, release proof, and agent assumptions.
 | API | SDK feedback, user-safe status, feature usage, admin config, control-room snapshots, explicit not-planned/blocked decisions, demand-memory promotion, work-item evidence ledger, runner claims, release markers, GitHub webhooks |
 | Database | Migrations, feedback, clusters, signal counts, work items, work-item evidence detail, agent runs, assumptions, costs, GitHub artifacts, releases, notifications, usage, audit events, workspace scope, RLS policies when enabled |
 | Security | Workspace/tenant isolation, RBAC, raw-feedback permissions, admin token gate, runner token gate, secret masking/storage, webhook signatures, prompt injection, SSRF/tunnel URL rejection, GitHub App installation boundaries, path traversal, command injection, branch-name injection, SQL injection, CSRF/CORS, rate limits, replay/idempotency, package-script sandboxing, token scope, audit tamper resistance, retention/delete |
-| SDK | Feedback submission, status polling, feature usage, privacy-safe metadata |
+| SDK | Feedback submission, floating suggestion launcher, status polling, feature usage, privacy-safe metadata |
 | Runner | Disabled mode, manual approval, auto approval, Codex CLI args, `cli` auth, `api_key` auth, host worker installer generation, Docker API-key worker snippet, sanitized prompt, JSONL parsing, usage/cost capture, skipped checks, assumptions |
 | GitHub | App manifest, localhost rejection, webhook reachability, signature validation, sanitized issue body, PR artifact storage, branch cleanup, guarded merge refusal |
 | Control center | Setup states, queue states, realtime lifecycle view, demand-memory panel, worker install guidance, human-readable labels, no raw enum leaks, evidence ledger, assumptions panel, cost panel, release state, follow-up state, missing-config explanations |
@@ -38,6 +38,10 @@ capture, release proof, and agent assumptions.
 
 - Raw feedback never leaves the private database in GitHub issue bodies, PR
   bodies, agent prompts, user-facing status, or logs intended for GitHub.
+- The web SDK exposes a floating suggestion launcher that opens feedback UI,
+  submits through the SDK, supports preset suggestions without auto-submitting
+  them, and does not collect screenshots, raw transcripts, secrets, or large
+  private payloads by default.
 - Workspace/tenant-scoped users, API keys, workers, and admins cannot read or
   mutate another workspace's feedback, work items, agent runs, costs, GitHub
   artifacts, release events, notifications, feature usage, policy config, or

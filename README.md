@@ -25,7 +25,7 @@ for the exact private dogfood completion gate.
 ## V1 Direction
 
 - Docker Compose local install.
-- Web SDK first.
+- Web SDK first, including a floating suggestion launcher.
 - Postgres database.
 - GitHub App integration.
 - Codex-only built-in runner.

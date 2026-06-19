@@ -11,8 +11,8 @@ describe("demo app UI contract", () => {
     expect(source).toContain("Add pinned notes");
     expect(source).toContain("Add search so I can find older notes");
     expect(source).toContain("Export every private note");
-    expect(source).toContain("Sample requests");
-    expect(source).toContain("These buttons only fill the request box");
+    expect(source).toContain("floating Suggest button");
+    expect(source).toContain("Suggest a Daybook improvement");
     expect(source).toContain("Request due dates for todos");
     expect(source).toContain("Request pinned notes");
     expect(source).toContain("Request note search");
@@ -23,9 +23,10 @@ describe("demo app UI contract", () => {
   });
 
   it("uses SDK feedback, status, and feature usage methods", () => {
-    expect(source).toContain("submitFeedback");
+    expect(source).toContain("mountFeedbackLauncher");
     expect(source).toContain("getFeedbackStatus");
     expect(source).toContain("trackFeatureUsage");
+    expect(source).toContain("floating-suggestion-launcher");
   });
 
   it("has persistent notes, todos, and dark mode", () => {

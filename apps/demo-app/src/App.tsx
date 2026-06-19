@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createOpenFeedbackClient, type SubmitFeedbackResult } from "@open-feedback-factory/sdk";
+import { createOpenFeedbackClient, mountFeedbackLauncher, type SubmitFeedbackResult } from "@open-feedback-factory/sdk";
 import "./styles.css";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -51,7 +51,6 @@ function readTasks(): Task[] {
 }
 
 export function App() {
-  const [message, setMessage] = useState(feedbackPresets[0]?.message ?? "");
   const [note, setNote] = useState(readNote);
   const [result, setResult] = useState<SubmitFeedbackResult | null>(null);
   const [status, setStatus] = useState("Ready");
@@ -73,6 +72,27 @@ export function App() {
     [],
   );
   const completedCount = tasks.filter((task) => task.done).length;
+
+  useEffect(() => {
+    const launcher = mountFeedbackLauncher({
+      client,
+      description: "Request a feature or report a rough edge. Daybook will show you what happens next.",
+      metadata: {
+        appName: "Daybook",
+        surface: "floating-suggestion-launcher",
+      },
+      onSubmitted(next) {
+        setResult(next);
+        setStatus(next.status.label);
+      },
+      placeholder: "What should Daybook improve next?",
+      source: "daybook_demo_app",
+      suggestions: feedbackPresets,
+      title: "Suggest a Daybook improvement",
+    });
+
+    return () => launcher.destroy();
+  }, [client]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -128,16 +148,6 @@ export function App() {
         source: "notepad-todo",
       },
     });
-  }
-
-  async function submitFeedback() {
-    setStatus("Sending feedback");
-    const next = await client.submitFeedback({
-      message,
-      source: "daybook_demo_app",
-    });
-    setResult(next);
-    setStatus(next.status.label);
   }
 
   async function refreshStatus() {
@@ -207,27 +217,13 @@ export function App() {
           </div>
         </div>
 
-        <aside className="panel feedback-panel" aria-label="Feedback form">
+        <aside className="panel feedback-panel" aria-label="Feedback status">
           <div className="panel-heading">
             <p className="eyebrow">Beta feedback</p>
-            <h2>Request a feature</h2>
+            <h2>Suggestion loop</h2>
           </div>
-          <label htmlFor="feedback">Request or report</label>
-          <textarea id="feedback" value={message} onChange={(event) => setMessage(event.target.value)} rows={6} />
-          <div className="sample-requests">
-            <p className="mini-label">Sample requests</p>
-            <p className="sample-help">These buttons only fill the request box. You still choose whether to send it.</p>
-            <div className="preset-row" aria-label="Sample requests">
-              {feedbackPresets.map((preset) => (
-                <button key={preset.label} type="button" onClick={() => setMessage(preset.message)}>
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <button className="primary-action" type="button" onClick={submitFeedback}>
-            Send request
-          </button>
+          <p className="sample-help">Use the floating Suggest button to request a feature or report a problem.</p>
+          <p className="sample-help">The SDK owns the suggestion UI so an indie app can add the feedback loop without designing a new form.</p>
           <div className="status-block" aria-live="polite">
             <div>
               <p className="mini-label">Factory status</p>

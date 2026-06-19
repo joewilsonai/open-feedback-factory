@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createOpenFeedbackClient } from "./client.js";
 
@@ -70,4 +71,20 @@ test("trackFeatureUsage posts feature usage event", async () => {
 
   assert.equal(result.usageId, "usage_1");
   assert.deepEqual(urls, ["http://localhost:4100/sdk/features/dark-mode/usage"]);
+});
+
+test("feedback launcher exposes a floating suggestion UI contract", () => {
+  const widgetSource = readFileSync(new URL("./widget.ts", import.meta.url), "utf8");
+  const indexSource = readFileSync(new URL("./index.ts", import.meta.url), "utf8");
+
+  assert.match(indexSource, /export \* from "\.\/widget\.js"/);
+  assert.match(widgetSource, /mountFeedbackLauncher/);
+  assert.match(widgetSource, /off-launcher-button/);
+  assert.match(widgetSource, /buttonIcon/);
+  assert.match(widgetSource, /bottom-left/);
+  assert.match(widgetSource, /Suggest an improvement/);
+  assert.match(widgetSource, /Suggested requests/);
+  assert.match(widgetSource, /Send suggestion/);
+  assert.match(widgetSource, /web_sdk_launcher/);
+  assert.match(widgetSource, /position: fixed/);
 });
