@@ -298,7 +298,13 @@ textarea {
   line-height: 1.5;
 }
 
-.pinned-note button {
+.pinned-note-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pinned-note-actions button {
   justify-self: start;
   min-height: 36px;
   padding: 0.42rem 0.7rem;

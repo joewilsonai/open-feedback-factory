@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createOpenFeedbackClient, type SubmitFeedbackResult } from "@open-feedback-factory/sdk";
 import "./styles.css";
 
@@ -123,6 +123,7 @@ export function App() {
   const [taskDraft, setTaskDraft] = useState("");
   const [tasks, setTasks] = useState<Task[]>(readTasks);
   const [theme, setTheme] = useState<Theme>(readInitialTheme);
+  const noteInputRef = useRef<HTMLTextAreaElement | null>(null);
   const client = useMemo(
     () =>
       createOpenFeedbackClient({
@@ -191,6 +192,19 @@ export function App() {
     setPinnedNotes((currentPinnedNotes) => currentPinnedNotes.filter((pinnedNote) => pinnedNote.id !== id));
     void client.trackFeatureUsage({
       action: "unpinned",
+      featureId: "pinned-note",
+      metadata: {
+        appName: "Daybook",
+        source: "notepad-todo",
+      },
+    });
+  }
+
+  function usePinnedNote(pinnedNote: PinnedNote) {
+    setNote(pinnedNote.text);
+    window.requestAnimationFrame(() => noteInputRef.current?.focus());
+    void client.trackFeatureUsage({
+      action: "restored",
       featureId: "pinned-note",
       metadata: {
         appName: "Daybook",
@@ -285,15 +299,20 @@ export function App() {
               {pinnedNotes.map((pinnedNote) => (
                 <article className="pinned-note" key={pinnedNote.id}>
                   <p>{pinnedNote.text}</p>
-                  <button type="button" onClick={() => unpinNote(pinnedNote.id)}>
-                    Unpin
-                  </button>
+                  <div className="pinned-note-actions">
+                    <button type="button" onClick={() => usePinnedNote(pinnedNote)}>
+                      Use note
+                    </button>
+                    <button type="button" onClick={() => unpinNote(pinnedNote.id)}>
+                      Unpin
+                    </button>
+                  </div>
                 </article>
               ))}
             </section>
           ) : null}
           <label htmlFor="note">Today</label>
-          <textarea id="note" value={note} onChange={(event) => setNote(event.target.value)} rows={12} />
+          <textarea id="note" ref={noteInputRef} value={note} onChange={(event) => setNote(event.target.value)} rows={12} />
         </div>
 
         <div className="panel todo-panel">

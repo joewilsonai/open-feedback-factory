@@ -39,11 +39,14 @@ describe("demo app UI contract", () => {
     expect(source).toContain('role="switch"');
     expect(source).toContain("pinned-note");
     expect(source).toContain("Pin note");
+    expect(source).toContain("Use note");
     expect(source).toContain("Unpin");
+    expect(source).toContain("restored");
     expect(source).toContain("todo-item");
     expect(source).toContain("Notes and todos");
     expect(styles).toContain(".theme-switch");
     expect(styles).toContain(".pinned-notes");
+    expect(styles).toContain(".pinned-note-actions");
     expect(styles).toContain(".task-list");
   });
 
