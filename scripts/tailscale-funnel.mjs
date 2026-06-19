@@ -11,16 +11,15 @@ const env = {
 
 const apiPort = Number(env.API_PORT || 4100);
 const demoPort = Number(env.DEMO_APP_PORT || 5174);
-const apiTarget = `http://127.0.0.1:${apiPort}`;
 const demoTarget = `http://127.0.0.1:${demoPort}`;
 const routes = [
   ["/", demoTarget],
-  ["/sdk", apiTarget],
-  ["/admin", apiTarget],
-  ["/runner", apiTarget],
-  ["/doctor", apiTarget],
-  ["/health", apiTarget],
-  ["/github", apiTarget],
+  ["/sdk", apiTarget("/sdk")],
+  ["/admin", apiTarget("/admin")],
+  ["/runner", apiTarget("/runner")],
+  ["/doctor", apiTarget("/doctor")],
+  ["/health", apiTarget("/health")],
+  ["/github", apiTarget("/github")],
 ];
 
 for (const [path, target] of routes) {
@@ -37,6 +36,10 @@ function run(command, args) {
   if (result.status !== 0) {
     throw new Error(`${command} ${args.join(" ")} failed with exit ${result.status ?? "unknown"}`);
   }
+}
+
+function apiTarget(path) {
+  return `http://127.0.0.1:${apiPort}${path}`;
 }
 
 function loadEnv(path) {
