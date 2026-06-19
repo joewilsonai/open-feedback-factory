@@ -12,6 +12,14 @@ export type FeedbackCategory =
 
 export type WorkRiskTier = "safe_auto_merge" | "guarded_review" | "extra_review" | "plan_only";
 
+export type AssumptionImpactArea =
+  | "cost"
+  | "merge_safety"
+  | "none"
+  | "privacy"
+  | "product_behavior"
+  | "release_status";
+
 export type WorkDecisionAction =
   | "already_available"
   | "blocked"
@@ -80,6 +88,7 @@ export interface AutoMergeInput {
   releaseHealthy: boolean;
   reviewerApproved: boolean;
   riskTier: WorkRiskTier;
+  unresolvedAssumptions?: AgentAssumptionRecord[];
 }
 
 export interface AutoMergeEvaluation {
@@ -101,4 +110,17 @@ export interface UserFeedbackStatus {
   label: string;
   message: string;
   timeline: FeedbackTimelineEvent[];
+}
+
+export interface AgentAssumptionRecord {
+  assumptions: string[];
+  alternativesSkipped: string[];
+  checksRun: string[];
+  checksSkipped: string[];
+  confidence: "high" | "low" | "medium";
+  defaultsUsed: string[];
+  humanQuestions: string[];
+  impactAreas: AssumptionImpactArea[];
+  notes: string;
+  unresolved: boolean;
 }

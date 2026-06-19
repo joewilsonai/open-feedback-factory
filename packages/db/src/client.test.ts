@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { routeFeedback, sanitizeFeedback } from "@open-feedback-factory/core";
+import { buildAssumptionRecord, routeFeedback, sanitizeFeedback } from "@open-feedback-factory/core";
+import pg from "pg";
 import { OpenFeedbackStore } from "./client.js";
 import { migrateDatabase } from "./migrate.js";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
+const { Pool } = pg;
 
 test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip: !databaseUrl }, async () => {
   assert.ok(databaseUrl);
@@ -53,6 +55,16 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
 
     const runId = await store.completeWorkItemRun({
       agentName: "db-test-worker",
+      assumptions: [
+        buildAssumptionRecord({
+          assumptions: ["Release health is assumed because this DB test does not deploy."],
+          checksRun: ["db integration test"],
+          checksSkipped: ["release health probe"],
+          impactAreas: ["release_status"],
+          notes: "A release-health assumption should block auto-merge until resolved.",
+          unresolved: true,
+        }),
+      ],
       costActual: { amountUsd: 1.25, confidence: "low", model: "gpt-5.5" },
       metadata: {
         changedFiles: ["apps/demo-app/src/styles.css"],
@@ -68,6 +80,11 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     const completed = await store.getWorkItem(claimed?.id ?? "");
     assert.equal(completed?.status, "implemented");
     assert.equal(completed?.githubPrUrl, "https://github.com/joewilsonai/open-feedback-factory/pull/123");
+    assert.equal(completed?.unresolvedAssumptions.length, 1);
+    assert.deepEqual(completed?.unresolvedAssumptions[0]?.impactAreas, ["release_status"]);
+
+    const completedSnapshot = await store.getControlRoomSnapshot();
+    assert.equal(completedSnapshot.recentAssumptions.length > 0, true);
 
     const progressedStatus = await store.getUserFeedbackStatus(intake.feedbackId);
     assert.equal(progressedStatus?.state, "implemented");
@@ -78,5 +95,55 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.match(duplicateAfterRun.status.message, /waiting for review or release/);
   } finally {
     await store.close();
+  }
+});
+
+test("schema migration enables workspace RLS scaffolding", { skip: !databaseUrl }, async () => {
+  assert.ok(databaseUrl);
+  await migrateDatabase(databaseUrl);
+  const pool = new Pool({ connectionString: databaseUrl });
+
+  try {
+    const tables = [
+      "feedback_signals",
+      "feedback_clusters",
+      "work_items",
+      "agent_runs",
+      "agent_assumptions",
+      "cost_records",
+      "github_artifacts",
+      "release_events",
+      "user_notifications",
+      "feature_usage_events",
+      "policy_configs",
+      "audit_events",
+    ];
+    const rowSecurity = await pool.query<{ tablename: string }>(
+      `select tablename
+       from pg_tables
+       where schemaname = 'public'
+         and tablename = any($1)
+         and rowsecurity = true`,
+      [tables],
+    );
+    assert.deepEqual(
+      rowSecurity.rows.map((row) => row.tablename).sort(),
+      tables.slice().sort(),
+    );
+
+    const policies = await pool.query<{ tablename: string }>(
+      `select tablename
+       from pg_policies
+       where schemaname = 'public'
+         and tablename = any($1)
+         and policyname like '%workspace_isolation'`,
+      [tables],
+    );
+    assert.deepEqual(
+      policies.rows.map((row) => row.tablename).sort(),
+      tables.slice().sort(),
+    );
+  } finally {
+    await pool.end();
   }
 });

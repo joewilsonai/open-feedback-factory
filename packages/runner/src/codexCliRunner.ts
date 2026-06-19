@@ -43,9 +43,14 @@ export class CodexCliRunner implements WorkRunner {
     });
     const parsed = parseCodexJsonlOutput(output);
     const structured = parsed.result ?? {
+      assumptions: ["Codex CLI did not return the expected structured result."],
       changedFiles: [],
+      checksRun: [],
+      checksSkipped: ["Unknown; structured result was missing."],
+      costSummary: "No structured cost summary was returned.",
       outcome: "failed",
       summary: "Codex CLI did not return the expected structured result.",
+      userMessage: "The agent run failed before it could produce a safe user-facing summary.",
     };
     const status = statusFromOutcome(structured.outcome);
     const gitChangedFiles = this.options.manageGit ? await listGitChangedFiles(this.options.cwd) : [];
@@ -76,12 +81,16 @@ export class CodexCliRunner implements WorkRunner {
     });
 
     return {
+      assumptions: structured.assumptions,
       branchName,
       changedFiles,
+      checksRun: structured.checksRun,
+      checksSkipped: structured.checksSkipped,
       costActual,
       output,
       status: finalStatus,
       summary: finalSummary,
+      userMessage: structured.userMessage,
     };
   }
 }
@@ -128,6 +137,8 @@ export function buildCodexPrompt(workItem: WorkItemRow): string {
     "Do not commit, push, or open a pull request; the runner handles GitHub publication.",
     "For tiny copy or docs requests, make only the requested file/content change.",
     "Run the relevant checks when feasible.",
+    "Return structured output with assumptions, checksRun, checksSkipped, costSummary, and a userMessage.",
+    "If you make assumptions, list them explicitly. If a check cannot run, list it in checksSkipped with a short reason.",
     "",
     `Work item: ${workItem.id}`,
     `Title: ${workItem.title}`,
@@ -222,13 +233,26 @@ function parseStructuredResult(text: string): CodexStructuredResult | null {
     if (
       (value.outcome === "blocked" || value.outcome === "failed" || value.outcome === "implemented") &&
       typeof value.summary === "string" &&
+      typeof value.costSummary === "string" &&
+      typeof value.userMessage === "string" &&
       Array.isArray(value.changedFiles) &&
-      value.changedFiles.every((file) => typeof file === "string")
+      value.changedFiles.every((file) => typeof file === "string") &&
+      Array.isArray(value.assumptions) &&
+      value.assumptions.every((item) => typeof item === "string") &&
+      Array.isArray(value.checksRun) &&
+      value.checksRun.every((item) => typeof item === "string") &&
+      Array.isArray(value.checksSkipped) &&
+      value.checksSkipped.every((item) => typeof item === "string")
     ) {
       return {
+        assumptions: value.assumptions,
         changedFiles: value.changedFiles,
+        checksRun: value.checksRun,
+        checksSkipped: value.checksSkipped,
+        costSummary: value.costSummary,
         outcome: value.outcome,
         summary: value.summary,
+        userMessage: value.userMessage,
       };
     }
   } catch {
@@ -335,11 +359,16 @@ async function writeOutputSchema(): Promise<string> {
       {
         additionalProperties: false,
         properties: {
+          assumptions: { items: { type: "string" }, type: "array" },
           changedFiles: { items: { type: "string" }, type: "array" },
+          checksRun: { items: { type: "string" }, type: "array" },
+          checksSkipped: { items: { type: "string" }, type: "array" },
+          costSummary: { type: "string" },
           outcome: { enum: ["blocked", "failed", "implemented"], type: "string" },
           summary: { type: "string" },
+          userMessage: { type: "string" },
         },
-        required: ["outcome", "summary", "changedFiles"],
+        required: ["outcome", "summary", "changedFiles", "assumptions", "checksRun", "checksSkipped", "costSummary", "userMessage"],
         type: "object",
       },
       null,

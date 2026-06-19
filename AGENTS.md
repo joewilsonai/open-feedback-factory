@@ -37,6 +37,8 @@ Default local URLs:
   GitHub modes unless the user explicitly asks for live mutation.
 - Do not bypass guardrails. Safe auto-merge requires the policy gates in
   `packages/core`.
+- Treat rate limits as product security controls. Do not remove or raise them
+  for tests unless the test is explicitly exercising a different limit.
 - Do not run destructive git commands unless the user explicitly asks for them.
 - When building, reviewing, or releasing work, record assumptions as part of the
   run output. Include defaults chosen, alternatives skipped, files intentionally

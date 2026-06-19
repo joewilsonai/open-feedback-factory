@@ -26,13 +26,17 @@ export async function completeJob(
   const response = await fetchImpl(`${config.apiBaseUrl}/runner/jobs/${workItemId}/complete`, {
     body: JSON.stringify({
       agentName: "codex-cli-worker",
+      assumptions: [buildRunnerAssumptionRecord(result, config)],
       costActual: result.costActual,
       metadata: {
         branchName: result.branchName,
         changedFiles: result.changedFiles,
+        checksRun: result.checksRun,
+        checksSkipped: result.checksSkipped,
         githubPrUrl,
         mode: config.runnerMode,
         runnerOutput: result.output,
+        userMessage: result.userMessage,
       },
       status: result.status,
       summary: result.summary,
@@ -70,9 +74,13 @@ export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike =
   if (publication.status === "failed") {
     result = {
       ...result,
+      assumptions: [...result.assumptions, "Pull request publication failed after the implementation run."],
+      checksSkipped: [...result.checksSkipped, "GitHub pull request publication could not be completed."],
       output: `${result.output}\n${publication.output}`,
       status: "failed",
       summary: "Runner implemented the work, but pull request publication failed.",
+      userMessage:
+        "An agent made changes, but the pull request could not be published. A maintainer needs to review the runner output.",
     };
   }
   const runId = await completeJob(runtimeConfig, job.id, result, publication.prUrl, fetchImpl);
@@ -102,8 +110,11 @@ async function runSafely(run: Promise<RunnerResult>, job: WorkItemRow, config: W
     return await run;
   } catch (error) {
     return {
+      assumptions: ["Runner failed before structured Codex output was available."],
       branchName: null,
       changedFiles: [],
+      checksRun: [],
+      checksSkipped: ["Codex runner failed before checks could be confirmed."],
       costActual: {
         amountUsd: 0,
         confidence: "low",
@@ -112,6 +123,7 @@ async function runSafely(run: Promise<RunnerResult>, job: WorkItemRow, config: W
       output: error instanceof Error ? error.stack ?? error.message : String(error),
       status: "failed",
       summary: `Runner failed while working on ${job.id}.`,
+      userMessage: "The agent run failed before it could produce a safe user-facing summary.",
     };
   }
 }
@@ -146,6 +158,22 @@ async function fetchRuntimeSettings(
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function buildRunnerAssumptionRecord(result: RunnerResult, config: WorkerConfig): Record<string, unknown> {
+  const unresolved = result.status !== "succeeded" || result.checksSkipped.length > 0;
+  return {
+    alternativesSkipped: [],
+    assumptions: result.assumptions,
+    checksRun: result.checksRun,
+    checksSkipped: result.checksSkipped,
+    confidence: result.status === "succeeded" ? "medium" : "low",
+    defaultsUsed: [`model=${config.codexModel}`, `runner=${config.runnerMode}`, `auth=${config.codexAuthMode}`],
+    humanQuestions: [],
+    impactAreas: unresolved ? ["merge_safety"] : ["none"],
+    notes: result.userMessage,
+    unresolved,
+  };
 }
 
 async function publishPullRequestIfEnabled(

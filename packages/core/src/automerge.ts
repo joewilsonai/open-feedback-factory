@@ -1,4 +1,5 @@
 import type { AutoMergeEvaluation, AutoMergeInput } from "./types.js";
+import { assumptionsBlockAutoMerge } from "./assumptions.js";
 
 export function evaluateAutoMerge(input: AutoMergeInput): AutoMergeEvaluation {
   const reasons: string[] = [];
@@ -12,6 +13,7 @@ export function evaluateAutoMerge(input: AutoMergeInput): AutoMergeEvaluation {
   if (input.redactionWarnings > 0) reasons.push("redaction_warnings_present");
   if (input.diffLineCount > input.maxDiffLineCount) reasons.push("diff_too_large");
   if (input.costActualUsd > input.costCapUsd) reasons.push("cost_cap_exceeded");
+  if (assumptionsBlockAutoMerge(input.unresolvedAssumptions)) reasons.push("unresolved_assumption_blocks_automerge");
 
   const protectedHit = input.changedFiles.some((file) =>
     input.protectedPathFragments.some((fragment) => file.includes(fragment)),

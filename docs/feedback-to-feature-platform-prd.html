@@ -907,6 +907,8 @@ trackFeatureOutcome({
 <li>release/deploy state;</li>
 <li>user notification history.</li>
 </ul>
+<p>V1 should use workspace-scoped records from the start, even while the private dogfood install has a single default workspace. Postgres tables should include a workspace identifier, row-level-security scaffolding, and tests that verify the policies exist. Hosted multi-tenant enforcement can mature later, but the schema must not need a privacy rewrite before launch.</p>
+<p>The API should apply separate rate-limit groups for SDK intake/status/usage, admin writes, runner claim/complete, and GitHub webhook/setup paths. Rate-limit responses must be explicit, user-safe, and observable; they should never silently drop feedback or pretend work was queued.</p>
 <p>Postgres is the only V1 database. SQLite is intentionally deferred until after the private dogfood loop works, because supporting two persistence paths would increase migration, test, and support complexity before the core product is proven.</p>
 <h3 id="8-3-control-center"><a class="heading-anchor" href="#8-3-control-center" aria-label="Link to 8.3 Control Center">#</a>8.3 Control Center</h3>
 <p>A web dashboard for developers.</p>
@@ -958,6 +960,8 @@ trackFeatureOutcome({
 <li>collect token and cost data when available;</li>
 <li>record assumptions the agent made, defaults it selected, alternatives it</li>
 <p>skipped, and questions that still need human/product confirmation;</p>
+<li>return structured fields for outcome, changed files, assumptions, checks run,</li>
+<p>skipped checks, cost summary, and user-safe follow-up;</p>
 <li>open a PR;</li>
 <li>never merge unless gates allow it;</li>
 <li>clean up temporary workspace state.</li>

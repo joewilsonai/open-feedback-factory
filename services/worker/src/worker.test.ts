@@ -29,6 +29,7 @@ const job: WorkItemRow = {
   title: "Add a dark mode option",
   updatedAt: new Date().toISOString(),
   userStatus: "planned",
+  unresolvedAssumptions: [],
 };
 
 test("claimJob posts worker identity and optional target work item", async () => {

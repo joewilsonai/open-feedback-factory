@@ -223,6 +223,17 @@ Stores:
 - release/deploy state;
 - user notification history.
 
+V1 should use workspace-scoped records from the start, even while the private
+dogfood install has a single default workspace. Postgres tables should include a
+workspace identifier, row-level-security scaffolding, and tests that verify the
+policies exist. Hosted multi-tenant enforcement can mature later, but the schema
+must not need a privacy rewrite before launch.
+
+The API should apply separate rate-limit groups for SDK intake/status/usage,
+admin writes, runner claim/complete, and GitHub webhook/setup paths. Rate-limit
+responses must be explicit, user-safe, and observable; they should never
+silently drop feedback or pretend work was queued.
+
 Postgres is the only V1 database. SQLite is intentionally deferred until after
 the private dogfood loop works, because supporting two persistence paths would
 increase migration, test, and support complexity before the core product is
@@ -295,6 +306,8 @@ Required runner behavior:
 - collect token and cost data when available;
 - record assumptions the agent made, defaults it selected, alternatives it
   skipped, and questions that still need human/product confirmation;
+- return structured fields for outcome, changed files, assumptions, checks run,
+  skipped checks, cost summary, and user-safe follow-up;
 - open a PR;
 - never merge unless gates allow it;
 - clean up temporary workspace state.

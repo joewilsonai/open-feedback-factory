@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import {
+  buildAssumptionRecord,
   buildUserStatus,
+  type AgentAssumptionRecord,
   type FeatureCostEstimate,
   type FeedbackInput,
   type SanitizedFeedback,
@@ -29,6 +31,7 @@ export interface WorkItemRow {
   userStatus: string;
   costEstimate: FeatureCostEstimate;
   shouldCreateIssue: boolean;
+  unresolvedAssumptions: AgentAssumptionRecord[];
   githubIssueUrl: string | null;
   githubPrUrl: string | null;
   autoMergeEligible: boolean;
@@ -38,6 +41,7 @@ export interface WorkItemRow {
 
 export interface AgentRunInput {
   agentName: string;
+  assumptions?: AgentAssumptionRecord[];
   costActual?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
   runType: string;
@@ -66,6 +70,7 @@ export interface ControlRoomSnapshot {
     openWorkItems: number;
   };
   recentAgentRuns: Array<Record<string, unknown>>;
+  recentAssumptions: Array<Record<string, unknown>>;
   recentFeedback: Array<Record<string, unknown>>;
   recentUsage: Array<Record<string, unknown>>;
   workItems: WorkItemRow[];
@@ -246,10 +251,18 @@ export class OpenFeedbackStore {
 
   async listWorkItems(): Promise<WorkItemRow[]> {
     const result = await this.pool.query(
-      `select id, cluster_key, title, summary, category, risk_tier, status, user_status,
-              cost_estimate, should_create_issue, github_issue_url, github_pr_url,
-              auto_merge_eligible, created_at, updated_at
-       from work_items
+      `select wi.id, wi.cluster_key, wi.title, wi.summary, wi.category, wi.risk_tier, wi.status, wi.user_status,
+              wi.cost_estimate, wi.should_create_issue, wi.github_issue_url, wi.github_pr_url,
+              wi.auto_merge_eligible, wi.created_at, wi.updated_at,
+              coalesce(
+                (
+                  select jsonb_agg(assumption_record_json(aa) order by aa.created_at desc)
+                  from agent_assumptions aa
+                  where aa.work_item_id = wi.id and aa.unresolved = true
+                ),
+                '[]'::jsonb
+              ) as unresolved_assumptions
+       from work_items wi
        order by created_at desc
        limit 50`,
     );
@@ -258,11 +271,19 @@ export class OpenFeedbackStore {
 
   async getWorkItem(id: string): Promise<WorkItemRow | null> {
     const result = await this.pool.query(
-      `select id, cluster_key, title, summary, category, risk_tier, status, user_status,
-              cost_estimate, should_create_issue, github_issue_url, github_pr_url,
-              auto_merge_eligible, created_at, updated_at
-       from work_items
-       where id = $1`,
+      `select wi.id, wi.cluster_key, wi.title, wi.summary, wi.category, wi.risk_tier, wi.status, wi.user_status,
+              wi.cost_estimate, wi.should_create_issue, wi.github_issue_url, wi.github_pr_url,
+              wi.auto_merge_eligible, wi.created_at, wi.updated_at,
+              coalesce(
+                (
+                  select jsonb_agg(assumption_record_json(aa) order by aa.created_at desc)
+                  from agent_assumptions aa
+                  where aa.work_item_id = wi.id and aa.unresolved = true
+                ),
+                '[]'::jsonb
+              ) as unresolved_assumptions
+       from work_items wi
+       where wi.id = $1`,
       [id],
     );
     return result.rows[0] ? workItemFromRow(result.rows[0]) : null;
@@ -324,21 +345,36 @@ export class OpenFeedbackStore {
 
   async recordAgentRun(input: AgentRunInput): Promise<string> {
     const id = `run_${randomUUID()}`;
-    await this.pool.query(
-      `insert into agent_runs
-       (id, work_item_id, run_type, agent_name, status, summary, cost_actual, metadata, completed_at)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, case when $5 in ('succeeded', 'failed', 'blocked') then now() else null end)`,
-      [
-        id,
-        input.workItemId,
-        input.runType,
-        input.agentName,
-        input.status,
-        input.summary,
-        JSON.stringify(input.costActual ?? null),
-        JSON.stringify(input.metadata ?? {}),
-      ],
-    );
+    const client = await this.pool.connect();
+    try {
+      await client.query("begin");
+      await client.query(
+        `insert into agent_runs
+         (id, work_item_id, run_type, agent_name, status, summary, cost_actual, metadata, completed_at)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, case when $5 in ('succeeded', 'failed', 'blocked') then now() else null end)`,
+        [
+          id,
+          input.workItemId,
+          input.runType,
+          input.agentName,
+          input.status,
+          input.summary,
+          JSON.stringify(input.costActual ?? null),
+          JSON.stringify(input.metadata ?? {}),
+        ],
+      );
+      await insertAssumptionRecords(client, {
+        agentRunId: id,
+        assumptions: input.assumptions,
+        workItemId: input.workItemId,
+      });
+      await client.query("commit");
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
     return id;
   }
 
@@ -366,6 +402,11 @@ export class OpenFeedbackStore {
           JSON.stringify(input.metadata ?? {}),
         ],
       );
+      await insertAssumptionRecords(client, {
+        agentRunId: runId,
+        assumptions: input.assumptions,
+        workItemId: input.workItemId,
+      });
 
       if (isActualCost(input.costActual)) {
         await client.query(
@@ -622,7 +663,7 @@ export class OpenFeedbackStore {
   }
 
   async getControlRoomSnapshot(): Promise<ControlRoomSnapshot> {
-    const [counts, workItems, recentFeedback, recentAgentRuns, recentUsage] = await Promise.all([
+    const [counts, workItems, recentFeedback, recentAgentRuns, recentAssumptions, recentUsage] = await Promise.all([
       this.pool.query<{
         agent_runs: string;
         feedback_signals: string;
@@ -645,6 +686,11 @@ export class OpenFeedbackStore {
          from agent_runs order by created_at desc limit 20`,
       ),
       this.pool.query(
+        `select id, work_item_id, agent_run_id, assumptions, defaults_used, alternatives_skipped,
+                checks_run, checks_skipped, human_questions, impact_areas, confidence, notes, unresolved, created_at
+         from agent_assumptions order by created_at desc limit 20`,
+      ),
+      this.pool.query(
         `select id, feature_id, user_id, action, metadata, created_at
          from feature_usage_events order by created_at desc limit 20`,
       ),
@@ -659,6 +705,7 @@ export class OpenFeedbackStore {
         openWorkItems: Number(countRow?.open_work_items ?? 0),
       },
       recentAgentRuns: recentAgentRuns.rows,
+      recentAssumptions: recentAssumptions.rows,
       recentFeedback: recentFeedback.rows,
       recentUsage: recentUsage.rows,
       workItems,
@@ -681,9 +728,49 @@ function workItemFromRow(row: Record<string, unknown>): WorkItemRow {
     status: String(row.status),
     summary: String(row.summary),
     title: String(row.title),
+    unresolvedAssumptions: assumptionRecordsFromRow(row.unresolved_assumptions),
     updatedAt: (row.updated_at as Date).toISOString(),
     userStatus: String(row.user_status),
   };
+}
+
+async function insertAssumptionRecords(
+  client: pg.PoolClient,
+  input: {
+    agentRunId: string;
+    assumptions?: AgentAssumptionRecord[];
+    workItemId: string;
+  },
+): Promise<void> {
+  for (const raw of input.assumptions ?? []) {
+    const record = buildAssumptionRecord(raw);
+    await client.query(
+      `insert into agent_assumptions
+       (id, work_item_id, agent_run_id, assumptions, defaults_used, alternatives_skipped,
+        checks_run, checks_skipped, human_questions, impact_areas, confidence, notes, unresolved)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [
+        `assumption_${randomUUID()}`,
+        input.workItemId,
+        input.agentRunId,
+        JSON.stringify(record.assumptions),
+        JSON.stringify(record.defaultsUsed),
+        JSON.stringify(record.alternativesSkipped),
+        JSON.stringify(record.checksRun),
+        JSON.stringify(record.checksSkipped),
+        JSON.stringify(record.humanQuestions),
+        JSON.stringify(record.impactAreas),
+        record.confidence,
+        record.notes,
+        record.unresolved,
+      ],
+    );
+  }
+}
+
+function assumptionRecordsFromRow(value: unknown): AgentAssumptionRecord[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => buildAssumptionRecord(item as Partial<AgentAssumptionRecord>));
 }
 
 async function upsertClusterUserMessage(
