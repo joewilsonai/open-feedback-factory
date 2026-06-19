@@ -6,14 +6,17 @@
     sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --ink: #232323;
+  --off-ink: #232323;
+  --off-lime: #84cc16;
+  --off-lime-dark: #4d7c0f;
+  --off-lime-soft: rgb(132 204 22 / 18%);
+  --off-paper: #f4f1e8;
+  --ink: var(--off-ink);
   --muted: #656156;
-  --paper: #f4f1e8;
+  --paper: var(--off-paper);
   --surface: #ffffff;
   --surface-strong: #e9e4d8;
   --line: #d5cfc1;
-  --green: #84cc16;
-  --green-dark: #4d7c0f;
   --coral: #7a5a20;
   --yellow: #f2c94c;
   --shadow: 0 24px 70px rgb(18 24 33 / 18%);
@@ -131,7 +134,7 @@ main {
   width: 13px;
   height: 13px;
   transform: translateY(-50%);
-  background: var(--green);
+  background: var(--off-lime);
   clip-path: polygon(18% 0, 100% 0, 100% 82%, 82% 100%, 0 100%, 0 18%);
 }
 
@@ -166,7 +169,7 @@ main {
 
 .eyebrow {
   margin: 0 0 14px;
-  color: var(--green);
+  color: var(--off-lime);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0;
@@ -174,7 +177,7 @@ main {
 }
 
 .hero .eyebrow {
-  color: var(--green);
+  color: var(--off-lime);
 }
 
 h1,
@@ -245,9 +248,9 @@ p {
 }
 
 .button.primary {
-  border: 1px solid var(--green);
-  background: var(--green);
-  color: var(--ink);
+  border: 1px solid var(--off-lime);
+  background: var(--off-lime);
+  color: var(--off-ink);
   box-shadow: 0 14px 32px rgb(132 204 22 / 24%);
 }
 
@@ -279,8 +282,8 @@ p {
   width: 9px;
   height: 9px;
   border-radius: 99px;
-  background: var(--green);
-  box-shadow: 0 0 0 5px rgb(132 204 22 / 18%);
+  background: var(--off-lime);
+  box-shadow: 0 0 0 5px var(--off-lime-soft);
   content: "";
 }
 
@@ -391,7 +394,7 @@ p {
   margin-bottom: 22px;
   border-radius: 99px;
   background: var(--surface-strong);
-  color: var(--green-dark);
+  color: var(--off-lime-dark);
   font-weight: 900;
 }
 
@@ -450,7 +453,7 @@ p {
 }
 
 .health-band .eyebrow {
-  color: var(--green);
+  color: var(--off-lime);
 }
 
 .health-grid article {
@@ -479,10 +482,10 @@ p {
 .sdk-card button {
   width: 100%;
   min-height: 52px;
-  border: 1px solid var(--green);
+  border: 1px solid var(--off-lime);
   border-radius: 8px;
-  background: var(--green);
-  color: var(--ink);
+  background: var(--off-lime);
+  color: var(--off-ink);
   cursor: default;
   font: inherit;
   font-weight: 900;
