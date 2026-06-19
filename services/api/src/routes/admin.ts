@@ -145,7 +145,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
     return reply.code(202).send({ result, runId, status: result.status });
   });
 
-  app.post<{ Body: { message?: string }; Params: { id: string } }>(
+  app.post<{ Body: { featureId?: unknown; message?: string }; Params: { id: string } }>(
     "/admin/work-items/:id/release",
     async (request, reply) => {
       const workItem = await deps.store.getWorkItem(request.params.id);
@@ -157,9 +157,13 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
           workItemStatus: workItem.status,
         });
       }
+      const featureId = normalizeFeatureId(request.body.featureId);
+      if (request.body.featureId !== undefined && !featureId) {
+        return reply.code(400).send({ error: "featureId must be 1-80 characters of letters, numbers, dot, underscore, colon, or dash" });
+      }
 
-      await deps.store.markWorkItemReleased(request.params.id, request.body.message);
-      return reply.code(202).send({ status: "shipped" });
+      await deps.store.markWorkItemReleased(request.params.id, request.body.message, featureId ?? undefined);
+      return reply.code(202).send({ featureId, status: "shipped" });
     },
   );
 
@@ -319,4 +323,12 @@ function defaultDecisionMessage(status: "blocked" | "not_planned"): string {
     return "We reviewed this request and do not plan to build it right now.";
   }
   return "We reviewed this request and it is blocked from shipping without human intervention.";
+}
+
+function normalizeFeatureId(value: unknown): string | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!/^[a-zA-Z0-9._:-]{1,80}$/.test(trimmed)) return null;
+  return trimmed;
 }

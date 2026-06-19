@@ -208,6 +208,11 @@ Feature usage tracking should be optional and privacy-safe. It should let the
 system connect shipped feedback to real adoption without becoming a surveillance
 tool.
 
+V1 should support release-linked attribution: when an operator marks a work item
+shipped, they can attach the app's stable `featureId`. Later SDK
+`trackFeatureUsage` calls for that feature id should be attributed back to the
+work item, feedback cluster, and requester count in the evidence ledger.
+
 ### 8.2 API and Database
 
 Stores:
@@ -2238,6 +2243,9 @@ context only.
 
 Feature usage tracking must be optional, configurable, and privacy-safe. It
 should avoid raw session recordings or sensitive behavior capture by default.
+The default attribution contract should use stable feature ids and aggregate
+event/user counts, not raw session replay, raw text, screenshots, or sensitive
+behavior streams.
 
 Secrets and PII must be redacted. This includes tokens, API keys, credentials,
 emails, phone numbers, private user details, screenshots, transcripts, and

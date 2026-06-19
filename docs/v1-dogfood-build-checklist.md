@@ -196,6 +196,8 @@ docker compose up --build
 - Reviewer approval is recorded as a durable work-item decision before
   auto-merge can pass; the system never trusts a request-body shortcut.
 - A release marker is required before a user sees shipped.
+- Release proof can include the app's stable feature id, and matching SDK usage
+  events appear as aggregate usage attribution on the work item.
 - Negative outcomes tell the user why the item will not be worked on.
 - Not-built categories and repeated demand are stored for reconsideration.
 - Assumptions are recorded and can block auto-merge.

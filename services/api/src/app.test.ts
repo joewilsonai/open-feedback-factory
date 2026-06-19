@@ -54,6 +54,7 @@ class MemoryStore implements AppStore {
   recentAssumptions: AgentAssumptionRecord[] = [];
   releaseEvents: WorkItemDetail["releaseEvents"] = [];
   userNotifications: WorkItemDetail["userNotifications"] = [];
+  usageEvents: Array<{ action: string; featureId: string; metadata: Record<string, unknown>; userId?: string }> = [];
   usageCount = 0;
   workItems: WorkItemRow[] = [];
 
@@ -269,6 +270,7 @@ class MemoryStore implements AppStore {
       costRecords: this.costRecords.filter((row) => row.workItemId === id),
       githubArtifacts: this.githubArtifactRows.filter((row) => row.workItemId === id),
       releaseEvents: this.releaseEvents.filter((row) => row.workItemId === id),
+      usageAttribution: this.usageAttributionForWorkItem(id),
       userNotifications: this.userNotifications.filter((row) => row.workItemId === id),
       workItem,
     };
@@ -278,7 +280,7 @@ class MemoryStore implements AppStore {
     return this.workItems;
   }
 
-  async markWorkItemReleased(workItemId: string, message = "This request has shipped.") {
+  async markWorkItemReleased(workItemId: string, message = "This request has shipped.", featureId?: string) {
     const item = this.workItems.find((workItem) => workItem.id === workItemId);
     if (item) {
       item.status = "shipped";
@@ -288,7 +290,7 @@ class MemoryStore implements AppStore {
     this.releaseEvents.unshift({
       createdAt: new Date().toISOString(),
       id: `release_${this.releaseEvents.length + 1}`,
-      metadata: {},
+      metadata: featureId ? { featureId } : {},
       status: "shipped",
       workItemId,
     });
@@ -403,8 +405,29 @@ class MemoryStore implements AppStore {
     return runId;
   }
 
-  async recordFeatureUsage() {
+  async recordFeatureUsage(input?: Parameters<AppStore["recordFeatureUsage"]>[0]) {
     this.usageCount += 1;
+    if (input) {
+      const attributedWorkItemId =
+        stringValue(input.metadata?.workItemId) ??
+        stringValue(input.metadata?.attributedWorkItemId) ??
+        this.releaseEvents.find((event) => event.metadata.featureId === input.featureId)?.workItemId ??
+        null;
+      this.usageEvents.unshift({
+        action: input.action,
+        featureId: input.featureId,
+        metadata: {
+          ...(input.metadata ?? {}),
+          ...(attributedWorkItemId
+            ? {
+                attributedWorkItemId,
+                attributionSource: stringValue(input.metadata?.workItemId) ? "sdk_metadata" : "release_feature_id",
+              }
+            : {}),
+        },
+        userId: input.userId,
+      });
+    }
     return `usage_${this.usageCount}`;
   }
 
@@ -467,6 +490,35 @@ class MemoryStore implements AppStore {
   async getWorkItemReviewDecision(workItemId: string) {
     return this.workItems.find((workItem) => workItem.id === workItemId)?.reviewDecision ?? null;
   }
+
+  private usageAttributionForWorkItem(workItemId: string): WorkItemDetail["usageAttribution"] {
+    const releaseFeatureIds = new Set(
+      this.releaseEvents
+        .filter((event) => event.workItemId === workItemId)
+        .map((event) => stringValue(event.metadata.featureId))
+        .filter((value): value is string => Boolean(value)),
+    );
+    const matching = this.usageEvents.filter(
+      (event) =>
+        stringValue(event.metadata.attributedWorkItemId) === workItemId ||
+        stringValue(event.metadata.workItemId) === workItemId ||
+        releaseFeatureIds.has(event.featureId),
+    );
+    const byFeature = new Map<string, typeof matching>();
+    for (const event of matching) byFeature.set(event.featureId, [...(byFeature.get(event.featureId) ?? []), event]);
+    return Array.from(byFeature.entries()).map(([featureId, events]) => ({
+      eventCount: events.length,
+      featureId,
+      latestUsageAt: new Date().toISOString(),
+      requesterCount: this.feedbackStatuses.size,
+      uniqueUsers: new Set(events.map((event) => event.userId).filter(Boolean)).size,
+      workItemId,
+    }));
+  }
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 test("API accepts SDK feedback and returns user-safe status", async () => {
@@ -1234,14 +1286,26 @@ test("release marker requires implemented work and updates user status after imp
 
   const release = await app.inject({
     method: "POST",
-    payload: { message: "Note search has shipped." },
+    payload: { featureId: "note-search", message: "Note search has shipped." },
     url: `/admin/work-items/${workItemId}/release`,
   });
   assert.equal(release.statusCode, 202);
+  assert.equal(release.json().featureId, "note-search");
+
+  const usage = await app.inject({
+    method: "POST",
+    payload: { action: "searched", userId: "demo-user" },
+    url: "/sdk/features/note-search/usage",
+  });
+  assert.equal(usage.statusCode, 201);
 
   const status = await app.inject({ method: "GET", url: `/sdk/feedback/${feedbackId}/status` });
   assert.equal(status.json().state, "shipped");
   assert.equal(status.json().message, "Note search has shipped.");
+
+  const evidence = await app.inject({ method: "GET", url: `/admin/work-items/${workItemId}/evidence` });
+  assert.equal(evidence.json().usageAttribution[0].featureId, "note-search");
+  assert.equal(evidence.json().usageAttribution[0].eventCount, 1);
 
   await app.close();
 });
