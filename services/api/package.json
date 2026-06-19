@@ -1,0 +1,22 @@
+{
+  "name": "@open-feedback-factory/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "test": "node --import tsx --test src/*.test.ts src/**/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "@open-feedback-factory/core": "workspace:*",
+    "@open-feedback-factory/db": "workspace:*",
+    "@open-feedback-factory/runner": "workspace:*",
+    "fastify": "^5.6.2"
+  }
+}

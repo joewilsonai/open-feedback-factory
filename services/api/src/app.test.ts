@@ -1,0 +1,150 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import type { UserFeedbackStatus } from "@open-feedback-factory/core";
+import type { ControlRoomSnapshot, WorkItemRow } from "@open-feedback-factory/db";
+import { buildApp, type AppStore } from "./app.js";
+import type { ApiConfig } from "./config.js";
+
+const config: ApiConfig = {
+  apiHost: "127.0.0.1",
+  apiPort: 4100,
+  autoMergeEnabled: false,
+  codexRunnerMode: "demo",
+  databaseUrl: "postgres://example",
+  githubMode: "disabled",
+  githubOwner: "joewilsonai",
+  githubRepo: "open-feedback-factory",
+  maxFeatureCostUsd: 5,
+  maxSafeDiffLines: 120,
+  protectedPathFragments: ["auth", "billing", "privacy"],
+  runnerWorkspace: "/tmp/open-feedback-factory-test",
+};
+
+class MemoryStore implements AppStore {
+  feedbackStatuses = new Map<string, UserFeedbackStatus>();
+  usageCount = 0;
+  workItems: WorkItemRow[] = [];
+
+  async createFeedbackIntake(input: Parameters<AppStore["createFeedbackIntake"]>[0]) {
+    const feedbackId = `feedback_${this.feedbackStatuses.size + 1}`;
+    const workItemId = input.decision.shouldCreateIssue ? `work_${this.workItems.length + 1}` : null;
+    const status: UserFeedbackStatus = {
+      feedbackId,
+      label: input.decision.userStatus,
+      message: input.decision.userMessage,
+      state: input.decision.userStatus,
+      timeline: [],
+    };
+    this.feedbackStatuses.set(feedbackId, status);
+
+    if (workItemId) {
+      this.workItems.push({
+        autoMergeEligible: false,
+        category: input.decision.category,
+        clusterKey: input.decision.clusterKey,
+        costEstimate: input.decision.costEstimate,
+        createdAt: new Date().toISOString(),
+        githubIssueUrl: null,
+        githubPrUrl: null,
+        id: workItemId,
+        riskTier: input.decision.riskTier,
+        shouldCreateIssue: input.decision.shouldCreateIssue,
+        status: "planned",
+        summary: input.sanitized.sanitizedMessage,
+        title: input.decision.title,
+        updatedAt: new Date().toISOString(),
+        userStatus: input.decision.userStatus,
+      });
+    }
+
+    return { feedbackId, status, workItemId };
+  }
+
+  async getControlRoomSnapshot(): Promise<ControlRoomSnapshot> {
+    return {
+      counts: {
+        agentRuns: 0,
+        feedbackSignals: this.feedbackStatuses.size,
+        featureUsageEvents: this.usageCount,
+        openWorkItems: this.workItems.length,
+      },
+      recentAgentRuns: [],
+      recentFeedback: [],
+      recentUsage: [],
+      workItems: this.workItems,
+    };
+  }
+
+  async getUserFeedbackStatus(feedbackId: string) {
+    return this.feedbackStatuses.get(feedbackId) ?? null;
+  }
+
+  async getWorkItem(id: string) {
+    return this.workItems.find((item) => item.id === id) ?? null;
+  }
+
+  async listWorkItems() {
+    return this.workItems;
+  }
+
+  async markWorkItemReleased() {}
+
+  async recordAgentRun() {
+    return "run_1";
+  }
+
+  async recordFeatureUsage() {
+    this.usageCount += 1;
+    return `usage_${this.usageCount}`;
+  }
+}
+
+test("API accepts SDK feedback and returns user-safe status", async () => {
+  const app = await buildApp({ config, store: new MemoryStore() });
+
+  const response = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add dark mode to settings",
+      source: "demo",
+      userId: "user-1",
+    },
+    url: "/sdk/feedback",
+  });
+
+  assert.equal(response.statusCode, 201);
+  const body = response.json();
+  assert.match(body.feedbackId, /^feedback_/);
+  assert.match(body.workItemId, /^work_/);
+  assert.equal(body.status.state, "planned");
+
+  await app.close();
+});
+
+test("API records feature usage and exposes control room counts", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  const usage = await app.inject({
+    method: "POST",
+    payload: { action: "enabled", userId: "user-1" },
+    url: "/sdk/features/dark-mode/usage",
+  });
+  assert.equal(usage.statusCode, 201);
+
+  const controlRoom = await app.inject({ method: "GET", url: "/admin/control-room" });
+  assert.equal(controlRoom.statusCode, 200);
+  assert.equal(controlRoom.json().counts.featureUsageEvents, 1);
+
+  await app.close();
+});
+
+test("API exposes GitHub App manifest seam", async () => {
+  const app = await buildApp({ config, store: new MemoryStore() });
+  const response = await app.inject({ method: "GET", url: "/github/app/manifest" });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().default_permissions.pull_requests, "write");
+
+  await app.close();
+});

@@ -8,4 +8,5 @@ coverage/
 !.env.example
 .turbo/
 .cache/
+.pnpm-store/
 *.log

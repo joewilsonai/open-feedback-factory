@@ -1,0 +1,206 @@
+import { useEffect, useMemo, useState } from "react";
+import "./styles.css";
+
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4100";
+
+interface Snapshot {
+  counts: {
+    agentRuns: number;
+    feedbackSignals: number;
+    featureUsageEvents: number;
+    openWorkItems: number;
+  };
+  recentAgentRuns: Array<Record<string, unknown>>;
+  recentFeedback: Array<Record<string, unknown>>;
+  recentUsage: Array<Record<string, unknown>>;
+  workItems: WorkItem[];
+}
+
+interface WorkItem {
+  category: string;
+  costEstimate: {
+    amountUsd: number;
+    confidence: string;
+    model: string;
+  };
+  id: string;
+  riskTier: string;
+  status: string;
+  summary: string;
+  title: string;
+  userStatus: string;
+}
+
+const emptySnapshot: Snapshot = {
+  counts: {
+    agentRuns: 0,
+    feedbackSignals: 0,
+    featureUsageEvents: 0,
+    openWorkItems: 0,
+  },
+  recentAgentRuns: [],
+  recentFeedback: [],
+  recentUsage: [],
+  workItems: [],
+};
+
+export function App() {
+  const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
+  const [status, setStatus] = useState("Connecting");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = useMemo(
+    () => snapshot.workItems.find((item) => item.id === selectedId) ?? snapshot.workItems[0] ?? null,
+    [selectedId, snapshot.workItems],
+  );
+
+  async function refresh() {
+    setStatus("Refreshing");
+    const response = await fetch(`${apiBaseUrl}/admin/control-room`);
+    const next = (await response.json()) as Snapshot;
+    setSnapshot(next);
+    setStatus("Live");
+  }
+
+  async function runWorkItem(id: string) {
+    setStatus("Running agent lane");
+    await fetch(`${apiBaseUrl}/admin/work-items/${id}/run`, { method: "POST" });
+    await refresh();
+  }
+
+  async function releaseWorkItem(id: string) {
+    setStatus("Marking shipped");
+    await fetch(`${apiBaseUrl}/admin/work-items/${id}/release`, {
+      body: JSON.stringify({ message: "Shipped in the Open Feedback Factory demo." }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    await refresh();
+  }
+
+  useEffect(() => {
+    refresh().catch((error) => setStatus(error instanceof Error ? error.message : "Offline"));
+  }, []);
+
+  return (
+    <main className="console-shell">
+      <header className="console-header">
+        <div>
+          <p className="eyebrow">Open Feedback Factory</p>
+          <h1>Control Center</h1>
+        </div>
+        <button type="button" onClick={refresh}>
+          Refresh
+        </button>
+      </header>
+
+      <section className="status-strip" aria-label="System health">
+        <Metric label="Status" value={status} />
+        <Metric label="Feedback" value={snapshot.counts.feedbackSignals} />
+        <Metric label="Open work" value={snapshot.counts.openWorkItems} />
+        <Metric label="Agent runs" value={snapshot.counts.agentRuns} />
+        <Metric label="Usage events" value={snapshot.counts.featureUsageEvents} />
+      </section>
+
+      <section className="console-grid">
+        <div className="panel work-list">
+          <div className="panel-heading">
+            <p className="eyebrow">Queue</p>
+            <h2>Work items</h2>
+          </div>
+          {snapshot.workItems.length ? (
+            <div className="work-stack">
+              {snapshot.workItems.map((item) => (
+                <button
+                  className={selected?.id === item.id ? "work-row active" : "work-row"}
+                  key={item.id}
+                  type="button"
+                  onClick={() => setSelectedId(item.id)}
+                >
+                  <span>{item.title}</span>
+                  <small>{item.status} / {item.riskTier}</small>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="empty">No work items yet. Submit feedback from the demo app.</p>
+          )}
+        </div>
+
+        <div className="panel detail-panel">
+          <div className="panel-heading">
+            <p className="eyebrow">Demo centerpiece</p>
+            <h2>{selected ? selected.title : "No selected work item"}</h2>
+          </div>
+          {selected ? (
+            <>
+              <p className="summary">{selected.summary}</p>
+              <dl className="detail-grid">
+                <Detail label="State" value={selected.status} />
+                <Detail label="User status" value={selected.userStatus} />
+                <Detail label="Risk" value={selected.riskTier} />
+                <Detail label="Cost" value={`$${selected.costEstimate.amountUsd.toFixed(2)} est.`} />
+                <Detail label="Model" value={selected.costEstimate.model} />
+                <Detail label="Category" value={selected.category} />
+              </dl>
+              <div className="action-row">
+                <button type="button" onClick={() => runWorkItem(selected.id)}>
+                  Run agent lane
+                </button>
+                <button type="button" onClick={() => releaseWorkItem(selected.id)}>
+                  Mark shipped
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="empty">The factory is waiting for its first signal.</p>
+          )}
+        </div>
+
+        <ActivityPanel title="Recent feedback" rows={snapshot.recentFeedback} />
+        <ActivityPanel title="Agent runs" rows={snapshot.recentAgentRuns} />
+        <ActivityPanel title="Feature usage" rows={snapshot.recentUsage} />
+      </section>
+    </main>
+  );
+}
+
+function Metric(props: { label: string; value: number | string }) {
+  return (
+    <article className="metric">
+      <span>{props.label}</span>
+      <strong>{props.value}</strong>
+    </article>
+  );
+}
+
+function Detail(props: { label: string; value: string }) {
+  return (
+    <div>
+      <dt>{props.label}</dt>
+      <dd>{props.value}</dd>
+    </div>
+  );
+}
+
+function ActivityPanel(props: { rows: Array<Record<string, unknown>>; title: string }) {
+  return (
+    <div className="panel activity">
+      <div className="panel-heading">
+        <p className="eyebrow">Audit</p>
+        <h2>{props.title}</h2>
+      </div>
+      {props.rows.length ? (
+        <ul>
+          {props.rows.slice(0, 5).map((row, index) => (
+            <li key={String(row.id ?? index)}>
+              <code>{String(row.id ?? index)}</code>
+              <span>{String(row.summary ?? row.sanitized_summary ?? row.action ?? row.status ?? "recorded")}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="empty">No records yet.</p>
+      )}
+    </div>
+  );
+}

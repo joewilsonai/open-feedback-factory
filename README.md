@@ -23,8 +23,43 @@ the first implementation should prove the loop privately before public launch.
 - Feature usage attribution.
 - Focused operator control center.
 
+## Local Development
+
+V1 uses a pnpm TypeScript workspace and Docker Compose.
+
+```bash
+pnpm install
+pnpm typecheck
+pnpm test
+pnpm run doctor
+pnpm dev
+```
+
+Default local ports:
+
+- API: `http://localhost:4100`
+- Control center: `http://localhost:5173`
+- Demo app: `http://localhost:5174`
+- Postgres: `localhost:55432`
+
+Docker path:
+
+```bash
+cp .env.example .env
+pnpm docker:up
+```
+
+Safety defaults:
+
+- real auto-merge is disabled by default;
+- GitHub mutations are disabled by default;
+- runner mode defaults to deterministic demo mode;
+- Codex CLI mode uses the local Codex subscription/auth path instead of an
+  OpenAI API key.
+
 ## Docs
 
 - [PRD](docs/feedback-to-feature-platform-prd.md)
 - [Polished PRD HTML](docs/feedback-to-feature-platform-prd.html)
 - [V1 design](docs/superpowers/specs/2026-06-19-open-feedback-factory-v1-design.md)
+- [Implementation plan](docs/superpowers/plans/2026-06-19-open-feedback-factory-v1.md)
