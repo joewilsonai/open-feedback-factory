@@ -27,6 +27,10 @@ the first implementation should prove the loop privately before public launch.
 
 V1 uses a pnpm TypeScript workspace and Docker Compose.
 
+If you are pointing Codex, Claude Code, GitHub Copilot, or another coding
+agent at this repo, start with [AGENTS.md](AGENTS.md) and
+[docs/agent-install.md](docs/agent-install.md).
+
 ```bash
 pnpm install
 pnpm typecheck
@@ -125,6 +129,8 @@ until `AUTO_MERGE_ENABLED=true` and GitHub mutation mode are explicitly set.
 
 ## Docs
 
+- [Agent instructions](AGENTS.md)
+- [Agent install guide](docs/agent-install.md)
 - [PRD](docs/feedback-to-feature-platform-prd.md)
 - [Polished PRD HTML](docs/feedback-to-feature-platform-prd.html)
 - [V1 design](docs/superpowers/specs/2026-06-19-open-feedback-factory-v1-design.md)
