@@ -249,11 +249,13 @@ Use the release marker only after implementation exists:
 ```bash
 curl -s -X POST http://localhost:4100/admin/work-items/work_.../release \
   -H 'content-type: application/json' \
-  -d '{"message":"This request has shipped."}'
+  -d '{"featureId":"daybook-note-search","message":"This request has shipped."}'
 ```
 
 If the work item is still queued or in progress, the API should return a
 blocked response instead of marking it shipped.
+Use the same stable `featureId` from your app's SDK `trackFeatureUsage` calls so
+the evidence ledger can attribute adoption back to the shipped request.
 
 ## What To Report Back
 

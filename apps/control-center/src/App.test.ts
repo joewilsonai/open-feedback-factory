@@ -29,6 +29,9 @@ describe("control center UI contract", () => {
     expect(source).toContain("Cost ledger");
     expect(source).toContain("Release proof");
     expect(source).toContain("Review decisions");
+    expect(source).toContain("Usage attribution");
+    expect(source).toContain("Feature usage id");
+    expect(source).toContain("No usage has been attributed");
     expect(source).toContain("Approve review");
     expect(source).toContain("Reject review");
     expect(source).toContain("Waiting for review");

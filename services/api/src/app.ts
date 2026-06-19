@@ -55,7 +55,7 @@ export interface AppStore {
     status: "blocked" | "not_planned";
     workItemId: string;
   }): Promise<void>;
-  markWorkItemReleased(workItemId: string, message?: string): Promise<void>;
+  markWorkItemReleased(workItemId: string, message?: string, featureId?: string): Promise<void>;
   reconcileWorkItems(input?: { actor?: string; staleAfterMinutes?: number }): Promise<ReconciliationResult>;
   recordAgentRun(input: {
     agentName: string;

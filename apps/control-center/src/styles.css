@@ -566,6 +566,30 @@ dd {
   flex-wrap: wrap;
 }
 
+.feature-id-field {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+  color: #52605a;
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.feature-id-field input {
+  min-height: 42px;
+  border: 1px solid rgba(22, 26, 31, 0.22);
+  border-radius: 7px;
+  padding: 0.65rem 0.85rem;
+  color: #161a1f;
+  background: #ffffff;
+  font: inherit;
+}
+
+.feature-id-field input:focus {
+  border-color: #255bc7;
+  outline: 2px solid rgba(37, 91, 199, 0.18);
+}
+
 .artifact-row {
   display: flex;
   gap: 0.7rem;

@@ -128,6 +128,14 @@ interface WorkItemEvidence {
     metadata: Record<string, unknown>;
     status: string;
   }>;
+  usageAttribution: Array<{
+    eventCount: number;
+    featureId: string;
+    latestUsageAt: string;
+    requesterCount: number;
+    uniqueUsers: number;
+    workItemId: string;
+  }>;
   userNotifications: Array<{
     createdAt: string;
     feedbackId: string | null;
@@ -229,6 +237,7 @@ export function App() {
   const [evidence, setEvidence] = useState<WorkItemEvidence | null>(null);
   const [evidenceLoading, setEvidenceLoading] = useState(false);
   const [modeUpdating, setModeUpdating] = useState(false);
+  const [releaseFeatureIdInput, setReleaseFeatureIdInput] = useState("");
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
   const [status, setStatus] = useState("Connecting");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -394,7 +403,10 @@ export function App() {
   async function releaseWorkItem(id: string) {
     setStatus("Marking shipped");
     const response = await adminFetch(`/admin/work-items/${id}/release`, {
-      body: JSON.stringify({ message: "This request has shipped." }),
+      body: JSON.stringify({
+        featureId: releaseFeatureIdInput.trim() || (selected ? featureIdSuggestion(selected) : id),
+        message: "This request has shipped.",
+      }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
@@ -492,6 +504,10 @@ export function App() {
   useEffect(() => {
     refresh().catch((error) => setStatus(error instanceof Error ? error.message : "Offline"));
   }, []);
+
+  useEffect(() => {
+    if (selected) setReleaseFeatureIdInput(featureIdSuggestion(selected));
+  }, [selected?.id]);
 
   function saveAdminToken() {
     const value = adminTokenInput.trim();
@@ -599,6 +615,15 @@ export function App() {
                 {selected.githubPrUrl ? <a href={selected.githubPrUrl}>Pull request</a> : <span>No PR yet</span>}
               </div>
               <AssumptionList assumptions={selected.unresolvedAssumptions ?? []} />
+              <label className="feature-id-field" htmlFor="release-feature-id">
+                Feature usage id
+                <input
+                  id="release-feature-id"
+                  placeholder={featureIdSuggestion(selected)}
+                  value={releaseFeatureIdInput}
+                  onChange={(event) => setReleaseFeatureIdInput(event.target.value)}
+                />
+              </label>
               <div className="action-row">
                 <button
                   type="button"
@@ -1184,6 +1209,20 @@ function EvidenceLedgerPanel(props: {
               <p className="empty">No reviewer approval recorded yet.</p>
             )}
           </LedgerSection>
+          <LedgerSection title="Usage attribution">
+            {evidence.usageAttribution.length ? (
+              evidence.usageAttribution.slice(0, 4).map((usage) => (
+                <LedgerItem
+                  key={`${usage.workItemId}-${usage.featureId}`}
+                  label={usage.featureId}
+                  meta={`${usage.uniqueUsers} users / ${usage.requesterCount} requesters`}
+                  text={`${usage.eventCount} usage events since ${dateLabel(usage.latestUsageAt)}`}
+                />
+              ))
+            ) : (
+              <p className="empty">No usage has been attributed to this shipped feature yet.</p>
+            )}
+          </LedgerSection>
           <LedgerSection title="Release proof">
             {evidence.releaseEvents.length ? (
               evidence.releaseEvents.slice(0, 4).map((release) => (
@@ -1449,6 +1488,15 @@ function actualCostLabel(item: WorkItem): string {
   const confidence = actual.confidence ? ` ${actual.confidence}` : "";
   const tokens = typeof actual.tokens === "number" ? ` / ${actual.tokens} tokens` : "";
   return `$${actual.amountUsd.toFixed(4)}${confidence}${tokens}`;
+}
+
+function featureIdSuggestion(item: WorkItem): string {
+  const slug = item.title
+    .toLowerCase()
+    .replace(/[^a-z0-9._:-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return slug || item.id;
 }
 
 function formatMoney(amount: number): string {

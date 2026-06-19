@@ -133,6 +133,15 @@ export interface WorkItemReviewDecision {
   summary: string;
 }
 
+export interface UsageAttributionRow {
+  eventCount: number;
+  featureId: string;
+  latestUsageAt: string;
+  requesterCount: number;
+  uniqueUsers: number;
+  workItemId: string;
+}
+
 export interface WorkItemDetail {
   agentRuns: AgentRunLedgerRow[];
   assumptions: AssumptionLedgerRow[];
@@ -140,6 +149,7 @@ export interface WorkItemDetail {
   costRecords: CostLedgerRow[];
   githubArtifacts: GithubArtifactLedgerRow[];
   releaseEvents: ReleaseLedgerRow[];
+  usageAttribution: UsageAttributionRow[];
   userNotifications: NotificationLedgerRow[];
   workItem: WorkItemRow;
 }
@@ -537,7 +547,16 @@ export class OpenFeedbackStore {
     const workItem = await this.getWorkItem(id);
     if (!workItem) return null;
 
-    const [agentRuns, assumptions, costRecords, githubArtifacts, releaseEvents, userNotifications, auditEvents] =
+    const [
+      agentRuns,
+      assumptions,
+      costRecords,
+      githubArtifacts,
+      releaseEvents,
+      userNotifications,
+      auditEvents,
+      usageAttribution,
+    ] =
       await Promise.all([
         this.pool.query(
           `select id, work_item_id, run_type, agent_name, status, summary, cost_actual, metadata, created_at, completed_at
@@ -596,6 +615,32 @@ export class OpenFeedbackStore {
            limit 50`,
           [id],
         ),
+        this.pool.query(
+          `with requesters as (
+             select count(distinct fs.user_id)::int as requester_count
+             from feedback_signals fs
+             join work_items wi on wi.cluster_key = fs.cluster_key
+             where wi.id = $1 and fs.user_id is not null
+           )
+           select fue.feature_id,
+                  coalesce(fue.metadata ->> 'attributedWorkItemId', $1) as work_item_id,
+                  count(*)::int as event_count,
+                  count(distinct fue.user_id)::int as unique_users,
+                  max(fue.created_at) as latest_usage_at,
+                  (select requester_count from requesters) as requester_count
+           from feature_usage_events fue
+           where fue.metadata ->> 'attributedWorkItemId' = $1
+              or fue.metadata ->> 'workItemId' = $1
+              or fue.feature_id in (
+                select re.metadata ->> 'featureId'
+                from release_events re
+                where re.work_item_id = $1 and re.metadata ? 'featureId'
+              )
+           group by fue.feature_id, coalesce(fue.metadata ->> 'attributedWorkItemId', $1)
+           order by max(fue.created_at) desc
+           limit 20`,
+          [id],
+        ),
       ]);
 
     return {
@@ -605,6 +650,7 @@ export class OpenFeedbackStore {
       costRecords: costRecords.rows.map(costLedgerFromRow),
       githubArtifacts: githubArtifacts.rows.map(githubArtifactLedgerFromRow),
       releaseEvents: releaseEvents.rows.map(releaseLedgerFromRow),
+      usageAttribution: usageAttribution.rows.map(usageAttributionFromRow),
       userNotifications: userNotifications.rows.map(notificationLedgerFromRow),
       workItem,
     };
@@ -893,7 +939,11 @@ export class OpenFeedbackStore {
     return (result.rowCount ?? 0) > 0;
   }
 
-  async markWorkItemReleased(workItemId: string, message = "This request has shipped."): Promise<void> {
+  async markWorkItemReleased(
+    workItemId: string,
+    message = "This request has shipped.",
+    featureId?: string,
+  ): Promise<void> {
     const client = await this.pool.connect();
     try {
       await client.query("begin");
@@ -912,8 +962,8 @@ export class OpenFeedbackStore {
       );
       await client.query(
         `insert into release_events (id, work_item_id, status, metadata)
-         values ($1, $2, 'shipped', '{}'::jsonb)`,
-        [`release_${randomUUID()}`, workItemId],
+         values ($1, $2, 'shipped', $3)`,
+        [`release_${randomUUID()}`, workItemId, JSON.stringify(featureId ? { featureId } : {})],
       );
       await client.query(
         `insert into user_notifications (id, feedback_id, work_item_id, status, message)
@@ -1113,12 +1163,39 @@ export class OpenFeedbackStore {
     userId?: string;
   }): Promise<string> {
     const id = `usage_${randomUUID()}`;
+    const attributedWorkItemId =
+      stringFromMetadata(input.metadata, "workItemId") ??
+      stringFromMetadata(input.metadata, "attributedWorkItemId") ??
+      (await this.resolveReleasedFeatureWorkItem(input.featureId));
+    const metadata = {
+      ...(input.metadata ?? {}),
+      ...(attributedWorkItemId
+        ? {
+            attributedWorkItemId,
+            attributionSource: stringFromMetadata(input.metadata, "workItemId")
+              ? "sdk_metadata"
+              : "release_feature_id",
+          }
+        : {}),
+    };
     await this.pool.query(
       `insert into feature_usage_events (id, feature_id, user_id, action, metadata)
        values ($1, $2, $3, $4, $5)`,
-      [id, input.featureId, input.userId ?? null, input.action, JSON.stringify(input.metadata ?? {})],
+      [id, input.featureId, input.userId ?? null, input.action, JSON.stringify(metadata)],
     );
     return id;
+  }
+
+  async resolveReleasedFeatureWorkItem(featureId: string): Promise<string | null> {
+    const result = await this.pool.query<{ work_item_id: string }>(
+      `select work_item_id
+       from release_events
+       where metadata ->> 'featureId' = $1
+       order by created_at desc
+       limit 1`,
+      [featureId],
+    );
+    return result.rows[0]?.work_item_id ?? null;
   }
 
   async getApprovalMode(defaultMode: ApprovalMode): Promise<ApprovalMode> {
@@ -1421,6 +1498,17 @@ function notificationLedgerFromRow(row: Record<string, unknown>): NotificationLe
     message: String(row.message),
     status: String(row.status),
     workItemId: stringOrNull(row.work_item_id),
+  };
+}
+
+function usageAttributionFromRow(row: Record<string, unknown>): UsageAttributionRow {
+  return {
+    eventCount: Number(row.event_count ?? 0),
+    featureId: String(row.feature_id),
+    latestUsageAt: dateString(row.latest_usage_at),
+    requesterCount: Number(row.requester_count ?? 0),
+    uniqueUsers: Number(row.unique_users ?? 0),
+    workItemId: String(row.work_item_id),
   };
 }
 

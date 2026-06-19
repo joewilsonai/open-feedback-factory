@@ -890,6 +890,7 @@ trackFeatureOutcome({
 });</code></pre>
 <p>The SDK must support privacy-safe metadata and avoid sending secrets, full session recordings, raw screenshots, or large transcripts by default.</p>
 <p>Feature usage tracking should be optional and privacy-safe. It should let the system connect shipped feedback to real adoption without becoming a surveillance tool.</p>
+<p>V1 should support release-linked attribution: when an operator marks a work item shipped, they can attach the app's stable <code>featureId</code>. Later SDK <code>trackFeatureUsage</code> calls for that feature id should be attributed back to the work item, feedback cluster, and requester count in the evidence ledger.</p>
 <h3 id="8-2-api-and-database"><a class="heading-anchor" href="#8-2-api-and-database" aria-label="Link to 8.2 API and Database">#</a>8.2 API and Database</h3>
 <p>Stores:</p>
 <ul>
@@ -2362,7 +2363,7 @@ feedback-factory demo</code></pre>
 <h3 id="20-4-trust-safety-and-control-requirements"><a class="heading-anchor" href="#20-4-trust-safety-and-control-requirements" aria-label="Link to 20.4 Trust, Safety, and Control Requirements">#</a>20.4 Trust, Safety, and Control Requirements</h3>
 <p>These requirements make people willing to run the product on their repos.</p>
 <p>Raw feedback must stay private by default. The system can store it internally, but GitHub issues, PRs, CI logs, and agent prompts should receive sanitized context only.</p>
-<p>Feature usage tracking must be optional, configurable, and privacy-safe. It should avoid raw session recordings or sensitive behavior capture by default.</p>
+<p>Feature usage tracking must be optional, configurable, and privacy-safe. It should avoid raw session recordings or sensitive behavior capture by default. The default attribution contract should use stable feature ids and aggregate event/user counts, not raw session replay, raw text, screenshots, or sensitive behavior streams.</p>
 <p>Secrets and PII must be redacted. This includes tokens, API keys, credentials, emails, phone numbers, private user details, screenshots, transcripts, and sensitive support context.</p>
 <p>Agents must never commit directly to <code>main</code>. They work through branches and PRs.</p>
 <p>Repo code run by agents should be treated as untrusted. Package install scripts, test setup, and project tooling can execute arbitrary code and must be sandboxed accordingly.</p>

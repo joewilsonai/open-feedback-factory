@@ -187,9 +187,15 @@ waiting for release proof.
 Each selected work item also has an evidence ledger. The ledger shows agent
 runs, estimate and actual cost records, all recorded assumptions, GitHub
 artifacts, review decisions, release markers, user-facing follow-up
-notifications, and audit events. This is the operator proof trail for "what
-happened, what did it cost, what assumptions were made, who reviewed it, what PR
-exists, and has it actually shipped?"
+notifications, feature-usage attribution, and audit events. This is the
+operator proof trail for "what happened, what did it cost, what assumptions were
+made, who reviewed it, what PR exists, is it actually shipped, and is it being
+used?"
+
+Feature usage attribution is tied to release proof. When marking a work item
+shipped, record the app's stable `featureId`; later SDK calls to
+`trackFeatureUsage({ featureId })` are attributed back to the shipped work item,
+requesting feedback cluster, and requester count without exposing raw feedback.
 
 Below-threshold feedback is not thrown away. The API stores it in feedback
 clusters, increments the cluster signal count on later matching requests, and

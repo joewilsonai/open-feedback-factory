@@ -135,8 +135,11 @@ capture, release proof, and agent assumptions.
   auto-merge.
 - The admin evidence endpoint and control center work-item ledger show agent
   runs, estimate and actual cost records, assumptions, GitHub artifacts, review
-  decisions, release markers, user notifications, and audit events without
-  exposing raw feedback.
+  decisions, release markers, feature-usage attribution, user notifications, and
+  audit events without exposing raw feedback.
+- Release markers can include a stable feature id, and later SDK usage events
+  for that feature id are attributed back to the shipped work item and requester
+  cluster using aggregate counts only.
 
 ## Local Verification Commands
 
