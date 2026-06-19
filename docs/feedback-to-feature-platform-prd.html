@@ -667,7 +667,7 @@
 
   <div class="layout">
     <aside class="toc" aria-label="Table of contents">
-      <p class="toc-title">Contents <span>77</span></p>
+      <p class="toc-title">Contents <span>78</span></p>
       <a class="toc-link level-2" href="#1-product-thesis" data-for="1-product-thesis">1. Product Thesis</a>
 <a class="toc-link level-2" href="#2-positioning" data-for="2-positioning">2. Positioning</a>
 <a class="toc-link level-2" href="#3-target-users" data-for="3-target-users">3. Target Users</a>
@@ -737,6 +737,7 @@
 <a class="toc-link level-2" href="#21-success-metrics" data-for="21-success-metrics">21. Success Metrics</a>
 <a class="toc-link level-2" href="#22-competitive-landscape" data-for="22-competitive-landscape">22. Competitive Landscape</a>
 <a class="toc-link level-3" href="#coding-agents" data-for="coding-agents">Coding agents</a>
+<a class="toc-link level-3" href="#ai-native-product-team-platforms" data-for="ai-native-product-team-platforms">AI-native product-team platforms</a>
 <a class="toc-link level-3" href="#feedback-tools" data-for="feedback-tools">Feedback tools</a>
 <a class="toc-link level-3" href="#error-tools" data-for="error-tools">Error tools</a>
 <a class="toc-link level-3" href="#differentiation" data-for="differentiation">Differentiation</a>
@@ -768,6 +769,7 @@
 <p>V1 is for private internal use and testing. The repo and product should be built as if they will become open source, but publishing the repo, package, hosted service, or launch materials is a later explicit decision after the dogfood loop works with real GitHub, real Codex runs, real costs, and real follow-up.</p>
 <h2 id="2-positioning"><a class="heading-anchor" href="#2-positioning" aria-label="Link to 2. Positioning">#</a>2. Positioning</h2>
 <p>The product is not another coding agent and not another feedback board.</p>
+<p>It should also not be positioned as &quot;a tool that turns requests into agent-built PRs.&quot; That is now the obvious middle of the category. Products such as Lightsprint can already let an internal product team create a task, run cloud agents, generate a preview, and open a pull request. That validates the market, but it also means agent-created PRs alone are not a differentiated wedge.</p>
 <p>It is the connective tissue between:</p>
 <ul>
 <li>customer feedback tools like Canny, Featurebase, Productboard, and Linear</li>
@@ -778,8 +780,21 @@
 <p>releases, and changelogs.</p>
 </ul>
 <p>The wedge:</p>
-<blockquote>Add this to your app and your beta users can request features, watch status,</blockquote>
-<blockquote>trigger safe agent work, and get told what shipped or why it will not.</blockquote>
+<blockquote>The open-source feedback-to-feature loop: collect real user requests, validate</blockquote>
+<blockquote>demand, create guarded agent work, track cost, prove release, and tell users</blockquote>
+<blockquote>what shipped or why it did not.</blockquote>
+<p>The launch story should emphasize that the product starts from real users inside the app, not from an internal product manager typing a task into a coding workspace.</p>
+<p>Recommended launch framing:</p>
+<blockquote>Let your users drive the roadmap, and let agents do the first implementation</blockquote>
+<blockquote>pass under your rules.</blockquote>
+<p>Avoid launch copy that sounds like a generic agentic product-team workspace:</p>
+<ul>
+<li>&quot;PMs can build features without engineers.&quot;</li>
+<li>&quot;Turn any idea into a PR.&quot;</li>
+<li>&quot;Cloud agents for product teams.&quot;</li>
+<li>&quot;A coding-agent dashboard for your repo.&quot;</li>
+</ul>
+<p>Those phrases point at the broader AI-native product-platform category. Open Feedback Factory should own the narrower, more visceral system around user demand: in-app SDK, feedback clustering, thresholds, sanitization, decision memory, cost ledger, guardrails, release proof, and user follow-up.</p>
 <h2 id="3-target-users"><a class="heading-anchor" href="#3-target-users" aria-label="Link to 3. Target Users">#</a>3. Target Users</h2>
 <h3 id="primary"><a class="heading-anchor" href="#primary" aria-label="Link to Primary">#</a>Primary</h3>
 <p>Indie developers, solo founders, and small teams with active beta users.</p>
@@ -2444,6 +2459,21 @@ feedback-factory demo</code></pre>
 <h3 id="coding-agents"><a class="heading-anchor" href="#coding-agents" aria-label="Link to Coding agents">#</a>Coding agents</h3>
 <p>GitHub Copilot coding agent, Codex, OpenHands, Devin, Factory Droid, Claude Code, and similar systems can work from tasks or issues and produce code.</p>
 <p>They are not primarily feedback intake, product-decision, cost-accounting, or user-follow-up systems.</p>
+<h3 id="ai-native-product-team-platforms"><a class="heading-anchor" href="#ai-native-product-team-platforms" aria-label="Link to AI-native product-team platforms">#</a>AI-native product-team platforms</h3>
+<p>Lightsprint and similar platforms are close enough to treat as category validation and competitive pressure. A Lightsprint-style workflow lets an internal team member connect a repository, create a product task, run cloud agents, produce a preview deployment, and open a pull request for review.</p>
+<p>That overlaps with the middle of this product's loop: task -&gt; agent -&gt; branch -&gt; PR -&gt; preview. Open Feedback Factory should not compete primarily on that middle step. The differentiated surface is what happens before and after the agent run:</p>
+<ul>
+<li>real in-app user feedback as the source of demand;</li>
+<li>deduping, clustering, demand thresholds, and decision memory;</li>
+<li>privacy sanitization before GitHub, agents, logs, or PRs see user context;</li>
+<li>configurable cost controls and actual-cost capture;</li>
+<li>required assumptions, guardrails, reviewer evidence, and merge policy;</li>
+<li>release proof that distinguishes &quot;implemented&quot; from &quot;shipped&quot;;</li>
+<li>user-facing outcomes for shipped, already available, not planned, needs more</li>
+<p>signal, blocked, or unsafe requests;</p>
+<li>open-source, self-hostable control-plane infrastructure for indie teams.</li>
+</ul>
+<p>The strategic conclusion: agent-built PRs are becoming table stakes. The product must sell and demonstrate the managed user-feedback-to-shipping loop.</p>
 <h3 id="feedback-tools"><a class="heading-anchor" href="#feedback-tools" aria-label="Link to Feedback tools">#</a>Feedback tools</h3>
 <p>Canny, Featurebase, Productboard, Linear Customer Requests, and similar tools capture and organize user feedback.</p>
 <p>They are not primarily agent implementation systems.</p>
@@ -2457,6 +2487,8 @@ feedback-factory demo</code></pre>
 <ul>
 <li>Product name: Open Feedback Factory.</li>
 <li>Current phase: private internal dogfood, not public open-source launch.</li>
+<li>Positioning: do not lead with generic &quot;agent-built PRs&quot;; lead with the</li>
+<p>open-source managed loop that turns real user demand into guarded agent work, cost/release evidence, and user follow-up.</p>
 <li>Public launch: deferred until the real dogfood loop proves feedback intake,</li>
 <p>GitHub issue creation, Codex implementation, PR creation, gate evaluation, cost capture, release marker, and user follow-up.</p>
 <li>Built-in runner: Codex only.</li>

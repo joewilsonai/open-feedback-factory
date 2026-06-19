@@ -3,10 +3,15 @@
 Open Feedback Factory is a standalone feedback-to-feature control plane for
 indie developers and small teams.
 
-The goal is simple: let users request improvements from inside an app, turn
-safe requests into sanitized GitHub issues, let agents implement tightly
-guarded work, track cost, ship through PRs, notify users what happened, and
-measure whether shipped features get used.
+The goal is simple: let an app listen to real user demand, decide what is worth
+acting on, turn safe requests into guarded agent work, track cost and release
+proof, notify users what happened, and measure whether shipped features get
+used.
+
+Agent-built pull requests are becoming table stakes. Open Feedback Factory's
+wedge is the managed loop around them: in-app feedback intake, privacy
+sanitization, demand thresholds, decision memory, cost controls, release proof,
+and user follow-up.
 
 V1 is an internal dogfood build. It is designed as an open-source product, but
 the first implementation should prove the loop privately before public launch.

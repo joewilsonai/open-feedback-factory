@@ -37,6 +37,12 @@ works with real GitHub, real Codex runs, real costs, and real follow-up.
 
 The product is not another coding agent and not another feedback board.
 
+It should also not be positioned as "a tool that turns requests into
+agent-built PRs." That is now the obvious middle of the category. Products such
+as Lightsprint can already let an internal product team create a task, run cloud
+agents, generate a preview, and open a pull request. That validates the market,
+but it also means agent-created PRs alone are not a differentiated wedge.
+
 It is the connective tissue between:
 
 - customer feedback tools like Canny, Featurebase, Productboard, and Linear
@@ -48,8 +54,30 @@ It is the connective tissue between:
 
 The wedge:
 
-> Add this to your app and your beta users can request features, watch status,
-> trigger safe agent work, and get told what shipped or why it will not.
+> The open-source feedback-to-feature loop: collect real user requests, validate
+> demand, create guarded agent work, track cost, prove release, and tell users
+> what shipped or why it did not.
+
+The launch story should emphasize that the product starts from real users
+inside the app, not from an internal product manager typing a task into a coding
+workspace.
+
+Recommended launch framing:
+
+> Let your users drive the roadmap, and let agents do the first implementation
+> pass under your rules.
+
+Avoid launch copy that sounds like a generic agentic product-team workspace:
+
+- "PMs can build features without engineers."
+- "Turn any idea into a PR."
+- "Cloud agents for product teams."
+- "A coding-agent dashboard for your repo."
+
+Those phrases point at the broader AI-native product-platform category. Open
+Feedback Factory should own the narrower, more visceral system around user
+demand: in-app SDK, feedback clustering, thresholds, sanitization, decision
+memory, cost ledger, guardrails, release proof, and user follow-up.
 
 ## 3. Target Users
 
@@ -2406,6 +2434,31 @@ Code, and similar systems can work from tasks or issues and produce code.
 They are not primarily feedback intake, product-decision, cost-accounting, or
 user-follow-up systems.
 
+### AI-native product-team platforms
+
+Lightsprint and similar platforms are close enough to treat as category
+validation and competitive pressure. A Lightsprint-style workflow lets an
+internal team member connect a repository, create a product task, run cloud
+agents, produce a preview deployment, and open a pull request for review.
+
+That overlaps with the middle of this product's loop: task -> agent -> branch
+-> PR -> preview. Open Feedback Factory should not compete primarily on that
+middle step. The differentiated surface is what happens before and after the
+agent run:
+
+- real in-app user feedback as the source of demand;
+- deduping, clustering, demand thresholds, and decision memory;
+- privacy sanitization before GitHub, agents, logs, or PRs see user context;
+- configurable cost controls and actual-cost capture;
+- required assumptions, guardrails, reviewer evidence, and merge policy;
+- release proof that distinguishes "implemented" from "shipped";
+- user-facing outcomes for shipped, already available, not planned, needs more
+  signal, blocked, or unsafe requests;
+- open-source, self-hostable control-plane infrastructure for indie teams.
+
+The strategic conclusion: agent-built PRs are becoming table stakes. The product
+must sell and demonstrate the managed user-feedback-to-shipping loop.
+
 ### Feedback tools
 
 Canny, Featurebase, Productboard, Linear Customer Requests, and similar tools
@@ -2431,6 +2484,9 @@ with an open-source wedge and GitHub-native developer workflow.
 
 - Product name: Open Feedback Factory.
 - Current phase: private internal dogfood, not public open-source launch.
+- Positioning: do not lead with generic "agent-built PRs"; lead with the
+  open-source managed loop that turns real user demand into guarded agent work,
+  cost/release evidence, and user follow-up.
 - Public launch: deferred until the real dogfood loop proves feedback intake,
   GitHub issue creation, Codex implementation, PR creation, gate evaluation,
   cost capture, release marker, and user follow-up.
