@@ -93,9 +93,10 @@ p {
 }
 
 h1 {
-  max-width: 8ch;
-  font-size: clamp(4rem, 12vw, 9rem);
-  line-height: 0.84;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: clamp(3.25rem, 6vw, 6rem);
+  line-height: 0.9;
   letter-spacing: 0;
 }
 
