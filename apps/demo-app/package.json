@@ -1,0 +1,24 @@
+{
+  "name": "@open-feedback-factory/demo-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && vite build",
+    "dev": "vite --host 127.0.0.1 --port 5174",
+    "preview": "vite preview --host 127.0.0.1 --port 5174",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@open-feedback-factory/sdk": "workspace:*",
+    "@vitejs/plugin-react": "^5.1.2",
+    "vite": "^7.3.0",
+    "typescript": "^5.9.3",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.16"
+  }
+}

@@ -33,10 +33,11 @@ Included:
 - PR creation;
 - narrow policy-gated auto-merge;
 - cost estimate and actual cost capture;
+- agent assumption records and unresolved questions;
 - user-facing status and notification, including negative outcomes;
 - feature usage attribution;
 - Docker Compose local install;
-- toy app demo with positive and negative paths;
+- Daybook notepad/todo demo with positive and negative paths;
 - doctor command for setup and safety checks.
 
 Excluded from V1:
@@ -82,7 +83,7 @@ V1 has six primary components.
 
 ### Web SDK
 
-Embeds in the customer app or toy demo app.
+Embeds in the customer app or Daybook demo app.
 
 Responsibilities:
 
@@ -151,6 +152,8 @@ Responsibilities:
 - run configured checks;
 - emit structured output;
 - capture usage and cost when available;
+- record assumptions, defaults chosen, alternatives skipped, checks skipped, and
+  unresolved questions;
 - open a PR;
 - report failure reasons and partial cost;
 - never push directly to the default branch.
@@ -169,6 +172,7 @@ Core screens:
 - work queue;
 - work item detail;
 - agent runs;
+- agent assumptions;
 - PR, check, and release status;
 - cost estimate vs actual;
 - auto-merge policy and status;
@@ -188,7 +192,7 @@ The work item detail screen is the demo centerpiece.
 6. If actionable and safe, the GitHub App creates a sanitized issue.
 7. Codex Runner receives only sanitized issue and work item context.
 8. Codex creates a branch, implements the change, runs checks, records actual
-   usage and cost, and opens a PR.
+   usage, cost, assumptions, and skipped checks, and opens a PR.
 9. Review/check gates evaluate the PR.
 10. If the work item is `safe_auto_merge` and every auto-merge gate passes, the
     GitHub App merges the PR.
@@ -219,7 +223,9 @@ A PR can auto-merge only when all are true:
 - reviewer lane approves;
 - cost stayed under cap;
 - no secrets, PII, or redaction warnings were found;
-- release and rollback policies are healthy.
+- release and rollback policies are healthy;
+- unresolved assumptions do not affect privacy, cost, merge safety, or release
+  status.
 
 Default protected categories:
 
@@ -246,7 +252,7 @@ The repo should ship:
 - worker/runner container;
 - Postgres container;
 - control center web container;
-- toy demo app container;
+- Daybook demo app container;
 - migration command;
 - seed command;
 - doctor command.
@@ -259,12 +265,12 @@ Setup flow:
 4. Create or install the GitHub App.
 5. Add OpenAI/Codex credentials.
 6. Confirm repo permissions and protected paths.
-7. Run a dry-run simulation.
+7. Verify the request queues or blocks honestly until a real runner is enabled.
 8. Enable real PR creation.
 9. Optionally enable safe auto-merge.
 
-The demo should work against a toy GitHub repo or toy app first. Users should
-see the loop before trusting the product with a production repo.
+The demo should work against a small real-feeling notepad/todo app first. Users
+should see the loop before trusting the product with a production repo.
 
 ## Data Model
 
@@ -274,6 +280,7 @@ V1 tables:
 - `feedback_clusters`;
 - `work_items`;
 - `agent_runs`;
+- `agent_assumptions`;
 - `cost_records`;
 - `github_artifacts`;
 - `release_events`;
@@ -397,6 +404,8 @@ Required tests:
 - Codex runner consumes sanitized context only;
 - cost estimate and actual are recorded;
 - auto-merge is blocked unless all gates pass;
+- auto-merge is blocked when unresolved assumptions affect privacy, cost, merge
+  safety, or release status;
 - user status updates for shipped, not planned, blocked, and needs more signal;
 - feature usage links back to shipped work;
 - doctor catches missing credentials, GitHub App setup, migration drift,
@@ -433,7 +442,6 @@ README, security model, install guide, and launch roadmap.
 
 ## Open Decisions For Later
 
-- Product name.
 - Public launch date.
 - Hosted product architecture.
 - Whether to add Requesty or OpenRouter as the first beta gateway adapter.
@@ -446,6 +454,7 @@ README, security model, install guide, and launch roadmap.
 
 - V1 is standalone and not HeyTelli-specific.
 - V1 is internal dogfood before public release.
+- Product name is Open Feedback Factory.
 - Demo path is feedback to real PR to safe auto-merge to user follow-up.
 - Docker Compose is the primary install.
 - GitHub App is required.
@@ -453,6 +462,7 @@ README, security model, install guide, and launch roadmap.
 - Auto-merge exists only for `safe_auto_merge`.
 - User-facing follow-up is required for positive and negative outcomes.
 - Feature usage attribution is required in V1.
+- Agent assumption records are required in V1.
 - Direct Codex/OpenAI is the required model path.
 - OpenRouter, Requesty, and Fusion are optional adapters.
 - Control center is focused and operational.

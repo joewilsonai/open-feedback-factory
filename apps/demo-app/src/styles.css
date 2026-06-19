@@ -1,0 +1,353 @@
+:root {
+  color: #18201d;
+  background: #eeefea;
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+:root[data-theme="dark"] {
+  color: #f4f0e8;
+  background: #12161c;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: clamp(1rem, 3vw, 2.25rem);
+  color: #18201d;
+  background:
+    linear-gradient(90deg, rgba(24, 32, 29, 0.045) 1px, transparent 1px) 0 0 / 42px 42px,
+    linear-gradient(0deg, rgba(24, 32, 29, 0.035) 1px, transparent 1px) 0 0 / 42px 42px,
+    #eeefea;
+  transition: background 220ms ease, color 220ms ease;
+}
+
+:root[data-theme="dark"] .app-shell {
+  color: #f4f0e8;
+  background:
+    linear-gradient(90deg, rgba(244, 240, 232, 0.05) 1px, transparent 1px) 0 0 / 42px 42px,
+    linear-gradient(0deg, rgba(244, 240, 232, 0.04) 1px, transparent 1px) 0 0 / 42px 42px,
+    #12161c;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: end;
+  max-width: 1180px;
+  margin: 0 auto 1rem;
+}
+
+.eyebrow,
+.mini-label {
+  margin: 0 0 0.35rem;
+  color: #0f7054;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+:root[data-theme="dark"] .eyebrow,
+:root[data-theme="dark"] .mini-label {
+  color: #75d9b4;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  max-width: 10ch;
+  font-size: clamp(3.5rem, 10vw, 8.4rem);
+  line-height: 0.86;
+  letter-spacing: 0;
+}
+
+h2 {
+  font-size: 1.2rem;
+  letter-spacing: 0;
+}
+
+button {
+  min-height: 44px;
+  border: 1px solid rgba(24, 32, 29, 0.22);
+  border-radius: 7px;
+  padding: 0.68rem 0.85rem;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.78);
+  cursor: pointer;
+  font-weight: 800;
+  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+button:hover {
+  border-color: #255bc7;
+  transform: translateY(-1px);
+}
+
+:root[data-theme="dark"] button {
+  border-color: rgba(244, 240, 232, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.theme-switch,
+.primary-action {
+  border-color: #18201d;
+  color: #ffffff;
+  background: #18201d;
+}
+
+:root[data-theme="dark"] .theme-switch,
+:root[data-theme="dark"] .primary-action {
+  border-color: #75d9b4;
+  color: #12161c;
+  background: #75d9b4;
+}
+
+.metric-strip,
+.workspace-grid {
+  display: grid;
+  max-width: 1180px;
+  margin: 0 auto;
+  border: 1px solid rgba(24, 32, 29, 0.15);
+  background: rgba(24, 32, 29, 0.15);
+  gap: 1px;
+}
+
+:root[data-theme="dark"] .metric-strip,
+:root[data-theme="dark"] .workspace-grid {
+  border-color: rgba(244, 240, 232, 0.14);
+  background: rgba(244, 240, 232, 0.14);
+}
+
+.metric-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 1px;
+}
+
+.metric,
+.panel,
+.task-row,
+.status-block {
+  background: rgba(255, 255, 255, 0.84);
+}
+
+:root[data-theme="dark"] .metric,
+:root[data-theme="dark"] .panel,
+:root[data-theme="dark"] .task-row,
+:root[data-theme="dark"] .status-block {
+  background: rgba(24, 31, 39, 0.86);
+}
+
+.metric {
+  display: grid;
+  align-content: space-between;
+  min-height: 7rem;
+  padding: 1rem;
+}
+
+.metric span,
+.metric small,
+dt,
+small {
+  color: #69736f;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+:root[data-theme="dark"] .metric span,
+:root[data-theme="dark"] .metric small,
+:root[data-theme="dark"] dt,
+:root[data-theme="dark"] small {
+  color: #a7b3ae;
+}
+
+.metric strong {
+  font-size: clamp(1.6rem, 4vw, 3rem);
+  line-height: 1;
+}
+
+.workspace-grid {
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
+}
+
+.panel {
+  min-height: 20rem;
+  padding: clamp(1rem, 2.4vw, 1.5rem);
+}
+
+.feedback-panel {
+  grid-column: span 2;
+}
+
+.panel-heading {
+  margin-bottom: 1rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-weight: 850;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid rgba(24, 32, 29, 0.22);
+  border-radius: 8px;
+  padding: 0.9rem;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+textarea {
+  min-height: 10rem;
+  resize: vertical;
+}
+
+.note-panel textarea {
+  min-height: 19rem;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea {
+  border-color: rgba(244, 240, 232, 0.2);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.task-entry > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.task-list {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.task-row {
+  display: grid;
+  justify-items: start;
+  gap: 0.28rem;
+  width: 100%;
+  text-align: left;
+}
+
+.task-row.done {
+  border-color: rgba(15, 112, 84, 0.55);
+}
+
+.task-row.done strong {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+.task-row span {
+  color: #0f7054;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.preset-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.sample-requests {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.sample-help {
+  color: #59645f;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+:root[data-theme="dark"] .sample-help {
+  color: #c8d1cc;
+}
+
+.primary-action {
+  width: 100%;
+  margin-top: 0.8rem;
+}
+
+.status-block {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  border: 1px solid rgba(24, 32, 29, 0.12);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.status-block p {
+  color: #59645f;
+  line-height: 1.45;
+}
+
+:root[data-theme="dark"] .status-block p {
+  color: #c8d1cc;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin: 0;
+}
+
+dd {
+  margin: 0.25rem 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 850;
+}
+
+@media (max-width: 900px) {
+  .app-header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .metric-strip,
+  .workspace-grid,
+  dl {
+    grid-template-columns: 1fr;
+  }
+
+  .feedback-panel {
+    grid-column: span 1;
+  }
+
+  .task-entry > div {
+    grid-template-columns: 1fr;
+  }
+}

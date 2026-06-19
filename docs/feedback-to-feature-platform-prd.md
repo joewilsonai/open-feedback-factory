@@ -3,8 +3,8 @@
 **Product:** Open Feedback Factory
 **Working category:** Open-source feedback-to-feature infrastructure
 **Audience:** Indie developers and small product teams
-**Status:** Draft v0.1
-**Distribution thesis:** Open-source first; hosted product later
+**Status:** Internal dogfood v0.1
+**Distribution thesis:** Private dogfood first; open-source launch later
 
 ---
 
@@ -27,6 +27,11 @@ user feedback -> private signal -> triage -> sanitized issue -> agent work
 
 The goal is not to replace product judgment. The goal is to make the full loop
 observable, repeatable, safe, and dramatically faster for small teams.
+
+V1 is for private internal use and testing. The repo and product should be built
+as if they will become open source, but publishing the repo, package, hosted
+service, or launch materials is a later explicit decision after the dogfood loop
+works with real GitHub, real Codex runs, real costs, and real follow-up.
 
 ## 2. Positioning
 
@@ -111,7 +116,8 @@ need an estimate before work starts and actual cost after it finishes.
 - Track estimated and actual agent cost per feature.
 - Notify users when something ships, already exists, is not planned, needs more
   signal, or is blocked.
-- Be open-source and self-hostable from day one.
+- Be designed for open-source, self-hostable distribution from day one, while
+  keeping V1 private until the internal dogfood loop is proven.
 - Provide a demo that feels magical within minutes.
 
 ## 6. Non-Goals
@@ -124,6 +130,8 @@ need an estimate before work starts and actual cost after it finishes.
 - No promise that every user request will be built.
 - No general-purpose coding-agent replacement.
 - No agent marketplace in V1.
+- No public launch, package publishing, hosted-product signup, or external
+  promotion until the private dogfood loop is complete and explicitly approved.
 
 ## 7. Core Product Loop
 
@@ -139,6 +147,10 @@ need an estimate before work starts and actual cost after it finishes.
 8. Reviewer agents and GitHub checks gate merge.
 9. Release tracking watches for deployment or TestFlight availability.
 10. The original users are notified with a clear outcome.
+
+Implementation or merge is not the same as shipped. V1 should require an
+explicit release marker before user-facing status becomes shipped, and it should
+refuse release markers for work that has not reached an implemented state.
 
 ## 8. V1 Product Surface
 
@@ -196,6 +208,11 @@ Feature usage tracking should be optional and privacy-safe. It should let the
 system connect shipped feedback to real adoption without becoming a surveillance
 tool.
 
+V1 should support release-linked attribution: when an operator marks a work item
+shipped, they can attach the app's stable `featureId`. Later SDK
+`trackFeatureUsage` calls for that feature id should be attributed back to the
+work item, feedback cluster, and requester count in the evidence ledger.
+
 ### 8.2 API and Database
 
 Stores:
@@ -207,6 +224,7 @@ Stores:
 - decisions and decision reasons;
 - GitHub issue and PR links;
 - agent runs;
+- agent assumptions and unresolved questions;
 - estimated and actual cost;
 - feature exposure, usage, and outcome events;
 - feedback-to-feature impact attribution;
@@ -214,8 +232,33 @@ Stores:
 - release/deploy state;
 - user notification history.
 
-V1 should support Postgres. A lightweight SQLite mode is desirable for local
-demo and open-source adoption, but it should not block launch.
+V1 should use workspace-scoped records from the start, even while the private
+dogfood install has a single default workspace. Postgres tables should include a
+workspace identifier, row-level-security scaffolding, and tests that verify the
+policies exist. Hosted multi-tenant enforcement can mature later, but the schema
+must not need a privacy rewrite before launch.
+
+The API should apply separate rate-limit groups for SDK intake/status/usage,
+admin writes, runner claim/complete, and GitHub webhook/setup paths. Rate-limit
+responses must be explicit, user-safe, and observable; they should never
+silently drop feedback or pretend work was queued.
+
+For private dogfood V1, admin and runner routes should support simple shared
+token gates before a full multi-user auth system exists:
+
+- `ADMIN_TOKEN` protects `/admin/*` and control-center mutations when set;
+- `RUNNER_TOKEN` protects `/runner/*` job claim and completion routes when set;
+- `/doctor` may expose whether those gates are required, but must never expose
+  token values;
+- local-only development may leave the tokens blank, but any public tunnel or
+  shared dogfood URL should require both tokens;
+- helper scripts that expose `/admin` or `/runner` routes should refuse to start
+  public tunnels while those tokens are missing.
+
+Postgres is the only V1 database. SQLite is intentionally deferred until after
+the private dogfood loop works, because supporting two persistence paths would
+increase migration, test, and support complexity before the core product is
+proven.
 
 ### 8.3 Control Center
 
@@ -232,8 +275,12 @@ Primary views:
 - feature usage and impact attribution;
 - decisions not to build;
 - guardrail and cost-control configuration;
+- latest actual cost and token evidence after runner completion;
+- reconciliation actions for stale in-progress work and missing release proof;
 - reconsideration candidates;
-- user follow-up status.
+- user follow-up status;
+- worker attachment/install guidance for host CLI workers and Docker API-key
+  workers.
 
 The control center should make the loop easy to demo without exposing private
 feedback.
@@ -253,8 +300,15 @@ Capabilities:
 - close issues when shipped or resolved;
 - clean up generated branches/workspaces.
 
-The preferred long-term shape is a GitHub App. The early open-source version
-may support a GitHub token for setup simplicity.
+Webhook handling must be idempotent. Duplicate GitHub deliveries with the same
+delivery id should be acknowledged but must not create duplicate artifacts,
+agent runs, costs, release markers, or user notifications. GitHub artifact
+storage should also be idempotent by work item, artifact type, and URL.
+
+V1 should use a GitHub App for installable GitHub integration, narrow
+permissions, webhook delivery, and auditable merge behavior. `GITHUB_MODE=gh`
+can remain an internal dogfood fallback for local testing, but the product
+should not teach broad personal access tokens as the normal install path.
 
 ### 8.5 Agent Runner
 
@@ -266,10 +320,11 @@ Supported V1 runner modes:
 - GitHub Actions runner;
 - optional hosted runner later.
 
-The runner should be agent-provider agnostic, but the initial implementation
-can optimize for Codex because Codex already supports noninteractive runs,
-cloud tasks, GitHub issue/PR workflows, review, MCP, image input, structured
-output, and usage capture.
+The runner interface should be designed so more agents can be added later, but
+Codex is the only built-in V1 runner. V1 should optimize for Codex because Codex
+already supports noninteractive runs, cloud tasks, GitHub issue/PR workflows,
+review, MCP, image input, structured output, and usage capture. Other agents and
+gateways are adapter work after the dogfood loop is stable.
 
 Required runner behavior:
 
@@ -279,9 +334,43 @@ Required runner behavior:
 - run an implementation agent;
 - run configured tests/checks;
 - collect token and cost data when available;
+- record assumptions the agent made, defaults it selected, alternatives it
+  skipped, and questions that still need human/product confirmation;
+- return structured fields for outcome, changed files, assumptions, checks run,
+  skipped checks, cost summary, and user-safe follow-up;
 - open a PR;
 - never merge unless gates allow it;
 - clean up temporary workspace state.
+
+V1 should include an operator-triggered reconciliation pass that requeues stale
+in-progress work and reports implemented items still waiting for release proof.
+This is not a full production scheduler yet; it is the minimum honest recovery
+lane for local dogfood and demos.
+
+V1 must productize worker attachment rather than relying on one-off local
+machine setup. The supported install lanes are:
+
+- host Codex CLI worker for local subscription auth, installed through a
+  generated macOS LaunchAgent or Linux user systemd service;
+- Docker API-key worker for installs that save a server-side OpenAI API key in
+  the control center and keep the worker inside Docker;
+- manual one-item worker command for targeted review, retries, and demos.
+
+Docker workers must install and use their own Codex CLI inside the container
+when `CODEX_RUNNER_MODE=codex`; they must not inherit host-only paths such as
+`/opt/homebrew/bin/codex`. Expose separate `DOCKER_CODEX_CLI` and
+`CODEX_CLI_VERSION` settings for the container lane. Docker workers should leave
+work queued in `cli` auth mode because host subscription auth is not available
+inside the container; use the host worker for `cli` auth or the Docker worker
+with `api_key` auth.
+
+The generated host service should source the ignored `.env` file at startup and
+set only worker-specific defaults such as `CODEX_RUNNER_MODE=codex`,
+`WORKER_RUN_ONCE=false`, `WORKER_API_BASE_URL`, `RUNNER_WORKSPACE`, and
+`CODEX_SECRETS_PATH`. It must not copy API keys, GitHub App private keys, or
+tokens into generated service files. It should also translate the Docker-only
+`WORKER_API_BASE_URL=http://api:4100` default to the host-reachable
+`http://localhost:4100` when generating local host worker services.
 
 ### 8.6 Review Gates
 
@@ -299,6 +388,51 @@ Reviewer lanes:
 - privacy/security review;
 - test review;
 - release review when applicable.
+
+Merge modes must be explicit product settings, not implied by whether an agent
+can open a PR:
+
+- `implement_only`: builder agents create a branch and PR, then stop;
+- `agent_reviewed_auto_merge`: builder agents create a PR, separate reviewer
+  agents evaluate it, CI passes, the policy engine verifies guardrails, and the
+  system can merge without a human when every required gate passes;
+- `human_exception_required`: the work is blocked from auto-merge and routed to
+  a human only because a policy, reviewer, CI, release, cost, or risk gate
+  failed or requires explicit approval.
+
+The desired default for real indie repos is not "a person reviews every PR."
+The default should be "agents do the routine implementation and review work;
+humans handle exceptions." The PR remains the audit artifact and rollback point,
+but human review is a policy outcome, not the universal bottleneck.
+
+Approval to run and approval to merge are separate controls. `auto` approval
+allows an attached worker to claim eligible queued work. It does not mean the PR
+can merge. Auto-merge requires separate reviewer agents, passing checks,
+guardrail evaluation, provenance checks, and cost/release policy compliance.
+Reviewer approval must be persisted as a work-item review decision before it can
+unlock any merge path. A transient API request flag or UI assumption is not
+enough evidence for auto-merge.
+Branch provenance, changed files, diff size, check status, and cost evidence
+must come from stored runner output or live GitHub PR data, not caller-supplied
+request fields.
+
+Agent-reviewed auto-merge requires at minimum:
+
+- a separate reviewer agent from the builder agent;
+- passing GitHub checks;
+- no protected-path violations;
+- cost within configured cap;
+- diff size within configured cap;
+- no privacy/security redaction warnings that require escalation;
+- no reviewer-agent disagreement;
+- branch and PR provenance tied to the work item;
+- generated runner branch cleanup after a guarded merge;
+- release/deploy health checks when configured.
+
+The evidence ledger must show the latest reviewer decision, reviewer identity,
+review type, summary, timestamp, and whether the decision was approving or
+rejecting. A later rejection overrides an earlier approval until another valid
+approval is recorded.
 
 ### 8.7 User Follow-Up
 
@@ -324,8 +458,9 @@ or other users' feedback.
 
 ### 8.8 Codex Integration Strategy
 
-Codex should be the default first implementation target, while the product
-remains agent-provider agnostic.
+Codex is the only built-in V1 implementation runner. The product should keep an
+adapter boundary so other agents can be added later, but V1 should not claim
+provider-agnostic implementation before the Codex dogfood loop works.
 
 As of the June 2026 research pass, useful Codex surfaces include:
 
@@ -333,8 +468,12 @@ As of the June 2026 research pass, useful Codex surfaces include:
 - Codex Cloud environments for disposable containerized work;
 - noninteractive `codex exec --json` for local/self-hosted runners, lifecycle
   events, usage capture, and actual cost accounting;
+- `codex exec --json` should support both local CLI subscription auth and a
+  server-side API-key mode where the saved OpenAI API key is injected only into
+  the worker process;
 - `--output-schema` for stable final run summaries such as outcome, PR URL,
-  shipped status, cost summary, and user-safe follow-up copy;
+  shipped status, cost summary, assumptions, skipped checks, and user-safe
+  follow-up copy;
 - Codex SDK as the longer-term server-side control-plane integration after the
   MVP moves beyond shelling out;
 - Codex GitHub Action as a CI-native lane for review, release prep, failed CI
@@ -631,6 +770,15 @@ Examples:
 - pause the runner when CI failure rate crosses a threshold;
 - pause auto-merge when rollback or production incident signals are active.
 
+V1 should persist the core merge guardrails in policy config: policy-level
+auto-merge allowance, max safe diff lines, and protected path fragments. These
+settings should be visible in `/doctor`, editable in the control center, and
+used by the auto-merge evaluator. The environment-level `AUTO_MERGE_ENABLED`
+switch remains a hard kill switch above the live policy.
+The evaluator should use recorded runner/GitHub evidence for branch provenance,
+changed files, diff size, checks, and cost instead of trusting a request-body
+shortcut.
+
 Cost controls should be explicit and visible before work starts.
 
 Examples:
@@ -651,6 +799,22 @@ budget, waiting for approval, safe to run, or eligible for auto-merge.
 Policy decisions should be stored and auditable. When work is blocked by a
 custom guardrail or cost limit, the original user should receive a respectful
 product-safe follow-up if the developer exposes feedback status.
+
+Agent assumptions should be first-class audit data, not buried in logs. Every
+planner, builder, reviewer, and release agent should emit:
+
+- assumptions made from incomplete product context;
+- defaults chosen from configuration;
+- alternatives considered and skipped;
+- files or surfaces intentionally left untouched;
+- tests or checks that could not be run;
+- follow-up questions for a human operator;
+- confidence level and reason.
+
+These assumptions should appear on the work item detail screen, be attached to
+the run record, and be summarized in the PR body or PR comment when safe. If an
+assumption affects product behavior, privacy, cost, release, or merge safety, it
+should prevent auto-merge until a reviewer lane or human operator resolves it.
 
 ## 12. Execution Cadence and Queues
 
@@ -911,6 +1075,14 @@ The product should support:
 Privacy-sensitive products should be able to purge raw feedback while keeping
 sanitized clusters, demand counts, and product decision history.
 
+Even if the first private dogfood is single-tenant, the database model should be
+designed with workspace/tenant boundaries from the start. Tables that contain
+feedback, users, work items, runs, costs, GitHub artifacts, release events,
+notifications, feature usage, policy config, secrets metadata, and audit events
+should carry a workspace or installation scope. When Postgres row-level security
+is enabled for a deployed multi-workspace mode, tests must prove cross-workspace
+reads and writes are denied.
+
 ### 15.5 Rollback and Failure Handling
 
 The system needs a path for bad agent changes.
@@ -1051,31 +1223,198 @@ Required:
 Upgrades must not silently weaken security policies, broaden agent access, or
 turn on real execution.
 
-## 16. Open-Source Launch Strategy
+### 15.12 Testing and Verification Requirements
 
-The open-source repo should be useful without the hosted product.
+V1 needs tests for the product loop, not only package-level code coverage. The
+test suite should prove that the system stays honest when integrations are
+missing, when agents fail, when costs are unavailable, and when a request should
+not be built.
 
-Launch package:
+Required test tiers:
+
+- unit tests for sanitization, clustering, routing, status generation, demand
+  thresholds, cost estimation, auto-merge gates, and assumption-record blocking;
+- security tests for workspace/tenant isolation, Postgres row-level security
+  policies when enabled, admin RBAC, raw-feedback permissions, secret storage,
+  webhook verification, prompt injection, SSRF/tunnel URL rejection, and
+  GitHub App permission boundaries;
+- Postgres RLS tests must use a non-owner app role and prove direct SQL
+  cross-workspace reads and writes are denied, not only inspect policy metadata;
+- abuse and hardening tests for path traversal, command injection, branch-name
+  injection, SQL injection, admin CSRF/CORS, rate limiting, webhook replay,
+  idempotency, package-script sandboxing, token-scope minimization, audit-log
+  tamper resistance, retention/delete behavior, and secret leakage into
+  artifacts;
+- API contract tests for SDK feedback submission, status reads, feature usage,
+  control-center snapshots, runner claims, release markers, admin config, and
+  GitHub webhooks;
+- Postgres integration tests for migrations, store methods, audit records,
+  agent assumptions, cost records, GitHub artifacts, release events, and feature
+  usage attribution, including RLS policy enforcement in a security test schema;
+- runner tests for disabled mode, manual approval, auto approval, Codex CLI
+  command construction, API-key auth, sanitized prompts, structured output,
+  usage parsing, cost calculation, and skipped-check/assumption capture;
+- GitHub integration tests for App manifest generation, webhook reachability,
+  signature verification, sanitized issue bodies, PR artifact storage, branch
+  cleanup, and guarded merge refusal;
+- control-center tests for setup states, queue states, human-readable labels,
+  raw enum hiding, assumption visibility, cost display, user follow-up, and
+  blocked/missing-configuration explanations;
+- SDK/demo-app tests for real feedback submission, user-safe status polling,
+  feature usage events, and negative outcomes;
+- dry-run end-to-end tests that prove the local demo never shows fake PRs, fake
+  costs, fake releases, fake shipped states, or fake agent runs;
+- private dogfood end-to-end tests that use real GitHub/Codex configuration to
+  create a real issue, real branch, real PR, real usage record, real cost or
+  token-only actual, real assumption record, and real release marker;
+- reconciliation tests for interrupted runs, stale workspaces, stale branches,
+  failed agent runs, failed checks, missing release proof, and rollback pause.
+
+Required high-value regressions:
+
+- raw feedback never appears in GitHub issue bodies, PR bodies, prompts,
+  browser-visible status, logs intended for GitHub, or user follow-up;
+- a user, API key, worker, or admin scoped to one workspace cannot read or mutate
+  another workspace's feedback, work items, costs, GitHub artifacts, release
+  events, notifications, feature usage, policy config, or audit trail;
+- Postgres RLS policies deny cross-workspace access when enabled, including
+  direct SQL attempts that bypass application helpers;
+- users without raw-feedback permission can see sanitized summaries and status
+  only, not raw payloads or private metadata;
+- non-owner roles cannot rotate secrets, enable auto-merge, change protected
+  paths, change cost caps upward, toggle the kill switch, or weaken policy;
+- GitHub webhook requests without a valid signature are rejected and do not write
+  artifacts;
+- GitHub App tokens are installation-scoped and the product refuses to mutate
+  repos outside the configured installation/repo;
+- prompt-injection text inside feedback is treated as user content and cannot
+  cause the runner to request raw feedback, expose secrets, change policy, or
+  bypass guardrails;
+- localhost, private-network, metadata-service, and malformed webhook/tunnel URLs
+  are rejected for public GitHub webhook setup unless explicitly in local-only
+  development mode;
+- secrets saved through the control center are stored outside git, masked in
+  responses, never returned to the browser, and never copied into GitHub
+  artifacts or agent prompts;
+- user-controlled strings cannot escape file/path boundaries, create unsafe
+  branch names, inject shell arguments, inject SQL, or alter generated YAML,
+  Markdown, PR bodies, issue bodies, or config files in unsafe ways;
+- generated branch names, commit messages, issue titles, labels, PR titles, and
+  file paths are normalized and length-limited before use in git, GitHub, shell,
+  or filesystem operations;
+- admin mutation endpoints require valid admin auth, reject cross-origin writes
+  unless explicitly configured, and are protected from CSRF in browser-based
+  deployments;
+- feedback, status, feature-usage, and admin endpoints have rate limits or abuse
+  controls appropriate for their exposure mode;
+- public SDK feedback intake, status polling, and feature-usage endpoints have
+  separate per-user, per-device/session, per-IP, per-app/workspace, and burst
+  limits;
+- admin write endpoints, policy changes, cost-cap changes, secret operations,
+  runner actions, and release-marker operations have stricter rate limits and
+  audit events for throttled attempts;
+- runner job claim/complete endpoints have per-worker, per-workspace, and
+  concurrency limits so a broken worker cannot claim the queue or create runaway
+  retries;
+- GitHub webhook endpoints have replay/idempotency protection plus rate limits
+  by delivery id, installation, repo, and source IP/header trust where available;
+- model/agent execution has spend and attempt limits separate from HTTP rate
+  limits: per work item, per day, per month, per workspace, and per runner;
+- rate-limit responses are user-safe and observable. They should not silently
+  drop feedback; they should queue, defer, or return a clear retry/status path
+  depending on endpoint type;
+- webhook delivery is idempotent and replay-resistant enough that duplicate
+  GitHub events cannot create duplicate runs, duplicate costs, duplicate release
+  markers, or duplicate notifications;
+- package install/test scripts from target repos are treated as untrusted code
+  and cannot access Open Feedback Factory secrets, raw feedback, production
+  databases, or broader network access than the sandbox allows;
+- access tokens and GitHub App installation tokens are scoped to the minimum
+  required permissions and are not logged, cached longer than necessary, or
+  reused across workspaces/installations;
+- audit events for policy changes, secret changes, runner claims, merge
+  decisions, release markers, and user notifications are append-only from the
+  application perspective and tamper-evident enough for dogfood debugging;
+- raw-feedback retention and deletion tests prove raw payloads are purged while
+  sanitized aggregates, demand counts, and audit-safe deletion records remain;
+- disabled runner queues work without creating runs, costs, commits, PRs, or
+  shipped states;
+- auto approval lets an attached worker claim eligible work, but never bypasses
+  review/check/policy/provenance/cost/release merge gates;
+- merged work remains waiting for release until a release marker or deployment
+  detector proves availability;
+- missing cost rates show real token usage and low-confidence dollar estimates,
+  not invented actual spend;
+- unresolved assumptions affecting privacy, cost, merge safety, or release
+  status block auto-merge;
+- not-planned, unsafe, duplicate, already-available, and below-threshold
+  outcomes produce respectful user-safe explanations and decision categories.
+
+Minimum verification before a dogfood release:
+
+```bash
+pnpm test
+pnpm typecheck
+pnpm build
+pnpm run doctor
+git diff --check
+```
+
+With Docker Postgres running:
+
+```bash
+TEST_DATABASE_URL=postgres://off:off@127.0.0.1:55432/open_feedback_factory pnpm --filter @open-feedback-factory/db test
+docker compose up --build
+```
+
+The control center should surface test and verification state: last test run,
+last doctor run, required checks for auto-merge, failed checks, skipped checks,
+and whether a work item is blocked because verification is incomplete.
+
+## 16. Private Dogfood and Open-Source Launch Strategy
+
+V1 is a private dogfood build. It should be engineered with open-source
+distribution in mind, but the repo should not be promoted publicly until the
+internal loop has been proven against real feedback, real Codex runs, real PRs,
+real cost records, and honest shipped/not-shipped outcomes.
+
+The eventual open-source repo should be useful without the hosted product.
+
+Private dogfood package:
+
+- Docker Compose local setup;
+- Daybook sample app;
+- local control center;
+- local API;
+- Postgres Docker Compose;
+- Codex-based runner;
+- GitHub App setup path, with `gh` fallback only for internal dogfood;
+- clear dry-run mode;
+- real dogfood mode with GitHub/Codex connected;
+- doctor command;
+- security notes and no-fake-demo rules.
+
+Eventual open-source launch package:
 
 - one-command local setup;
 - sample app;
 - sample GitHub repo flow;
 - local control center;
 - Codex-based runner;
-- GitHub token setup;
+- GitHub App setup;
 - Postgres Docker compose;
-- demo feedback items;
+- clearly labeled sample feedback items;
 - security disclosure policy and threat model;
 - README with a short video/GIF.
 
-The viral demo:
+The private dogfood demo:
 
 1. Run the sample app.
 2. Submit feedback as a beta user.
 3. Watch it appear in the control center.
 4. See it become a GitHub issue.
 5. Watch the agent open a PR.
-6. Merge/deploy.
+6. Watch reviewer/check/policy gates decide whether it can merge.
 7. See the user-facing status change to shipped.
 
 The story should be simple:
@@ -1100,10 +1439,11 @@ The product should optimize for:
 
 ### 17.1 Installation Paths
 
-#### Demo Mode
+#### Dry-Run Demo Mode
 
-Demo mode should require no real GitHub mutations, no production secrets, and
-no model spend.
+Dry-run demo mode should require no real GitHub mutations, no production
+secrets, and no model spend. It exists to show the shape of the loop without
+pretending work happened.
 
 Example target flow:
 
@@ -1118,13 +1458,40 @@ It should launch:
 - sample app;
 - local control center;
 - local API;
-- fake or seeded feedback;
-- simulated agent run;
-- simulated PR lifecycle;
+- clearly seeded sample feedback, labeled as sample input;
+- sample reset command that removes seed/test rows without touching real app
+  submissions;
+- live workers leave sample-only seed work queued so dry-run data does not burn
+  real agent runs;
+- queued or blocked agent lane unless a real runner is configured;
+- no fake PR URLs, fake costs, fake agent runs, fake releases, or fake shipped
+  state;
 - user-facing status updates.
 
-This is the viral path. A developer should understand the product loop in a few
-minutes before connecting real infrastructure.
+This is the trust-building path. A developer should understand the product loop
+in a few minutes before connecting real infrastructure, without pretending that
+agent work, PRs, release proof, or costs happened.
+
+#### Private Dogfood Demo Mode
+
+Private dogfood demo mode is the real internal test. It connects GitHub, Codex,
+and cost capture, then runs the Daybook sample app through the same path a
+customer app would use.
+
+It should require:
+
+- a configured GitHub App, or explicit internal `gh` fallback;
+- a real target repo and clean branch;
+- Codex CLI subscription auth or server-side API-key auth;
+- explicit approval mode;
+- explicit merge mode;
+- configured cost rates or a clearly labeled token-only actual;
+- release marker or deployment detector.
+
+Private dogfood mode must create real GitHub artifacts and record real run
+results. If any dependency is missing, the UI should say queued, blocked, or
+waiting for configuration. It must never substitute seeded data for real PRs,
+costs, releases, or shipped outcomes.
 
 #### Indie Self-Hosted Mode
 
@@ -1213,22 +1580,27 @@ The admin UI should be wizard-driven.
 Setup steps:
 
 1. Connect GitHub repo.
-2. Choose install mode: dry-run, PR-only, guarded auto-merge.
-3. Add model provider, OpenRouter key, Requesty key, or model gateway.
-4. Set cost caps.
-5. Pick guardrail template: web app, iOS app, SaaS app, or open-source
+2. Choose install mode: dry-run demo, implement-only PR mode,
+   agent-reviewed auto-merge, or human-exception-required.
+3. Add Codex auth mode: local CLI subscription or server-side API key.
+4. Attach a worker: host Codex CLI service, Docker API-key worker, or manual
+   one-item command.
+5. Set cost caps.
+6. Pick guardrail template: web app, iOS app, SaaS app, or open-source
    library.
-6. Choose execution cadence: manual, immediate safe lane, daily batch, weekly
+7. Choose execution cadence: manual, immediate safe lane, daily batch, weekly
    batch, threshold-based, or hybrid.
-7. Choose demand threshold preset: aggressive beta, balanced, conservative, or
+8. Choose demand threshold preset: aggressive beta, balanced, conservative, or
    custom.
-8. Install SDK snippet.
-9. Submit test feedback.
-10. Watch a dry-run issue/PR simulation.
-11. Explicitly enable real agent execution.
+9. Install SDK snippet.
+10. Submit test feedback.
+11. Watch it queue, block, or run against real configured integrations.
+12. Explicitly enable real agent execution.
+13. Optionally configure OpenRouter, Requesty, or Fusion adapters after the
+    direct Codex path works.
 
-The default path should start in dry-run. Real GitHub mutations and real model
-spend should require explicit enabling.
+The default path should start disabled and honest. Real GitHub mutations and
+real model spend should require explicit enabling.
 
 ### 17.3 Admin UI Control Surfaces
 
@@ -1293,7 +1665,8 @@ Provider and gateway health views should show:
 - configured direct providers;
 - configured managed gateways;
 - active base URL or endpoint region;
-- API key status;
+- API key status, masked fingerprint, storage source, and whether the key is
+  held in environment variables or local secret storage;
 - approved or allowed model list;
 - fallback and routing policy status;
 - OpenRouter Fusion availability and selected default preset when configured;
@@ -1502,7 +1875,12 @@ Default behavior must be conservative:
 
 - dry-run by default;
 - no direct commits to `main`;
-- no auto-merge until enabled;
+- no auto-merge until explicitly enabled;
+- when auto-merge is enabled, it still requires CI, reviewer-agent approval,
+  policy gates, provenance checks, and configured release-health gates;
+- human review is required for exceptions, protected categories, failed gates,
+  reviewer disagreement, high-cost runs, large diffs, and configured approval
+  categories, not for every routine safe PR;
 - GitHub App preferred over broad personal access token;
 - raw feedback never sent to GitHub by default;
 - raw feedback never sent to agent prompts by default;
@@ -1516,7 +1894,46 @@ Default behavior must be conservative:
 - per-run and monthly budget caps;
 - full audit log for policy decisions and agent actions.
 
-### 17.5 Maintenance Commands
+### 17.5 V1 Dogfood Defaults
+
+New installs should start with conservative defaults that still let our private
+dogfood run be real once explicitly enabled.
+
+V1 defaults:
+
+- product name: Open Feedback Factory;
+- visibility: private internal dogfood;
+- database: Postgres only;
+- admin access: local-open by default, `ADMIN_TOKEN` required before tunnels or
+  shared URLs;
+- runner access: local-open by default, `RUNNER_TOKEN` required before tunnels
+  or shared URLs;
+- install path: Docker Compose;
+- GitHub path: GitHub App required, with `gh` fallback for internal dogfood;
+- built-in runner: Codex only;
+- Codex auth: local CLI subscription first, API-key mode optional;
+- runner mode: disabled until explicitly attached;
+- host worker installer: macOS LaunchAgent or Linux user systemd service;
+- Docker worker lane: API-key mode after the key is saved server-side;
+- approval mode: manual by default;
+- merge mode: implement-only by default;
+- auto-merge: off until explicitly enabled and still limited to
+  `safe_auto_merge`;
+- default cadence: manual, with immediate safe lane available only after the
+  operator enables real execution;
+- default threshold preset: balanced;
+- default work-item cap: `$5` estimated cost;
+- default daily cap: `$25`;
+- default monthly cap: `$100`;
+- raw feedback retention: 30 days by default, with sanitized summaries, demand
+  counts, decisions, audit logs, and cost records retained longer;
+- guardrail templates: web app and open-source library in V1; iOS and SaaS
+  templates after the web path works;
+- release proof: explicit release marker in V1, deployment integrations later;
+- outbound notifications: user-safe status endpoint in V1, outbound webhooks as
+  integration surface, native email/Slack/Discord later.
+
+### 17.6 Maintenance Commands
 
 The CLI should make maintenance boring.
 
@@ -1570,6 +1987,8 @@ should win on setup, reliability, observability, and scale.
 - Wizard-driven setup and strict dry-run default.
 - Triage and dedupe.
 - Sanitized GitHub issue creation.
+- GitHub App install path and webhook receiver, with `gh` fallback only for
+  internal dogfood.
 - Owned work router for risk, budget, agent, and merge decisions.
 - Configurable execution cadence and queue modes.
 - Demand thresholds for backlog, planning, and implementation promotion.
@@ -1579,11 +1998,23 @@ should win on setup, reliability, observability, and scale.
 - Basic admin roles.
 - Audit log.
 - PR creation.
-- Basic reviewer gate.
+- Agent reviewer gate.
+- Durable review-decision ledger that safe auto-merge reads instead of trusting
+  a one-off request flag.
+- Durable merge-evidence path that reads stored runner output and live GitHub PR
+  data instead of trusting caller-supplied branch, diff, check, or cost fields.
+- Policy-governed merge modes: implement-only, agent-reviewed auto-merge, and
+  human-exception-required.
 - Estimated and actual cost capture.
-- User-safe status endpoint.
-- Optional feature usage tracking and feedback-impact attribution.
-- Demo app and seed scenario.
+- Minimal release marker so merged work is not called shipped until release is
+  explicitly proven.
+- User-safe status endpoint for shipped, planned, already available, not
+  planned, blocked, unsafe, needs more signal, and waiting-for-release states.
+- Feature usage tracking and feedback-impact attribution.
+- Real Daybook demo app and seed scenario with no fake PRs, fake costs, fake
+  releases, or fake shipped states.
+- Sample seed/reset path that keeps dry-run installs honest and prevents
+  integration-test rows from polluting the control center.
 - Maintenance/doctor command.
 - Versioned config and migration path.
 
@@ -1591,8 +2022,8 @@ should win on setup, reliability, observability, and scale.
 
 - iOS SDK/example.
 - Error capture.
-- Release/deploy tracking.
-- Feature exposure/usage/outcome tracking.
+- Deployment-provider tracking beyond the V1 release marker.
+- Advanced feature exposure/usage/outcome reporting.
 - Data retention controls.
 - Rollback/revert workflow.
 - Outbound webhooks.
@@ -1602,12 +2033,11 @@ should win on setup, reliability, observability, and scale.
 - Per-category cadence templates.
 - User-base-size threshold presets.
 - Optional model gateway adapter.
-- OpenRouter provider support.
-- OpenRouter Fusion deliberation lane support.
-- Requesty gateway/provider support.
+- OpenRouter provider adapter.
+- OpenRouter Fusion deliberation adapter.
+- Requesty gateway/provider adapter.
 - MCP tool surface for agent-safe access to work items.
 - Codex capability health panel.
-- GitHub App install path.
 - Feature flag/rollout hooks.
 - Agent quality reporting.
 - OpenTelemetry or similar trace export.
@@ -1750,26 +2180,34 @@ data, and webhooks.
 
 The database needs tables for feedback signals, sanitized summaries, clusters,
 work items, decisions, agent runs, cost estimates, actual cost, policies,
-GitHub links, release status, feature usage events, impact attribution, and
-notifications.
+GitHub links, release status, agent assumptions, unresolved questions, feature
+usage events, impact attribution, and notifications.
 
 The control center is the developer UI. It shows the queue, clusters, statuses,
 PRs, agents, costs, guardrails, blocked items, and reconsideration candidates.
+Each work item should expose an evidence ledger with agent runs, cost records,
+assumption records, GitHub artifacts, release markers, user notifications, and
+audit events so an operator can prove whether a feature was merely queued,
+implemented, waiting for release, shipped, blocked, or rejected.
 
 The queue system should support immediate jobs, scheduled batches, threshold
 queues, manual approval queues, and per-category cadence rules.
 
 The promotion system should support user-base-size presets and custom
 thresholds for backlog, planning, and implementation eligibility.
+V1 should at minimum use stored cluster signal counts during routing so a
+below-threshold request can become a guarded work item when another matching
+request arrives. This demand memory should also show in the control center.
 
 The GitHub integration should create issues, apply labels, comment status, open
 PRs, read checks, close resolved issues, and clean up generated branches.
 
-The agent runner should be abstract. Codex can be first, but the platform
-should eventually support other agents.
+Codex should be the only built-in V1 runner. The runner boundary should still be
+designed as an adapter interface so the platform can support other agents later
+without moving product policy out of the work router.
 
 A Codex runner should use noninteractive runs, structured output, usage
-capture, and review mode where possible.
+capture, assumption records, and review mode where possible.
 
 The work router should be owned by this product. It decides risk, budget,
 agent, model tier, review lanes, merge policy, and whether work runs at all.
@@ -1802,6 +2240,23 @@ The admin UI should be wizard-driven, start in dry-run, and make security,
 permissions, cost caps, connected repos, agent access, blocked work, and
 maintenance health obvious.
 
+The setup UI must make worker attachment explicit. Auto approval allows a live
+worker to claim queued work, but does not itself create a worker. The UI and
+docs must show the exact command or deployment path for manual one-item workers,
+host CLI auto-polling workers, and Docker API-key workers, including
+`CODEX_RUNNER_MODE`, `CODEX_AUTH_MODE`, `CODEX_SECRETS_PATH`, `CODEX_CLI` for
+host workers, `DOCKER_CODEX_CLI` and `CODEX_CLI_VERSION` for Docker workers,
+GitHub PR settings, model, effort, timeout, and workspace. The host install
+helper should generate macOS LaunchAgent and Linux user systemd files, provide
+status and uninstall commands, write logs under `.off/logs`, and avoid
+embedding secrets directly in generated service files.
+
+Admin and beta-user surfaces must not leak raw internal enum names. Labels such
+as `planned`, `safe_auto_merge`, `guarded_review`, and `not_planned` should be
+rendered as human-readable product states such as "Queued", "Low-risk auto
+lane", "Needs review", and "Not planned". Raw enum values can remain in APIs
+and audit logs, but not as the primary visible control-center language.
+
 The hosted version later needs multi-tenant auth, billing, hosted workers, team
 roles, managed secrets, managed backups, and webhook delivery monitoring.
 
@@ -1815,6 +2270,9 @@ context only.
 
 Feature usage tracking must be optional, configurable, and privacy-safe. It
 should avoid raw session recordings or sensitive behavior capture by default.
+The default attribution contract should use stable feature ids and aggregate
+event/user counts, not raw session replay, raw text, screenshots, or sensitive
+behavior streams.
 
 Secrets and PII must be redacted. This includes tokens, API keys, credentials,
 emails, phone numbers, private user details, screenshots, transcripts, and
@@ -1834,9 +2292,22 @@ production release logic.
 Cost caps must be enforced before and during work. If a feature is estimated
 above budget, it waits. If actual cost exceeds the configured limit, the system
 stops or escalates.
+The V1 control center should let an operator change the max feature cost cap
+without editing environment files, and runner/admin execution must read that
+live policy before spending model time.
 
 There needs to be an audit trail for every decision: why it was built, blocked,
 not planned, merged, reopened, or reconsidered.
+
+The evidence ledger should be the operator-facing version of that audit trail.
+It must avoid raw feedback leakage while still showing sanitized summaries,
+agent run results, estimate-vs-actual cost, unresolved assumptions, persisted
+review decisions, release proof, and user-safe follow-up status.
+
+When an operator decides not to build something, the system should provide an
+explicit decision action. That action must update the work item, notify matching
+requesters with a user-safe explanation, store the decision category, and add an
+audit event. Rejected work should never disappear as an unspoken queue change.
 
 Admin auth and roles are required so raw feedback, secrets, policy changes,
 approvals, deletion, billing, and kill-switch access are not all controlled by
@@ -1954,52 +2425,88 @@ They are not primarily product-request systems.
 This product owns the whole loop between user request and shipped outcome,
 with an open-source wedge and GitHub-native developer workflow.
 
-## 23. Open Questions
+## 23. V1 Decisions and Deferred Questions
 
-- What is the product name?
-- Should V1 support only Codex, or a pluggable agent interface from day one?
-- Should SQLite be part of V1 for dead-simple local setup?
-- Should hosted runners exist at launch, or wait until OSS demand is proven?
-- Which OSS model gateway should be the default optional adapter, if any?
-- Should OpenRouter be a first-class setup option in V1 or a documented
-  provider adapter?
-- Should OpenRouter Fusion ship as a visible planning/review button in V1 or
-  remain an advanced policy option?
-- What default Fusion presets should ship for budget, high-quality, and custom
-  review lanes?
-- Should Requesty be a first-class setup option in V1, especially as a possible
-  early partner integration?
-- Which install path should be the launch default: Docker Compose, Railway
-  template, GitHub Actions, or all three?
-- What sandbox model is strict enough for local and hosted agent execution?
-- What admin roles should ship in V1?
-- What raw feedback retention default should ship in V1?
-- Which feature flag/rollout providers should be first-class integrations?
-- Which outbound webhook events should ship in V1?
-- What execution cadence should be the default for new installs?
-- Which demand threshold preset should be the default for new installs?
-- What is the default cost cap for indie developers?
-- What guardrail templates should ship by default for web apps, iOS apps,
-  open-source libraries, and SaaS products?
-- What is the minimum useful iOS SDK?
-- Should user notifications be owned by the product or exposed as webhook-only
-  in V1?
+### Resolved V1 Decisions
+
+- Product name: Open Feedback Factory.
+- Current phase: private internal dogfood, not public open-source launch.
+- Public launch: deferred until the real dogfood loop proves feedback intake,
+  GitHub issue creation, Codex implementation, PR creation, gate evaluation,
+  cost capture, release marker, and user follow-up.
+- Built-in runner: Codex only.
+- Runner extensibility: keep an adapter interface, but do not claim broad agent
+  support in V1.
+- Database: Postgres only.
+- Install default: Docker Compose.
+- GitHub integration: GitHub App as the installable path; `gh` fallback only for
+  internal dogfood.
+- Hosted runners: deferred.
+- Model/gateway default: direct Codex/OpenAI first.
+- Codex auth modes: local CLI subscription and server-side API key.
+- OpenRouter: documented optional adapter, not a launch blocker.
+- Requesty: documented optional adapter and possible early partner path, not a
+  launch blocker.
+- OpenRouter Fusion: optional policy/deliberation lane, off by default, not the
+  primary coding path.
+- Sandbox model: local isolated workspace/container plus strict policy checks in
+  V1; hosted disposable workers later.
+- Admin roles: owner, developer/operator, reviewer, viewer, billing/admin, and
+  privacy/admin.
+- Raw feedback retention default: 30 days.
+- Status ownership: the product owns the user-safe status endpoint and
+  notification records in V1.
+- Release proof: explicit release marker in V1; deployment-provider
+  integrations later.
+- Execution cadence default: manual.
+- Demand threshold default: balanced.
+- Cost defaults: `$5` per work item, `$25` per day, `$100` per month.
+- Guardrail templates: web app and open-source library in V1; iOS and SaaS
+  templates later.
+- Mobile SDK: deferred; web SDK ships first.
+- Feature flag providers: generic release marker/webhook hooks first, native
+  provider integrations later.
+
+### Deferred Post-V1 Questions
+
+- When to publish the repo publicly.
+- Whether the first hosted product should use managed runners or only managed
+  control-plane hosting.
+- Which provider adapter should become first-class first: OpenRouter, Requesty,
+  or another gateway.
+- Whether Fusion deserves a visible control-center action or should remain a
+  policy-only escalation.
+- Which Fusion presets should ship for budget, high-quality, and custom review
+  lanes.
+- When to add mobile SDKs.
+- When to add Linear, Jira, Slack, Discord, and email integrations.
+- Whether to add a public roadmap, changelog widget, or voting board.
 
 ## 24. First Demo Script
 
 The demo should use a tiny real app, not a mock dashboard.
 
+The first demo has two modes:
+
+- dry-run demo: local education mode with seeded/sample data clearly labeled,
+  no GitHub mutation, no model spend, no fake PR/cost/release claims, and a
+  reset path for sample/test rows;
+- private dogfood demo: real internal mode with GitHub and Codex connected,
+  real PRs, real run results, real cost records, and release/user status updates
+  only when proven.
+
 Scenario:
 
-1. A beta user says: "Please add dark mode to the settings screen."
+1. A beta user says: "Please add note search so I can find older notes."
 2. The control center receives and clusters the request.
 3. The system estimates cost and marks it safe.
 4. A sanitized GitHub issue is created.
-5. The agent opens a PR adding dark mode.
+5. The agent opens a PR adding note search.
 6. Tests pass.
-7. The PR merges.
-8. The demo app deploys.
-9. The user sees: "Shipped: dark mode is now available in settings."
+7. Reviewer, check, policy, cost, and provenance gates pass.
+8. The PR merges only if the configured merge mode allows it.
+9. A release marker or deployment detector proves the change is available.
+10. The user sees: "Shipped: note search is now available."
 
 The demo must also show a negative path:
 
@@ -2009,6 +2516,12 @@ The demo must also show a negative path:
 4. The user sees a respectful reason.
 5. Repeated similar requests can trigger reconsideration if the category allows
    it.
+
+If the runner is disabled, the demo should say queued. If GitHub is missing, it
+should say waiting for GitHub configuration. If Codex auth is missing, it should
+say waiting for runner configuration. If cost rates are missing, it should show
+real token usage and a low-confidence dollar estimate rather than invented
+actual spend.
 
 ## 25. Product Principle
 

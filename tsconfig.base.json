@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "declaration": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "lib": ["ES2024", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noUncheckedIndexedAccess": true,
+    "outDir": "dist",
+    "paths": {
+      "@open-feedback-factory/core": ["packages/core/src/index.ts"],
+      "@open-feedback-factory/db": ["packages/db/src/index.ts"],
+      "@open-feedback-factory/runner": ["packages/runner/src/index.ts"],
+      "@open-feedback-factory/sdk": ["packages/sdk/src/index.ts"]
+    },
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2024"
+  }
+}

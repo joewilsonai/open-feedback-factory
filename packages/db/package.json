@@ -1,0 +1,19 @@
+{
+  "name": "@open-feedback-factory/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "demo:reset": "tsx src/demoReset.ts",
+    "migrate": "tsx src/migrate.ts",
+    "test": "node --import tsx --test src/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@open-feedback-factory/core": "workspace:*",
+    "pg": "^8.16.3"
+  }
+}
