@@ -230,6 +230,14 @@ const defaultRunnerInstallPlan: RunnerInstallPlan = {
   recommendedMode: "host_cli",
 };
 
+function OffMark() {
+  return (
+    <span className="off-mark" aria-hidden="true">
+      <span />
+    </span>
+  );
+}
+
 export function App() {
   const [adminToken, setAdminToken] = useState(() =>
     typeof window === "undefined" ? "" : window.localStorage.getItem(adminTokenStorageKey) ?? "",
@@ -585,9 +593,12 @@ export function App() {
   return (
     <main className="console-shell">
       <header className="console-header">
-        <div>
-          <p className="eyebrow">Open Feedback Factory</p>
-          <h1>Control Center</h1>
+        <div className="brand-lockup">
+          <OffMark />
+          <div>
+            <p className="eyebrow">Open Feedback Factory</p>
+            <h1>Control Center</h1>
+          </div>
         </div>
         <div className="live-sync-pill" aria-live="polite">
           <span />
