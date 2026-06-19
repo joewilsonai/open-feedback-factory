@@ -19,6 +19,10 @@ That means `CODEX_AUTH_MODE` can be changed in the control center and the host
 worker will pick it up. `CODEX_RUNNER_MODE=codex` still has to be set on the
 worker process because it is the switch that attaches real execution.
 
+The control center's **Worker install** panel exposes the supported install
+commands. Users should not need to hand-wire LaunchAgents, systemd units, or
+Docker worker snippets from memory.
+
 ## Approval Modes
 
 `manual` means feedback queues until an operator runs one selected work item.
@@ -62,6 +66,63 @@ pnpm --filter @open-feedback-factory/worker dev
 ```
 
 For CLI subscription auth, set `CODEX_AUTH_MODE=cli` and omit the API key.
+
+## Persistent Host CLI Worker
+
+Use this when the install should use the signed-in Codex CLI subscription on the
+local machine. The helper detects macOS and Linux:
+
+```bash
+pnpm worker:install:host
+pnpm worker:status:host
+pnpm worker:uninstall:host
+```
+
+On macOS it writes a LaunchAgent. On Linux it writes a user systemd service. The
+service sources the ignored `.env` file at startup, then sets worker-only
+defaults such as `CODEX_RUNNER_MODE=codex`, `WORKER_RUN_ONCE=false`,
+`RUNNER_WORKSPACE`, `WORKER_API_BASE_URL`, and `CODEX_SECRETS_PATH`.
+If `.env` still contains the Docker-internal `WORKER_API_BASE_URL=http://api:4100`,
+the host helper translates it to `http://localhost:4100`; custom host URLs are
+left alone.
+
+The generated service file does not copy API keys, GitHub App private keys, or
+tokens out of `.env`. If `.env` changes, restart the host worker service. The
+worker still reads live approval/auth settings from `/doctor` before each job.
+
+To inspect without installing:
+
+```bash
+pnpm worker:print:host
+```
+
+Host worker logs are written to `.off/logs/host-worker.log` and
+`.off/logs/host-worker.error.log`.
+
+## Docker API-Key Worker
+
+Use this when the install should keep the worker inside Docker and use a
+server-side OpenAI API key.
+
+1. Save the API key in the control center **Agent credentials** panel.
+2. Set these values in `.env`:
+
+```bash
+CODEX_RUNNER_MODE=codex
+CODEX_AUTH_MODE=api_key
+```
+
+3. Restart the worker:
+
+```bash
+docker compose up -d --build worker
+```
+
+To print the exact helper snippet:
+
+```bash
+pnpm worker:print:docker-api
+```
 
 ## Auto Worker
 

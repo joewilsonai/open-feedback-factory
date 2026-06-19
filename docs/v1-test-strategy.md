@@ -26,9 +26,9 @@ capture, release proof, and agent assumptions.
 | Database | Migrations, feedback, clusters, work items, agent runs, assumptions, costs, GitHub artifacts, releases, notifications, usage, audit events, workspace scope, RLS policies when enabled |
 | Security | Workspace/tenant isolation, RBAC, raw-feedback permissions, secret masking/storage, webhook signatures, prompt injection, SSRF/tunnel URL rejection, GitHub App installation boundaries, path traversal, command injection, branch-name injection, SQL injection, CSRF/CORS, rate limits, replay/idempotency, package-script sandboxing, token scope, audit tamper resistance, retention/delete |
 | SDK | Feedback submission, status polling, feature usage, privacy-safe metadata |
-| Runner | Disabled mode, manual approval, auto approval, Codex CLI args, `cli` auth, `api_key` auth, sanitized prompt, JSONL parsing, usage/cost capture, skipped checks, assumptions |
+| Runner | Disabled mode, manual approval, auto approval, Codex CLI args, `cli` auth, `api_key` auth, host worker installer generation, Docker API-key worker snippet, sanitized prompt, JSONL parsing, usage/cost capture, skipped checks, assumptions |
 | GitHub | App manifest, localhost rejection, webhook reachability, signature validation, sanitized issue body, PR artifact storage, branch cleanup, guarded merge refusal |
-| Control center | Setup states, queue states, human-readable labels, no raw enum leaks, assumptions panel, cost panel, release state, follow-up state, missing-config explanations |
+| Control center | Setup states, queue states, worker install guidance, human-readable labels, no raw enum leaks, assumptions panel, cost panel, release state, follow-up state, missing-config explanations |
 | Demo app | Real Daybook workflow, positive request, negative request, status display, feature usage event |
 | Dry-run E2E | Docker stack starts, seeded data labeled, sample reset works, integration tests do not pollute the control center, no fake PRs, no fake costs, no fake agent runs, no fake releases, no fake shipped states |
 | Private dogfood E2E | Real GitHub/Codex issue, branch, PR, usage record, cost or token actual, assumptions, release marker, user status |
@@ -61,6 +61,9 @@ capture, release proof, and agent assumptions.
 - Secrets saved through the control center are stored outside git, masked in
   responses, never returned to the browser, and never copied into GitHub
   artifacts or agent prompts.
+- Generated host worker service files source `.env` at startup and do not copy
+  `OPENAI_API_KEY`, GitHub App private keys, tokens, or raw feedback into
+  LaunchAgent/systemd files.
 - User-controlled strings cannot escape file/path boundaries, create unsafe
   branch names, inject shell arguments, inject SQL, or alter generated YAML,
   Markdown, PR bodies, issue bodies, or config files in unsafe ways.

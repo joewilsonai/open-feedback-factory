@@ -157,6 +157,10 @@ small {
   min-height: 22rem;
 }
 
+.worker-install-panel {
+  min-height: 22rem;
+}
+
 .reconciliation-panel {
   min-height: 12rem;
 }
@@ -278,6 +282,66 @@ small {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 0.7rem;
+}
+
+.install-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid rgba(22, 26, 31, 0.13);
+  background: rgba(22, 26, 31, 0.13);
+}
+
+.install-card {
+  display: grid;
+  align-content: start;
+  gap: 0.65rem;
+  min-height: 15rem;
+  padding: 1rem;
+  background: #ffffff;
+}
+
+.install-card.recommended {
+  box-shadow: inset 0 0 0 2px #0f6b4f;
+}
+
+.install-card strong {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  color: #0f6b4f;
+  background: rgba(15, 107, 79, 0.11);
+  font-size: 0.72rem;
+}
+
+.install-card h3,
+.install-card p {
+  margin: 0;
+}
+
+.install-card h3 {
+  font-size: 1rem;
+}
+
+.install-card p,
+.install-card small {
+  color: #52605a;
+  line-height: 1.45;
+}
+
+.command-list {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.command-list code {
+  display: block;
+  overflow-wrap: anywhere;
+  border: 1px solid rgba(22, 26, 31, 0.12);
+  border-radius: 6px;
+  padding: 0.55rem 0.65rem;
+  color: #161a1f;
+  background: rgba(22, 26, 31, 0.04);
 }
 
 .wizard-rail {
@@ -522,6 +586,10 @@ code {
   }
 
   .secret-row {
+    grid-template-columns: 1fr;
+  }
+
+  .install-grid {
     grid-template-columns: 1fr;
   }
 }

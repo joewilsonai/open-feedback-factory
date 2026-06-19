@@ -342,6 +342,10 @@ test("doctor exposes setup wizard links", async () => {
   assert.equal(response.json().githubAppSetupUrl, "http://api.test/github/app/setup");
   assert.equal(response.json().githubWebhookUrl, "http://api.test/github/webhook");
   assert.equal(response.json().githubWebhooksEnabled, true);
+  assert.equal(response.json().runnerInstall.recommendedMode, "host_cli");
+  assert.equal(response.json().runnerInstall.hostCli.installCommand, "pnpm worker:install:host");
+  assert.equal(response.json().runnerInstall.hostCli.statusCommand, "pnpm worker:status:host");
+  assert.equal(response.json().runnerInstall.dockerApiKey.startCommand, "docker compose up -d --build worker");
 
   await app.close();
 });

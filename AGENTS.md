@@ -119,6 +119,21 @@ Auto approval does not start a worker by itself. A live worker still has to run
 with `CODEX_RUNNER_MODE=codex`. See
 [docs/agent-runner-setup.md](docs/agent-runner-setup.md).
 
+For durable local CLI/subscription workers, use the repo installer instead of
+hand-writing host services:
+
+```bash
+docker compose stop worker
+pnpm worker:install:host
+pnpm worker:status:host
+```
+
+This creates a macOS LaunchAgent or Linux user systemd service that sources the
+ignored `.env` file at startup and keeps secrets out of the service file. Use
+`pnpm worker:uninstall:host` to remove it. For Docker API-key workers, save the
+key in the control center, set `CODEX_RUNNER_MODE=codex` and
+`CODEX_AUTH_MODE=api_key`, then run `docker compose up -d --build worker`.
+
 The worker reads live approval/auth settings from `/doctor` before claiming
 work. Do not force a stale `CODEX_AUTH_MODE` in a host worker command when the
 control center has the current mode.

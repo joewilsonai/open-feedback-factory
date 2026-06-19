@@ -72,6 +72,26 @@ interface Doctor {
   githubWebhooksEnabled: boolean;
   maxFeatureCostUsd: number;
   publicBaseUrl: string;
+  runnerInstall: RunnerInstallPlan;
+}
+
+interface RunnerInstallPlan {
+  dockerApiKey: {
+    env: string[];
+    requirement: string;
+    startCommand: string;
+    title: string;
+  };
+  hostCli: {
+    installCommand: string;
+    logPath: string;
+    printCommand: string;
+    service: string;
+    statusCommand: string;
+    title: string;
+    uninstallCommand: string;
+  };
+  recommendedMode: "docker_api_key" | "host_cli";
 }
 
 const emptySnapshot: Snapshot = {
@@ -86,6 +106,25 @@ const emptySnapshot: Snapshot = {
   recentFeedback: [],
   recentUsage: [],
   workItems: [],
+};
+
+const defaultRunnerInstallPlan: RunnerInstallPlan = {
+  dockerApiKey: {
+    env: ["CODEX_RUNNER_MODE=codex", "CODEX_AUTH_MODE=api_key"],
+    requirement: "Save an OpenAI API key in the control center before starting the Docker worker.",
+    startCommand: "docker compose up -d --build worker",
+    title: "Docker API-key worker",
+  },
+  hostCli: {
+    installCommand: "pnpm worker:install:host",
+    logPath: ".off/logs/host-worker.log",
+    printCommand: "pnpm worker:print:host",
+    service: "macOS LaunchAgent or Linux user systemd",
+    statusCommand: "pnpm worker:status:host",
+    title: "Host Codex CLI worker",
+    uninstallCommand: "pnpm worker:uninstall:host",
+  },
+  recommendedMode: "host_cli",
 };
 
 export function App() {
@@ -373,6 +412,7 @@ export function App() {
           onSaveApiKey={saveCodexApiKey}
           onSetCodexAuthMode={setCodexAuthMode}
         />
+        <WorkerInstallPanel doctor={doctor} />
         <SetupWizard doctor={doctor} />
         <ActivityPanel title="Recent feedback" rows={snapshot.recentFeedback} />
         <SetupPanel doctor={doctor} />
@@ -519,6 +559,54 @@ function AgentCredentialsPanel(props: {
         </p>
         <p>API-key mode runs the Codex worker with the saved key injected server-side.</p>
       </div>
+    </div>
+  );
+}
+
+function WorkerInstallPanel(props: { doctor: Doctor | null }) {
+  const plan = props.doctor?.runnerInstall ?? defaultRunnerInstallPlan;
+  const hostRecommended = plan?.recommendedMode !== "docker_api_key";
+  const dockerRecommended = plan?.recommendedMode === "docker_api_key";
+
+  return (
+    <div className="panel worker-install-panel">
+      <div className="panel-heading">
+        <p className="eyebrow">Runner setup</p>
+        <h2>Worker install</h2>
+      </div>
+      <div className="install-grid">
+        <article className={hostRecommended ? "install-card recommended" : "install-card"}>
+          <strong>{hostRecommended ? "Recommended" : "Available"}</strong>
+          <h3>{plan.hostCli.title}</h3>
+          <p>
+            Use this when the worker should use the signed-in Codex CLI subscription on the local machine. The installer
+            creates a {plan.hostCli.service} and sources <code>.env</code> at startup.
+          </p>
+          <CommandList commands={[plan.hostCli.installCommand, plan.hostCli.statusCommand, plan.hostCli.uninstallCommand]} />
+          <small>Logs: {plan.hostCli.logPath}</small>
+        </article>
+        <article className={dockerRecommended ? "install-card recommended" : "install-card"}>
+          <strong>{dockerRecommended ? "Recommended" : "Available"}</strong>
+          <h3>{plan.dockerApiKey.title}</h3>
+          <p>{plan.dockerApiKey.requirement} This keeps the worker inside Docker and injects the key server-side.</p>
+          <CommandList commands={[...plan.dockerApiKey.env, plan.dockerApiKey.startCommand]} />
+          <small>Use {plan.hostCli.printCommand} to inspect the host service before installing it.</small>
+        </article>
+      </div>
+      <p className="mode-note">
+        Auto approval only gives a live worker permission to claim work. These install paths are what make that worker
+        actually run, record real costs, and open real PRs when GitHub mutation is enabled.
+      </p>
+    </div>
+  );
+}
+
+function CommandList(props: { commands: string[] }) {
+  return (
+    <div className="command-list">
+      {props.commands.map((command) => (
+        <code key={command}>{command}</code>
+      ))}
     </div>
   );
 }

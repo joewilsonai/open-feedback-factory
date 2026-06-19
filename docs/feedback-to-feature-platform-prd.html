@@ -927,7 +927,9 @@ trackFeatureOutcome({
 <li>latest actual cost and token evidence after runner completion;</li>
 <li>reconciliation actions for stale in-progress work and missing release proof;</li>
 <li>reconsideration candidates;</li>
-<li>user follow-up status.</li>
+<li>user follow-up status;</li>
+<li>worker attachment/install guidance for host CLI workers and Docker API-key</li>
+<p>workers.</p>
 </ul>
 <p>The control center should make the loop easy to demo without exposing private feedback.</p>
 <h3 id="8-4-github-integration"><a class="heading-anchor" href="#8-4-github-integration" aria-label="Link to 8.4 GitHub Integration">#</a>8.4 GitHub Integration</h3>
@@ -971,6 +973,15 @@ trackFeatureOutcome({
 <li>clean up temporary workspace state.</li>
 </ul>
 <p>V1 should include an operator-triggered reconciliation pass that requeues stale in-progress work and reports implemented items still waiting for release proof. This is not a full production scheduler yet; it is the minimum honest recovery lane for local dogfood and demos.</p>
+<p>V1 must productize worker attachment rather than relying on one-off local machine setup. The supported install lanes are:</p>
+<ul>
+<li>host Codex CLI worker for local subscription auth, installed through a</li>
+<p>generated macOS LaunchAgent or Linux user systemd service;</p>
+<li>Docker API-key worker for installs that save a server-side OpenAI API key in</li>
+<p>the control center and keep the worker inside Docker;</p>
+<li>manual one-item worker command for targeted review, retries, and demos.</li>
+</ul>
+<p>The generated host service should source the ignored <code>.env</code> file at startup and set only worker-specific defaults such as <code>CODEX_RUNNER_MODE=codex</code>, <code>WORKER_RUN_ONCE=false</code>, <code>WORKER_API_BASE_URL</code>, <code>RUNNER_WORKSPACE</code>, and <code>CODEX_SECRETS_PATH</code>. It must not copy API keys, GitHub App private keys, or tokens into generated service files. It should also translate the Docker-only <code>WORKER_API_BASE_URL=http://api:4100</code> default to the host-reachable <code>http://localhost:4100</code> when generating local host worker services.</p>
 <h3 id="8-6-review-gates"><a class="heading-anchor" href="#8-6-review-gates" aria-label="Link to 8.6 Review Gates">#</a>8.6 Review Gates</h3>
 <p>V1 risk tiers:</p>
 <ul>
@@ -1867,6 +1878,8 @@ pnpm demo</code></pre>
 <li>Choose install mode: dry-run demo, implement-only PR mode,</li>
 <p>agent-reviewed auto-merge, or human-exception-required.</p>
 <li>Add Codex auth mode: local CLI subscription or server-side API key.</li>
+<li>Attach a worker: host Codex CLI service, Docker API-key worker, or manual</li>
+<p>one-item command.</p>
 <li>Set cost caps.</li>
 <li>Pick guardrail template: web app, iOS app, SaaS app, or open-source</li>
 <p>library.</p>
@@ -2147,6 +2160,8 @@ pnpm demo</code></pre>
 <li>built-in runner: Codex only;</li>
 <li>Codex auth: local CLI subscription first, API-key mode optional;</li>
 <li>runner mode: disabled until explicitly attached;</li>
+<li>host worker installer: macOS LaunchAgent or Linux user systemd service;</li>
+<li>Docker worker lane: API-key mode after the key is saved server-side;</li>
 <li>approval mode: manual by default;</li>
 <li>merge mode: implement-only by default;</li>
 <li>auto-merge: off until explicitly enabled and still limited to</li>
@@ -2323,7 +2338,7 @@ feedback-factory demo</code></pre>
 <p>Configuration should be versioned, validated, migratable, and safe to upgrade.</p>
 <p>The local demo setup needs to be excellent: one command, sample app, sample feedback, GitHub flow, control center, and visible PR.</p>
 <p>The admin UI should be wizard-driven, start in dry-run, and make security, permissions, cost caps, connected repos, agent access, blocked work, and maintenance health obvious.</p>
-<p>The setup UI must make worker attachment explicit. Auto approval allows a live worker to claim queued work, but does not itself create a worker. The UI and docs must show the exact command or deployment path for manual one-item workers and auto-polling workers, including <code>CODEX_RUNNER_MODE</code>, <code>CODEX_AUTH_MODE</code>, <code>CODEX_SECRETS_PATH</code>, GitHub PR settings, model, effort, timeout, and workspace.</p>
+<p>The setup UI must make worker attachment explicit. Auto approval allows a live worker to claim queued work, but does not itself create a worker. The UI and docs must show the exact command or deployment path for manual one-item workers, host CLI auto-polling workers, and Docker API-key workers, including <code>CODEX_RUNNER_MODE</code>, <code>CODEX_AUTH_MODE</code>, <code>CODEX_SECRETS_PATH</code>, GitHub PR settings, model, effort, timeout, and workspace. The host install helper should generate macOS LaunchAgent and Linux user systemd files, provide status and uninstall commands, write logs under <code>.off/logs</code>, and avoid embedding secrets directly in generated service files.</p>
 <p>Admin and beta-user surfaces must not leak raw internal enum names. Labels such as <code>planned</code>, <code>safe_auto_merge</code>, <code>guarded_review</code>, and <code>not_planned</code> should be rendered as human-readable product states such as &quot;Queued&quot;, &quot;Low-risk auto lane&quot;, &quot;Needs review&quot;, and &quot;Not planned&quot;. Raw enum values can remain in APIs and audit logs, but not as the primary visible control-center language.</p>
 <p>The hosted version later needs multi-tenant auth, billing, hosted workers, team roles, managed secrets, managed backups, and webhook delivery monitoring.</p>
 <h3 id="20-4-trust-safety-and-control-requirements"><a class="heading-anchor" href="#20-4-trust-safety-and-control-requirements" aria-label="Link to 20.4 Trust, Safety, and Control Requirements">#</a>20.4 Trust, Safety, and Control Requirements</h3>
