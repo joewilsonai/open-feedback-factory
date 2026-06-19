@@ -48,7 +48,6 @@ export async function completeJob(
 export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike = fetch): Promise<boolean> {
   if (config.runnerMode !== "codex") return false;
   if (config.codexAuthMode !== "cli") return false;
-  if (config.approvalMode === "manual" && !config.workItemId) return false;
 
   const job = await claimJob(config, fetchImpl);
   if (!job) return false;

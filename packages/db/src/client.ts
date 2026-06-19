@@ -71,6 +71,8 @@ export interface ControlRoomSnapshot {
   workItems: WorkItemRow[];
 }
 
+export type ApprovalMode = "auto" | "manual";
+
 export class OpenFeedbackStore {
   private readonly pool: pg.Pool;
 
@@ -546,6 +548,42 @@ export class OpenFeedbackStore {
     return id;
   }
 
+  async getApprovalMode(defaultMode: ApprovalMode): Promise<ApprovalMode> {
+    const result = await this.pool.query<{ mode: string | null }>(
+      `select value ->> 'mode' as mode
+       from policy_configs
+       where key = 'approval_mode'
+       limit 1`,
+    );
+    return approvalModeFromValue(result.rows[0]?.mode) ?? defaultMode;
+  }
+
+  async setApprovalMode(mode: ApprovalMode, actor = "operator"): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("begin");
+      await client.query(
+        `insert into policy_configs (id, key, value)
+         values ($1, 'approval_mode', $2)
+         on conflict (key) do update
+         set value = excluded.value,
+             updated_at = now()`,
+        [`policy_${randomUUID()}`, JSON.stringify({ mode })],
+      );
+      await client.query(
+        `insert into audit_events (id, actor, event, target_type, target_id, metadata)
+         values ($1, $2, 'approval_mode_updated', 'policy_config', 'approval_mode', $3)`,
+        [`audit_${randomUUID()}`, actor, JSON.stringify({ mode })],
+      );
+      await client.query("commit");
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async getControlRoomSnapshot(): Promise<ControlRoomSnapshot> {
     const [counts, workItems, recentFeedback, recentAgentRuns, recentUsage] = await Promise.all([
       this.pool.query<{
@@ -701,4 +739,9 @@ function githubNumberFromUrl(url: string): number | undefined {
   const raw = url.split("/").filter(Boolean).at(-1);
   const value = Number(raw);
   return Number.isInteger(value) ? value : undefined;
+}
+
+function approvalModeFromValue(value: string | null | undefined): ApprovalMode | null {
+  if (value === "auto" || value === "manual") return value;
+  return null;
 }

@@ -7,6 +7,20 @@ import { buildGithubClient } from "../githubClient.js";
 export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   app.get("/admin/control-room", async () => deps.store.getControlRoomSnapshot());
 
+  app.get("/admin/settings", async () => ({
+    approvalMode: await deps.store.getApprovalMode(deps.config.approvalMode),
+  }));
+
+  app.patch<{ Body: { approvalMode?: unknown } }>("/admin/settings/approval-mode", async (request, reply) => {
+    const approvalMode = request.body?.approvalMode;
+    if (approvalMode !== "auto" && approvalMode !== "manual") {
+      return reply.code(400).send({ error: "approvalMode must be auto or manual" });
+    }
+
+    await deps.store.setApprovalMode(approvalMode, "control-center");
+    return { approvalMode, status: "updated" };
+  });
+
   app.get<{ Params: { id: string } }>("/admin/work-items/:id", async (request, reply) => {
     const workItem = await deps.store.getWorkItem(request.params.id);
     if (!workItem) return reply.code(404).send({ error: "work item not found" });

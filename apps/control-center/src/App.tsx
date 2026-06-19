@@ -67,6 +67,7 @@ const emptySnapshot: Snapshot = {
 
 export function App() {
   const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const [modeUpdating, setModeUpdating] = useState(false);
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
   const [status, setStatus] = useState("Connecting");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -95,6 +96,29 @@ export function App() {
     const body = await response.json().catch(() => ({}));
     await refresh();
     setStatus(response.ok ? "Agent lane accepted" : `Runner blocked: ${String(body.error ?? "not configured")}`);
+  }
+
+  async function setApprovalMode(approvalMode: "auto" | "manual") {
+    setModeUpdating(true);
+    setStatus(`Switching to ${approvalModeLabel(approvalMode)}`);
+    try {
+      const response = await fetch(`${apiBaseUrl}/admin/settings/approval-mode`, {
+        body: JSON.stringify({ approvalMode }),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      });
+      const body = await response.json().catch(() => ({}));
+      await refresh();
+      setStatus(
+        response.ok
+          ? `Approval mode set to ${approvalModeLabel(approvalMode)}`
+          : `Mode change blocked: ${String(body.error ?? "not saved")}`,
+      );
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Mode change failed");
+    } finally {
+      setModeUpdating(false);
+    }
   }
 
   async function releaseWorkItem(id: string) {
@@ -226,7 +250,7 @@ export function App() {
           )}
         </div>
 
-        <ExecutionPanel doctor={doctor} />
+        <ExecutionPanel doctor={doctor} modeUpdating={modeUpdating} onSetApprovalMode={setApprovalMode} />
         <SetupWizard doctor={doctor} />
         <ActivityPanel title="Recent feedback" rows={snapshot.recentFeedback} />
         <SetupPanel doctor={doctor} />
@@ -296,11 +320,16 @@ function SetupWizard(props: { doctor: Doctor | null }) {
   );
 }
 
-function ExecutionPanel(props: { doctor: Doctor | null }) {
+function ExecutionPanel(props: {
+  doctor: Doctor | null;
+  modeUpdating: boolean;
+  onSetApprovalMode: (mode: "auto" | "manual") => void;
+}) {
   const doctor = props.doctor;
   const manualActive = doctor?.approvalMode !== "auto";
   const autoActive = doctor?.approvalMode === "auto";
   const autoReady = Boolean(autoActive && doctor?.codexRunnerMode === "codex" && doctor.codexAuthMode === "cli");
+  const controlsDisabled = props.modeUpdating || !doctor;
 
   return (
     <div className="panel execution-panel">
@@ -311,36 +340,57 @@ function ExecutionPanel(props: { doctor: Doctor | null }) {
       <div className="mode-grid">
         <ModeCard
           active={manualActive}
+          actionLabel={manualActive ? "Current mode" : "Switch to manual"}
           detail="Feedback queues until an operator runs a selected work item."
+          disabled={controlsDisabled || manualActive}
           label="Manual approval required"
+          onSelect={() => props.onSetApprovalMode("manual")}
           state={manualActive ? "Active" : "Available"}
         />
         <ModeCard
           active={autoActive}
+          actionLabel={autoActive ? "Current mode" : "Switch to auto"}
           detail={
             autoReady
               ? "Safe queued work can be claimed by a live Codex worker."
               : "Needs auto mode plus a live Codex CLI worker before it can claim work."
           }
+          disabled={controlsDisabled || autoActive}
           label="Auto approval"
+          onSelect={() => props.onSetApprovalMode("auto")}
           state={autoActive ? (autoReady ? "Ready" : "Configured") : "Available"}
         />
       </div>
       <p className="mode-note">
-        Configure this with <code>APPROVAL_MODE=manual</code> or <code>APPROVAL_MODE=auto</code>. Auto approval still uses
-        real runners, real PRs, and real guardrails.
+        Switch modes here. Auto approval lets an attached live worker claim queued work; it still uses real runners, real
+        PRs, and real guardrails.
       </p>
     </div>
   );
 }
 
-function ModeCard(props: { active: boolean; detail: string; label: string; state: string }) {
+function ModeCard(props: {
+  actionLabel: string;
+  active: boolean;
+  detail: string;
+  disabled: boolean;
+  label: string;
+  onSelect: () => void;
+  state: string;
+}) {
   return (
-    <article className={props.active ? "mode-card active" : "mode-card"}>
+    <button
+      aria-pressed={props.active}
+      className={props.active ? "mode-card active" : "mode-card"}
+      disabled={props.disabled}
+      type="button"
+      onClick={props.onSelect}
+    >
       <strong>{props.state}</strong>
       <h3>{props.label}</h3>
       <p>{props.detail}</p>
-    </article>
+      <span>{props.actionLabel}</span>
+    </button>
   );
 }
 

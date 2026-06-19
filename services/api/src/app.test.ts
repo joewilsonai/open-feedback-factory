@@ -30,6 +30,7 @@ const config: ApiConfig = {
 };
 
 class MemoryStore implements AppStore {
+  approvalMode: ApiConfig["approvalMode"] | null = null;
   feedbackStatuses = new Map<string, UserFeedbackStatus>();
   usageCount = 0;
   workItems: WorkItemRow[] = [];
@@ -82,6 +83,14 @@ class MemoryStore implements AppStore {
       recentUsage: [],
       workItems: this.workItems,
     };
+  }
+
+  async getApprovalMode(defaultMode: ApiConfig["approvalMode"]): Promise<ApiConfig["approvalMode"]> {
+    return this.approvalMode ?? defaultMode;
+  }
+
+  async setApprovalMode(mode: ApiConfig["approvalMode"]) {
+    this.approvalMode = mode;
   }
 
   async claimNextWorkItem(_workerName?: string, workItemId?: string) {
@@ -202,17 +211,48 @@ test("admin run endpoint blocks implementation when Codex runner is disabled", a
 });
 
 test("doctor exposes setup wizard links", async () => {
-  const app = await buildApp({ config, store: new MemoryStore() });
+  const store = new MemoryStore();
+  store.approvalMode = "auto";
+  const app = await buildApp({ config, store });
   const response = await app.inject({ method: "GET", url: "/doctor" });
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().controlCenterUrl, "http://control.test");
-  assert.equal(response.json().approvalMode, "manual");
+  assert.equal(response.json().approvalMode, "auto");
   assert.equal(response.json().codexAuthMode, "cli");
   assert.equal(response.json().codexApiKeyConfigured, false);
   assert.equal(response.json().githubAppSetupUrl, "http://api.test/github/app/setup");
   assert.equal(response.json().githubWebhookUrl, "http://api.test/github/webhook");
   assert.equal(response.json().githubWebhooksEnabled, true);
+
+  await app.close();
+});
+
+test("admin can change approval mode without restarting the API", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  const initialSettings = await app.inject({ method: "GET", url: "/admin/settings" });
+  assert.equal(initialSettings.statusCode, 200);
+  assert.equal(initialSettings.json().approvalMode, "manual");
+
+  const update = await app.inject({
+    method: "PATCH",
+    payload: { approvalMode: "auto" },
+    url: "/admin/settings/approval-mode",
+  });
+  assert.equal(update.statusCode, 200);
+  assert.equal(update.json().approvalMode, "auto");
+
+  const doctor = await app.inject({ method: "GET", url: "/doctor" });
+  assert.equal(doctor.json().approvalMode, "auto");
+
+  const invalid = await app.inject({
+    method: "PATCH",
+    payload: { approvalMode: "reckless" },
+    url: "/admin/settings/approval-mode",
+  });
+  assert.equal(invalid.statusCode, 400);
 
   await app.close();
 });
@@ -435,8 +475,35 @@ test("GitHub webhook verifies signature and records PR artifact", async () => {
   await app.close();
 });
 
-test("runner claims planned work and completes it with actual cost", async () => {
+test("runner waits for a target work item while approval mode is manual", async () => {
   const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add dark mode to settings",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+
+  const claim = await app.inject({
+    method: "POST",
+    payload: { workerName: "worker-test" },
+    url: "/runner/jobs/claim",
+  });
+  assert.equal(claim.statusCode, 200);
+  assert.equal(claim.json().job, null);
+  assert.equal(claim.json().reason, "manual_approval_required");
+  assert.equal(store.workItems[0]?.status, "planned");
+
+  await app.close();
+});
+
+test("runner claims planned work in auto approval mode and completes it with actual cost", async () => {
+  const store = new MemoryStore();
+  store.approvalMode = "auto";
   const app = await buildApp({ config, store });
 
   const feedback = await app.inject({

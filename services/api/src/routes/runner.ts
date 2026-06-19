@@ -3,8 +3,13 @@ import type { AppDeps } from "../app.js";
 
 export async function registerRunnerRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   app.post<{ Body: { workItemId?: string; workerName?: string } }>("/runner/jobs/claim", async (request) => {
+    const approvalMode = await deps.store.getApprovalMode(deps.config.approvalMode);
+    if (approvalMode === "manual" && !request.body?.workItemId) {
+      return { approvalMode, job: null, reason: "manual_approval_required" };
+    }
+
     const job = await deps.store.claimNextWorkItem(request.body?.workerName ?? "worker", request.body?.workItemId);
-    return { job };
+    return { approvalMode, job };
   });
 
   app.post<{

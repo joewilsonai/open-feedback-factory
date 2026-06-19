@@ -60,18 +60,19 @@ test("runWorkerOnce leaves work queued when runner is disabled", async () => {
   assert.equal(calls.length, 0);
 });
 
-test("runWorkerOnce requires a targeted item in manual approval mode", async () => {
+test("runWorkerOnce leaves work queued when API requires manual approval", async () => {
   const calls: Array<{ body: unknown; url: string }> = [];
   const config = readWorkerConfig({ API_BASE_URL: "http://api.test", CODEX_RUNNER_MODE: "codex" });
   const fetchImpl: FetchLike = async (url, init) => {
     calls.push({ body: init?.body ? JSON.parse(String(init.body)) : null, url });
-    return jsonResponse({ job });
+    return jsonResponse({ approvalMode: "manual", job: null, reason: "manual_approval_required" });
   };
 
   assert.equal(config.approvalMode, "manual");
   assert.equal(config.runnerMode, "codex");
   assert.equal(await runWorkerOnce(config, fetchImpl), false);
-  assert.equal(calls.length, 0);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0]?.url, "http://api.test/runner/jobs/claim");
 });
 
 test("runWorkerOnce does not claim jobs for api key mode until that runner exists", async () => {

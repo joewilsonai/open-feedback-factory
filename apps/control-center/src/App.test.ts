@@ -16,6 +16,8 @@ describe("control center UI contract", () => {
     expect(source).toContain("Auto-merge");
     expect(source).toContain("Manual approval required");
     expect(source).toContain("Auto approval");
+    expect(source).toContain("Switch to auto");
+    expect(source).toContain("Switch modes here");
     expect(source).toContain("Agent credentials");
     expect(source).toContain("Health");
     expect(source).toContain("Codex CLI");
@@ -23,6 +25,7 @@ describe("control center UI contract", () => {
 
   it("can trigger run, auto-merge, and release actions", () => {
     expect(source).toContain("/doctor");
+    expect(source).toContain("/admin/settings/approval-mode");
     expect(source).toContain("/github/app/setup");
     expect(source).toContain("/github/app/manifest");
     expect(source).toContain("/run");
