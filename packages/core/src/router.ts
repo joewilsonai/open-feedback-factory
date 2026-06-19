@@ -80,7 +80,7 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
       shouldCreateIssue: true,
       title: titleForThemeFeature(message, clusterKey),
       userMessage:
-        "This looks safe and actionable. We can queue it for a small implementation PR.",
+        "Thanks, we saved this request and queued it for review. It is not shipped yet.",
       userStatus: "planned",
     });
   }
@@ -94,7 +94,7 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
       riskTier: "safe_auto_merge",
       shouldCreateIssue: true,
       title: "Improve product copy",
-      userMessage: "This copy improvement looks safe enough for the small-change lane.",
+      userMessage: "Thanks, we saved this copy request and queued it for review. It is not shipped yet.",
       userStatus: "planned",
     });
   }
@@ -109,7 +109,7 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
       shouldCreateIssue: true,
       title: titleForDaybookFeature(message),
       userMessage:
-        "This looks like a safe Daybook feature request. We can queue it for a small implementation PR.",
+        "Thanks, we saved this feature request and queued it for review. It is not shipped yet.",
       userStatus: "planned",
     });
   }
@@ -125,7 +125,7 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
       shouldCreateIssue: false,
       title: "Needs more user signal",
       userMessage:
-        "We received this and are keeping it in the backlog until enough similar requests appear.",
+        "Thanks, we saved this request. We are not building it yet because we need more similar requests first.",
       userStatus: "needs_more_signal",
     });
   }
@@ -139,7 +139,7 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
     shouldCreateIssue: true,
     title: "Review repeated feature request",
     userMessage:
-      "Enough similar requests have appeared to queue this for a guarded implementation review.",
+      "Enough similar requests have appeared, so we queued this for a guarded implementation review. It is not shipped yet.",
     userStatus: "planned",
   });
 }

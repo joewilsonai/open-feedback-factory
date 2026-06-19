@@ -1786,18 +1786,18 @@ function decisionMessageForStatus(status: WorkItemDecisionInput["status"]): stri
 function followUpForExistingWorkItem(status: string): { message: string; status: UserFeedbackState } {
   if (status === "implemented") {
     return {
-      message: "An agent implemented a matching request and it is waiting for review or release.",
+      message: "A matching request has been implemented and is waiting for review or release. It is not shipped yet.",
       status: "implemented",
     };
   }
   if (status === "in_progress") {
     return {
-      message: "An agent is already working on a matching request.",
+      message: "An agent is already working on a matching request. It is not shipped yet.",
       status: "in_progress",
     };
   }
   return {
-    message: "We grouped this with a matching request that is already in the queue.",
+    message: "Thanks, we saved this and grouped it with matching feedback already in the queue. It is not shipped yet.",
     status: "grouped",
   };
 }

@@ -16,6 +16,7 @@ test("routeFeedback sends dark mode through the safe implementation lane", () =>
   assert.equal(decision.riskTier, "safe_auto_merge");
   assert.equal(decision.userStatus, "planned");
   assert.equal(decision.clusterKey, "feature.theme.dark-mode");
+  assert.match(decision.userMessage, /not shipped yet/i);
 });
 
 test("routeFeedback names theme color requests distinctly from dark mode", () => {
@@ -57,6 +58,7 @@ test("routeFeedback keeps one-off unclear requests in needs-more-signal", () => 
   assert.equal(decision.action, "needs_more_signal");
   assert.equal(decision.shouldCreateIssue, false);
   assert.equal(decision.userStatus, "needs_more_signal");
+  assert.match(decision.userMessage, /not building it yet/i);
 });
 
 test("routeFeedback promotes repeated unclear requests into guarded work", () => {
@@ -72,6 +74,7 @@ test("routeFeedback promotes repeated unclear requests into guarded work", () =>
   assert.equal(decision.riskTier, "guarded_review");
   assert.equal(decision.userStatus, "planned");
   assert.equal(decision.title, "Review repeated feature request");
+  assert.match(decision.userMessage, /not shipped yet/i);
 });
 
 test("routeFeedback asks plain-language follow-up questions for vague requests", () => {
