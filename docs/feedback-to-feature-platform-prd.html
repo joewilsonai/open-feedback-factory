@@ -910,6 +910,17 @@ trackFeatureOutcome({
 </ul>
 <p>V1 should use workspace-scoped records from the start, even while the private dogfood install has a single default workspace. Postgres tables should include a workspace identifier, row-level-security scaffolding, and tests that verify the policies exist. Hosted multi-tenant enforcement can mature later, but the schema must not need a privacy rewrite before launch.</p>
 <p>The API should apply separate rate-limit groups for SDK intake/status/usage, admin writes, runner claim/complete, and GitHub webhook/setup paths. Rate-limit responses must be explicit, user-safe, and observable; they should never silently drop feedback or pretend work was queued.</p>
+<p>For private dogfood V1, admin and runner routes should support simple shared token gates before a full multi-user auth system exists:</p>
+<ul>
+<li><code>ADMIN_TOKEN</code> protects <code>/admin/*</code> and control-center mutations when set;</li>
+<li><code>RUNNER_TOKEN</code> protects <code>/runner/*</code> job claim and completion routes when set;</li>
+<li><code>/doctor</code> may expose whether those gates are required, but must never expose</li>
+<p>token values;</p>
+<li>local-only development may leave the tokens blank, but any public tunnel or</li>
+<p>shared dogfood URL should require both tokens;</p>
+<li>helper scripts that expose <code>/admin</code> or <code>/runner</code> routes should refuse to start</li>
+<p>public tunnels while those tokens are missing.</p>
+</ul>
 <p>Postgres is the only V1 database. SQLite is intentionally deferred until after the private dogfood loop works, because supporting two persistence paths would increase migration, test, and support complexity before the core product is proven.</p>
 <h3 id="8-3-control-center"><a class="heading-anchor" href="#8-3-control-center" aria-label="Link to 8.3 Control Center">#</a>8.3 Control Center</h3>
 <p>A web dashboard for developers.</p>
@@ -2155,6 +2166,10 @@ pnpm demo</code></pre>
 <li>product name: Open Feedback Factory;</li>
 <li>visibility: private internal dogfood;</li>
 <li>database: Postgres only;</li>
+<li>admin access: local-open by default, <code>ADMIN_TOKEN</code> required before tunnels or</li>
+<p>shared URLs;</p>
+<li>runner access: local-open by default, <code>RUNNER_TOKEN</code> required before tunnels</li>
+<p>or shared URLs;</p>
 <li>install path: Docker Compose;</li>
 <li>GitHub path: GitHub App required, with <code>gh</code> fallback for internal dogfood;</li>
 <li>built-in runner: Codex only;</li>

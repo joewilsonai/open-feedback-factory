@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import "./styles.css";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
+const adminTokenStorageKey = "open-feedback-factory.admin-token";
 
 interface Snapshot {
   counts: {
@@ -53,6 +54,7 @@ interface AgentAssumption {
 }
 
 interface Doctor {
+  adminAuthRequired: boolean;
   api: string;
   approvalMode: string;
   autoMergeEnabled: boolean;
@@ -73,6 +75,7 @@ interface Doctor {
   maxFeatureCostUsd: number;
   publicBaseUrl: string;
   runnerInstall: RunnerInstallPlan;
+  runnerAuthRequired: boolean;
 }
 
 interface RunnerInstallPlan {
@@ -128,7 +131,12 @@ const defaultRunnerInstallPlan: RunnerInstallPlan = {
 };
 
 export function App() {
+  const [adminToken, setAdminToken] = useState(() =>
+    typeof window === "undefined" ? "" : window.localStorage.getItem(adminTokenStorageKey) ?? "",
+  );
+  const [adminTokenInput, setAdminTokenInput] = useState(adminToken);
   const [apiKeyInput, setApiKeyInput] = useState("");
+  const [adminAuthBlocked, setAdminAuthBlocked] = useState(false);
   const [credentialUpdating, setCredentialUpdating] = useState(false);
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [modeUpdating, setModeUpdating] = useState(false);
@@ -143,20 +151,32 @@ export function App() {
   const runnerLabel = doctor ? runnerModeLabel(doctor) : "Checking";
   const credentialLabel = doctor ? credentialModeLabel(doctor) : "Checking";
 
+  function adminFetch(path: string, init?: RequestInit) {
+    const headers = new Headers(init?.headers);
+    if (adminToken) headers.set("authorization", `Bearer ${adminToken}`);
+    return fetch(`${apiBaseUrl}${path}`, { ...init, headers });
+  }
+
   async function refresh() {
     setStatus("Refreshing");
-    const [snapshotResponse, doctorResponse] = await Promise.all([
-      fetch(`${apiBaseUrl}/admin/control-room`),
-      fetch(`${apiBaseUrl}/doctor`),
-    ]);
+    const doctorResponse = await fetch(`${apiBaseUrl}/doctor`);
+    const nextDoctor = (await doctorResponse.json()) as Doctor;
+    setDoctor(nextDoctor);
+    const snapshotResponse = await adminFetch("/admin/control-room");
+    if (snapshotResponse.status === 401) {
+      setAdminAuthBlocked(true);
+      setSnapshot(emptySnapshot);
+      setStatus(nextDoctor.adminAuthRequired ? "Admin token required" : "Admin access blocked");
+      return;
+    }
+    setAdminAuthBlocked(false);
     setSnapshot((await snapshotResponse.json()) as Snapshot);
-    setDoctor((await doctorResponse.json()) as Doctor);
     setStatus("Live");
   }
 
   async function runWorkItem(id: string) {
     setStatus("Running agent lane");
-    const response = await fetch(`${apiBaseUrl}/admin/work-items/${id}/run`, { method: "POST" });
+    const response = await adminFetch(`/admin/work-items/${id}/run`, { method: "POST" });
     const body = await response.json().catch(() => ({}));
     await refresh();
     setStatus(response.ok ? "Agent lane accepted" : `Runner blocked: ${String(body.error ?? "not configured")}`);
@@ -166,7 +186,7 @@ export function App() {
     setModeUpdating(true);
     setStatus(`Switching to ${approvalModeLabel(approvalMode)}`);
     try {
-      const response = await fetch(`${apiBaseUrl}/admin/settings/approval-mode`, {
+      const response = await adminFetch("/admin/settings/approval-mode", {
         body: JSON.stringify({ approvalMode }),
         headers: { "content-type": "application/json" },
         method: "PATCH",
@@ -189,7 +209,7 @@ export function App() {
     setCredentialUpdating(true);
     setStatus(`Switching to ${codexAuthModeLabel(codexAuthMode)}`);
     try {
-      const response = await fetch(`${apiBaseUrl}/admin/settings/codex-auth-mode`, {
+      const response = await adminFetch("/admin/settings/codex-auth-mode", {
         body: JSON.stringify({ codexAuthMode }),
         headers: { "content-type": "application/json" },
         method: "PATCH",
@@ -212,7 +232,7 @@ export function App() {
     setCredentialUpdating(true);
     setStatus("Saving API key");
     try {
-      const response = await fetch(`${apiBaseUrl}/admin/settings/codex-api-key`, {
+      const response = await adminFetch("/admin/settings/codex-api-key", {
         body: JSON.stringify({ apiKey: apiKeyInput }),
         headers: { "content-type": "application/json" },
         method: "PUT",
@@ -232,7 +252,7 @@ export function App() {
     setCredentialUpdating(true);
     setStatus("Removing saved API key");
     try {
-      const response = await fetch(`${apiBaseUrl}/admin/settings/codex-api-key`, { method: "DELETE" });
+      const response = await adminFetch("/admin/settings/codex-api-key", { method: "DELETE" });
       const body = await response.json().catch(() => ({}));
       await refresh();
       setStatus(response.ok ? "Saved API key removed" : `Remove blocked: ${String(body.error ?? "not removed")}`);
@@ -245,7 +265,7 @@ export function App() {
 
   async function releaseWorkItem(id: string) {
     setStatus("Marking shipped");
-    const response = await fetch(`${apiBaseUrl}/admin/work-items/${id}/release`, {
+    const response = await adminFetch(`/admin/work-items/${id}/release`, {
       body: JSON.stringify({ message: "This request has shipped." }),
       headers: { "content-type": "application/json" },
       method: "POST",
@@ -257,7 +277,7 @@ export function App() {
 
   async function runReconciliation() {
     setStatus("Running reconciliation");
-    const response = await fetch(`${apiBaseUrl}/admin/reconciliation/run`, {
+    const response = await adminFetch("/admin/reconciliation/run", {
       body: JSON.stringify({ staleAfterMinutes: 60 }),
       headers: { "content-type": "application/json" },
       method: "POST",
@@ -281,7 +301,7 @@ export function App() {
 
   async function attemptAutoMerge(id: string) {
     setStatus("Checking safe auto-merge gates");
-    const response = await fetch(`${apiBaseUrl}/admin/work-items/${id}/automerge`, {
+    const response = await adminFetch(`/admin/work-items/${id}/automerge`, {
       body: JSON.stringify({
         branchTrusted: true,
         changedFiles: ["apps/demo-app/src/styles.css"],
@@ -308,6 +328,23 @@ export function App() {
     refresh().catch((error) => setStatus(error instanceof Error ? error.message : "Offline"));
   }, []);
 
+  function saveAdminToken() {
+    const value = adminTokenInput.trim();
+    setAdminToken(value);
+    if (typeof window !== "undefined") {
+      if (value) window.localStorage.setItem(adminTokenStorageKey, value);
+      else window.localStorage.removeItem(adminTokenStorageKey);
+    }
+    setStatus(value ? "Admin token saved" : "Admin token removed");
+  }
+
+  function clearAdminToken() {
+    setAdminToken("");
+    setAdminTokenInput("");
+    if (typeof window !== "undefined") window.localStorage.removeItem(adminTokenStorageKey);
+    setStatus("Admin token cleared");
+  }
+
   return (
     <main className="console-shell">
       <header className="console-header">
@@ -329,9 +366,19 @@ export function App() {
         <Metric label="Mode" value={executionLabel} />
         <Metric label="Runner" value={runnerLabel} />
         <Metric label="Credentials" value={credentialLabel} />
+        <Metric label="Admin access" value={doctor?.adminAuthRequired ? (adminAuthBlocked ? "Locked" : "Token") : "Local"} />
       </section>
 
       <section className="console-grid">
+        <AdminAccessPanel
+          adminAuthBlocked={adminAuthBlocked}
+          adminTokenInput={adminTokenInput}
+          doctor={doctor}
+          onAdminTokenInput={setAdminTokenInput}
+          onClearAdminToken={clearAdminToken}
+          onRefresh={refresh}
+          onSaveAdminToken={saveAdminToken}
+        />
         <div className="panel work-list">
           <div className="panel-heading">
             <p className="eyebrow">Queue</p>
@@ -480,6 +527,63 @@ function SetupWizard(props: { doctor: Doctor | null }) {
           ? "GitHub App mode is ready for sanitized issue and PR work."
           : "After GitHub returns, convert the temporary code, add the generated values to .env, and restart Docker."}
       </div>
+    </div>
+  );
+}
+
+function AdminAccessPanel(props: {
+  adminAuthBlocked: boolean;
+  adminTokenInput: string;
+  doctor: Doctor | null;
+  onAdminTokenInput: (value: string) => void;
+  onClearAdminToken: () => void;
+  onRefresh: () => void;
+  onSaveAdminToken: () => void;
+}) {
+  const required = Boolean(props.doctor?.adminAuthRequired);
+
+  return (
+    <div className={props.adminAuthBlocked ? "panel admin-access-panel blocked" : "panel admin-access-panel"}>
+      <div className="panel-heading">
+        <p className="eyebrow">Admin access</p>
+        <h2>{required ? "Control center token" : "Local admin gate"}</h2>
+      </div>
+      {required ? (
+        <>
+          <p className="mode-note">
+            This install has <code>ADMIN_TOKEN</code> enabled. Enter it once for this browser before using queue,
+            settings, release, or merge controls.
+          </p>
+          <div className="secret-row">
+            <input
+              autoComplete="off"
+              placeholder="ADMIN_TOKEN"
+              type="password"
+              value={props.adminTokenInput}
+              onChange={(event) => props.onAdminTokenInput(event.target.value)}
+            />
+            <button disabled={props.adminTokenInput.trim().length < 8} type="button" onClick={props.onSaveAdminToken}>
+              Save token
+            </button>
+            <button type="button" onClick={props.onClearAdminToken}>
+              Clear
+            </button>
+          </div>
+          <div className={props.adminAuthBlocked ? "wizard-note" : "wizard-note ready"}>
+            {props.adminAuthBlocked ? "Admin token is required or incorrect." : "Admin token will be sent as a bearer token."}
+          </div>
+          <div className="wizard-actions">
+            <button type="button" onClick={props.onRefresh}>
+              Retry access
+            </button>
+          </div>
+        </>
+      ) : (
+        <p className="mode-note">
+          Admin routes are open for local-only development. Set <code>ADMIN_TOKEN</code> before exposing a tunnel or
+          shared network URL.
+        </p>
+      )}
     </div>
   );
 }
@@ -710,6 +814,8 @@ function SetupPanel(props: { doctor: Doctor | null }) {
           <Detail label="Approval" value={approvalModeLabel(doctor.approvalMode)} />
           <Detail label="Runner" value={runnerModeLabel(doctor)} />
           <Detail label="Credentials" value={credentialModeLabel(doctor)} />
+          <Detail label="Admin auth" value={doctor.adminAuthRequired ? "Token required" : "Local open"} />
+          <Detail label="Runner auth" value={doctor.runnerAuthRequired ? "Token required" : "Local open"} />
           <Detail label="GitHub" value={doctor.githubMode} />
           <Detail label="GitHub App" value={doctor.githubAppConfigured ? "Configured" : "Not configured"} />
           <Detail label="Webhooks" value={doctor.githubWebhooksEnabled ? "Enabled" : "Local off"} />

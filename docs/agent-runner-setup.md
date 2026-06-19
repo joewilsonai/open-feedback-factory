@@ -18,6 +18,8 @@ The worker reads live approval/auth settings from `/doctor` before each claim.
 That means `CODEX_AUTH_MODE` can be changed in the control center and the host
 worker will pick it up. `CODEX_RUNNER_MODE=codex` still has to be set on the
 worker process because it is the switch that attaches real execution.
+If `RUNNER_TOKEN` is set, the worker sends it to `/runner/*` as
+`x-off-runner-token`; unauthenticated claim/complete requests are rejected.
 
 The control center's **Worker install** panel exposes the supported install
 commands. Users should not need to hand-wire LaunchAgents, systemd units, or

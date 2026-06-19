@@ -23,6 +23,13 @@ Default local URLs:
 - Demo app: `http://localhost:5174`
 - Postgres: `localhost:55432`
 
+Private dogfood auth:
+
+- `ADMIN_TOKEN` protects `/admin/*` and control-center mutations when set.
+- `RUNNER_TOKEN` protects `/runner/*` worker claim/complete routes when set.
+- `/doctor` may report whether those gates are required, but must never expose
+  token values.
+
 ## Safety Rules
 
 - Live demos must be real. Do not fake implementation, PRs, shipped states,
@@ -35,6 +42,9 @@ Default local URLs:
   PR bodies, issue bodies, or agent prompts.
 - Do not enable `AUTO_MERGE_ENABLED=true`, `GITHUB_CREATE_PR=true`, or mutating
   GitHub modes unless the user explicitly asks for live mutation.
+- Before exposing the control center or API through Tailscale Funnel,
+  Cloudflare Tunnel, or any shared URL, set `ADMIN_TOKEN` and `RUNNER_TOKEN`.
+  Never paste those tokens into GitHub issues, PRs, logs, or chat output.
 - Do not bypass guardrails. Safe auto-merge requires the policy gates in
   `packages/core`.
 - Treat rate limits as product security controls. Do not remove or raise them

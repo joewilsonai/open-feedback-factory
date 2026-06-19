@@ -6,6 +6,12 @@ describe("control center UI contract", () => {
 
   it("shows the required operator surfaces", () => {
     expect(source).toContain("Control Center");
+    expect(source).toContain("Admin access");
+    expect(source).toContain("ADMIN_TOKEN");
+    expect(source).toContain("Save token");
+    expect(source).toContain("Retry access");
+    expect(source).toContain("authorization");
+    expect(source).toContain("localStorage");
     expect(source).toContain("Install wizard");
     expect(source).toContain("Create GitHub App");
     expect(source).toContain("Webhooks");

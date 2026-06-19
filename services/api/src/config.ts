@@ -1,4 +1,5 @@
 export interface ApiConfig {
+  adminToken?: string;
   apiHost: string;
   apiPort: number;
   approvalMode: "auto" | "manual";
@@ -25,12 +26,14 @@ export interface ApiConfig {
   githubRateLimitMax?: number;
   rateLimitWindowMs?: number;
   runnerRateLimitMax?: number;
+  runnerToken?: string;
   runnerWorkspace: string;
   sdkRateLimitMax?: number;
 }
 
 export function readConfig(env = process.env): ApiConfig {
   return {
+    adminToken: env.ADMIN_TOKEN || undefined,
     apiHost: env.API_HOST ?? "127.0.0.1",
     apiPort: Number(env.API_PORT ?? 4100),
     approvalMode: env.APPROVAL_MODE === "auto" ? "auto" : "manual",
@@ -60,6 +63,7 @@ export function readConfig(env = process.env): ApiConfig {
     githubRateLimitMax: Number(env.GITHUB_RATE_LIMIT_MAX ?? 300),
     rateLimitWindowMs: Number(env.RATE_LIMIT_WINDOW_MS ?? 60_000),
     runnerRateLimitMax: Number(env.RUNNER_RATE_LIMIT_MAX ?? 300),
+    runnerToken: env.RUNNER_TOKEN || undefined,
     runnerWorkspace: env.RUNNER_WORKSPACE ?? process.cwd(),
     sdkRateLimitMax: Number(env.SDK_RATE_LIMIT_MAX ?? 120),
   };
