@@ -967,6 +967,27 @@ trackFeatureOutcome({
 <li>test review;</li>
 <li>release review when applicable.</li>
 </ul>
+<p>Merge modes must be explicit product settings, not implied by whether an agent can open a PR:</p>
+<ul>
+<li><code>implement_only</code>: builder agents create a branch and PR, then stop;</li>
+<li><code>agent_reviewed_auto_merge</code>: builder agents create a PR, separate reviewer</li>
+<p>agents evaluate it, CI passes, the policy engine verifies guardrails, and the system can merge without a human when every required gate passes;</p>
+<li><code>human_exception_required</code>: the work is blocked from auto-merge and routed to</li>
+<p>a human only because a policy, reviewer, CI, release, cost, or risk gate failed or requires explicit approval.</p>
+</ul>
+<p>The desired default for real indie repos is not &quot;a person reviews every PR.&quot; The default should be &quot;agents do the routine implementation and review work; humans handle exceptions.&quot; The PR remains the audit artifact and rollback point, but human review is a policy outcome, not the universal bottleneck.</p>
+<p>Agent-reviewed auto-merge requires at minimum:</p>
+<ul>
+<li>a separate reviewer agent from the builder agent;</li>
+<li>passing GitHub checks;</li>
+<li>no protected-path violations;</li>
+<li>cost within configured cap;</li>
+<li>diff size within configured cap;</li>
+<li>no privacy/security redaction warnings that require escalation;</li>
+<li>no reviewer-agent disagreement;</li>
+<li>branch and PR provenance tied to the work item;</li>
+<li>release/deploy health checks when configured.</li>
+</ul>
 <h3 id="8-7-user-follow-up"><a class="heading-anchor" href="#8-7-user-follow-up" aria-label="Link to 8.7 User Follow-Up">#</a>8.7 User Follow-Up</h3>
 <p>Every submitted item must eventually have a user-safe status.</p>
 <p>Statuses:</p>
@@ -1925,7 +1946,11 @@ pnpm demo</code></pre>
 <ul>
 <li>dry-run by default;</li>
 <li>no direct commits to <code>main</code>;</li>
-<li>no auto-merge until enabled;</li>
+<li>no auto-merge until explicitly enabled;</li>
+<li>when auto-merge is enabled, it still requires CI, reviewer-agent approval,</li>
+<p>policy gates, provenance checks, and configured release-health gates;</p>
+<li>human review is required for exceptions, protected categories, failed gates,</li>
+<p>reviewer disagreement, high-cost runs, large diffs, and configured approval categories, not for every routine safe PR;</p>
 <li>GitHub App preferred over broad personal access token;</li>
 <li>raw feedback never sent to GitHub by default;</li>
 <li>raw feedback never sent to agent prompts by default;</li>
@@ -1989,7 +2014,9 @@ feedback-factory demo</code></pre>
 <li>Basic admin roles.</li>
 <li>Audit log.</li>
 <li>PR creation.</li>
-<li>Basic reviewer gate.</li>
+<li>Agent reviewer gate.</li>
+<li>Policy-governed merge modes: implement-only, agent-reviewed auto-merge, and</li>
+<p>human-exception-required.</p>
 <li>Estimated and actual cost capture.</li>
 <li>User-safe status endpoint.</li>
 <li>Optional feature usage tracking and feedback-impact attribution.</li>

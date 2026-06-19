@@ -300,6 +300,34 @@ Reviewer lanes:
 - test review;
 - release review when applicable.
 
+Merge modes must be explicit product settings, not implied by whether an agent
+can open a PR:
+
+- `implement_only`: builder agents create a branch and PR, then stop;
+- `agent_reviewed_auto_merge`: builder agents create a PR, separate reviewer
+  agents evaluate it, CI passes, the policy engine verifies guardrails, and the
+  system can merge without a human when every required gate passes;
+- `human_exception_required`: the work is blocked from auto-merge and routed to
+  a human only because a policy, reviewer, CI, release, cost, or risk gate
+  failed or requires explicit approval.
+
+The desired default for real indie repos is not "a person reviews every PR."
+The default should be "agents do the routine implementation and review work;
+humans handle exceptions." The PR remains the audit artifact and rollback point,
+but human review is a policy outcome, not the universal bottleneck.
+
+Agent-reviewed auto-merge requires at minimum:
+
+- a separate reviewer agent from the builder agent;
+- passing GitHub checks;
+- no protected-path violations;
+- cost within configured cap;
+- diff size within configured cap;
+- no privacy/security redaction warnings that require escalation;
+- no reviewer-agent disagreement;
+- branch and PR provenance tied to the work item;
+- release/deploy health checks when configured.
+
 ### 8.7 User Follow-Up
 
 Every submitted item must eventually have a user-safe status.
@@ -1507,7 +1535,12 @@ Default behavior must be conservative:
 
 - dry-run by default;
 - no direct commits to `main`;
-- no auto-merge until enabled;
+- no auto-merge until explicitly enabled;
+- when auto-merge is enabled, it still requires CI, reviewer-agent approval,
+  policy gates, provenance checks, and configured release-health gates;
+- human review is required for exceptions, protected categories, failed gates,
+  reviewer disagreement, high-cost runs, large diffs, and configured approval
+  categories, not for every routine safe PR;
 - GitHub App preferred over broad personal access token;
 - raw feedback never sent to GitHub by default;
 - raw feedback never sent to agent prompts by default;
@@ -1584,7 +1617,9 @@ should win on setup, reliability, observability, and scale.
 - Basic admin roles.
 - Audit log.
 - PR creation.
-- Basic reviewer gate.
+- Agent reviewer gate.
+- Policy-governed merge modes: implement-only, agent-reviewed auto-merge, and
+  human-exception-required.
 - Estimated and actual cost capture.
 - User-safe status endpoint.
 - Optional feature usage tracking and feedback-impact attribution.
