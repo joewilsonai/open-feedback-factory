@@ -95,6 +95,11 @@ Required behavior:
    path from feedback intake through usage measurement, with every stage backed
    by append-only evidence.
 
+   The work item detail should also show what the system learned from each run:
+   cost calibration, model/provider performance, repeated assumptions,
+   guardrail hits, rejected-feature reconsideration signals, rollback/failure
+   patterns, and suggested eval or regression cases.
+
 6. GitHub:
    support GitHub App manifest/install/webhook flow, sanitized issue creation,
    branch/PR creation, check reads, comments, guarded merge, and branch cleanup.
@@ -114,7 +119,13 @@ Required behavior:
    clean stale workspaces/branches, recover interrupted runs, record failure
    reasons and partial costs, and keep queued/blocked states honest.
 
-10. Verification:
+10. Recursive learning:
+    persist learning events from feedback decisions, assumptions, agent runs,
+    reviews, costs, releases, usage, blocked policy results, and rollbacks.
+    Feed those events back into deterministic router rules and scorecards while
+    preserving hard privacy, cost, security, and merge gates.
+
+11. Verification:
     run local unit tests, DB tests when Postgres is available, typecheck, build,
     doctor, Docker Compose smoke, dry-run demo, and private dogfood demo.
 
@@ -144,6 +155,7 @@ At minimum, V1 must include tests for:
 - Codex runner structured output, assumptions, and skipped checks;
 - release marker required before shipped status;
 - feature usage attribution;
+- recursive learning events and router scorecards;
 - dry-run no-fake-state behavior;
 - private dogfood real GitHub/Codex path;
 - cleanup and reconciliation for interrupted work.
@@ -165,6 +177,16 @@ record with:
 
 Assumptions should be saved on the run, visible in the control center, and
 summarized in the PR body or PR comment when safe.
+
+Each run should also produce a learning record when relevant:
+
+- what should affect future routing or thresholds;
+- what changed cost-estimate confidence;
+- what changed model/provider confidence;
+- what guardrail, test, or eval should be added;
+- what user-facing explanation should improve;
+- whether a not-planned or blocked decision should be reconsidered after more
+  demand.
 
 ## Verification Commands
 
@@ -208,4 +230,5 @@ docker compose up --build
 - Negative outcomes tell the user why the item will not be worked on.
 - Not-built categories and repeated demand are stored for reconsideration.
 - Assumptions are recorded and can block auto-merge.
+- Learning events are recorded and visible without weakening hard safety gates.
 - README, AGENTS, setup docs, PRD, and control-center copy agree.

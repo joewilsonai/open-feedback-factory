@@ -17,6 +17,11 @@ wedge is the managed loop around them: in-app feedback intake, privacy
 sanitization, demand thresholds, decision memory, cost controls, release proof,
 and user follow-up.
 
+The product should also improve itself over time. Every request, decision,
+agent run, PR, review, release marker, usage event, rejection, rollback, and
+blocked policy result should become structured learning evidence for future
+routing, cost estimation, guardrails, provider/model choice, and eval coverage.
+
 V1 is an internal dogfood build. It is designed as an open-source product, but
 the first implementation should prove the loop privately before public launch.
 See [docs/v1-dogfood-build-checklist.md](docs/v1-dogfood-build-checklist.md)
@@ -34,6 +39,8 @@ for the exact private dogfood completion gate.
 - Demand memory for below-threshold and blocked feedback clusters.
 - Feature usage attribution.
 - Focused operator control center with a realtime feature lifecycle view.
+- Recursive learning events that make routing, cost estimates, guardrails, and
+  agent/provider selection smarter without weakening safety gates.
 
 ## Local Development
 
@@ -208,6 +215,13 @@ notifications, feature-usage attribution, and audit events. This is the
 operator proof trail for "what happened, what did it cost, what assumptions were
 made, who reviewed it, what PR exists, is it actually shipped, and is it being
 used?"
+
+Learning is part of that ledger. Runs should record what the system learned:
+cost-estimate calibration, repeated assumptions, provider/model performance,
+guardrail hits, missed tests, rollback causes, and suggested eval/regression
+cases. The router should use those records to make better future decisions, but
+learning artifacts must never silently relax privacy, cost, security, or merge
+guards.
 
 Feature usage attribution is tied to release proof. When marking a work item
 shipped, record the app's stable `featureId`; later SDK calls to

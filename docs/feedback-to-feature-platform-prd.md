@@ -91,6 +91,13 @@ The indie developer emotional frame:
 > implementation automatically while you keep the rules, budget, and release
 > gates.
 
+The competitive line after the Lightsprint audit:
+
+> Coding-agent PR creation is the middle of the workflow. Open Feedback Factory
+> should own the beginning and end: real user demand, safe autonomous decisions,
+> cost-aware execution, release proof, usage feedback, and respectful user
+> outcomes.
+
 ## 3. Target Users
 
 ### Primary
@@ -1324,6 +1331,75 @@ Reports should include:
 
 This should feed the work router so low-risk tasks can use cheaper models while
 risky tasks receive stronger models and stricter review.
+
+#### Recursive Product Learning Loop
+
+Open Feedback Factory should get smarter every time it runs. Learning is not a
+nice-to-have analytics layer; it is part of the product's autonomy story.
+
+Every feedback item, decision, agent run, PR, review, release marker, usage
+event, rollback, not-planned decision, and blocked policy result should become
+structured learning evidence that improves the next routing decision.
+
+The system should maintain durable learning artifacts:
+
+- demand memory by cluster, requester segment, severity, source, and recency;
+- decision memory for already-available, duplicate, below-threshold,
+  not-planned, unsafe, blocked, founder-bet, and strategic-priority outcomes;
+- assumption memory for recurring defaults and unresolved questions;
+- cost-estimate calibration by model, effort, repo, task type, file count, diff
+  size, and checks run;
+- model/provider scorecards by category, risk tier, PR acceptance, review
+  findings, rollback rate, and cost;
+- guardrail hit history for protected paths, privacy risk, policy blocks,
+  budget caps, and rate limits;
+- release and usage attribution that shows which shipped feedback clusters
+  actually created product adoption;
+- rejection-reconsideration signals when repeated future demand contradicts an
+  older "not planned" decision;
+- eval cases generated from past failures, bad assumptions, missed tests,
+  privacy-risky prompts, and rollback incidents.
+
+The work router should use these artifacts to:
+
+- choose manual, scheduled, threshold, or immediate lanes;
+- select low-cost vs high-capability agents and model effort levels;
+- require extra planning before expensive or ambiguous work;
+- recommend splitting large requests into smaller PRs;
+- tighten or relax default thresholds by app size and request quality;
+- predict cost with improving confidence;
+- prevent repeated bad patterns from reaching auto-run or auto-merge;
+- surface "we should reconsider this" when many users ask for a rejected or
+  deferred feature;
+- generate better user-facing explanations for shipped, rejected, unsafe,
+  blocked, or below-threshold outcomes.
+
+The control center should expose this learning loop visibly:
+
+- "why this was routed here";
+- "what prior evidence influenced this decision";
+- "what the system learned from this run";
+- "what will change next time";
+- "which generated eval/regression case protects against repeating this
+  mistake."
+
+Agents should write learning summaries as structured output, not prose hidden in
+logs. A run should be able to update:
+
+- a work item assumption record;
+- a cluster decision record;
+- a model/provider score event;
+- a cost-calibration sample;
+- a policy/guardrail learning event;
+- a suggested eval or regression test;
+- a user-message improvement note.
+
+V1 can begin with simple append-only learning events and deterministic router
+rules. Later versions can add learned ranking, retrieval over historical
+decisions, eval-driven router tuning, and automated policy recommendations.
+Autonomy should increase only when evidence improves; the system must never
+silently use learning artifacts to weaken privacy, cost, security, or merge
+guards.
 
 ### 15.10 Integration Surface and Webhooks
 
@@ -2580,14 +2656,34 @@ Useful product patterns to adapt, without copying the positioning:
   my real repo" the obvious path, with repo discovery, branch/PR base settings,
   and clear GitHub App status. Templates can exist, but the magic is acting on
   a repo the developer already ships.
+- **Repository switcher metrics.** The repo/workspace overview should show the
+  high-signal operational counters at a glance. For Open Feedback Factory that
+  means intake, queued work, running work, PRs, shipped items, rejected/not
+  planned items, cost, release-proof gaps, and notification state.
 - **Provider connection clarity.** Agent setup should show Codex CLI, Codex API
   key, future OpenRouter/Requesty, and other providers as explicit connection
   cards with health, scopes, missing secrets, and whether each lane can run
   locally, in Docker, or remotely.
+- **Subscription vs API-key setup.** Agent provider setup should explicitly
+  offer "use my subscription/CLI" and "use an API key" paths where the provider
+  supports both. The UI must also state where code runs, whether actual dollar
+  cost can be captured, and whether the worker is local, Docker, or remote.
 - **Live run logs.** Every agent attempt needs a readable timeline: planning,
   files inspected, commands run, tests, blocked reasons, assumptions, cost, PR,
   review, release marker, and user notification. Logs should be honest enough
   that a failed sandbox or missing credential is understandable in seconds.
+- **Plan-first decision cards.** When feedback is ambiguous, agents should
+  produce structured decision questions with recommended defaults, tradeoffs,
+  and safe alternatives. In manual mode, the developer answers them. In auto
+  mode, the agent may choose defaults only when policy allows it, and the choice
+  becomes an auditable assumption.
+- **Approach diagrams and tradeoffs.** For non-trivial work, the planner should
+  explain the selected architecture with a diagram, explicit tradeoffs, and the
+  guardrails that make the selected path safe.
+- **Visual option filmstrips.** UI/product changes should be able to present a
+  few concrete visual approaches before implementation, using the host app's
+  real design system when possible. This is especially valuable in manual
+  approval mode and for beta-user-facing UX changes.
 - **Task lifecycle UI.** Work items should have visible stages such as queued,
   planning, building, checking, PR opened, awaiting review, merged, awaiting
   release proof, shipped, blocked, not planned, and needs more signal.
@@ -2597,6 +2693,14 @@ Useful product patterns to adapt, without copying the positioning:
 - **Health page.** The product should continuously report repo connection,
   GitHub webhook health, worker health, provider auth, queue age, failure rate,
   cost caps, and release-proof gaps.
+- **Stack/runner setup surface.** Local and hosted runners need their own
+  operational surface: setup command, test command, service list, env-var
+  status, sandbox size, MCP tools, reusable skills/instructions, active worker
+  sandboxes, snapshot/build health, and rebuild/restart controls.
+- **MCP/app connection catalog.** Integrations should be exposed as optional
+  tools attached to agent runs, not as broad raw access. A marketplace-style
+  catalog can be useful, but each tool must declare scopes, data exposure, and
+  whether it can mutate external systems.
 - **Bug report with logs and UI state.** The control center and SDK should be
   able to submit bug/error reports with safe diagnostics attached, so the same
   feedback-to-feature loop can handle product bugs without screenshots or raw
@@ -2608,12 +2712,19 @@ Useful product patterns to adapt, without copying the positioning:
   the next useful actions obvious: explain assumptions, retry with narrower
   scope, split into subtasks, ask for reviewer pass, mark not planned, or
   request release proof.
+- **Learning summary.** After each run, the product should show what was learned
+  for future routing, cost estimation, guardrails, model/provider choice, and
+  eval coverage.
 
 Patterns to avoid copying:
 
 - making the PM/designer task workspace the center of the product;
 - competing on general cloud-agent execution alone;
 - generic "build anything from a prompt" launch copy;
+- making greenfield templates feel like the primary path for real teams;
+- using opaque credits as the only cost story instead of estimated vs actual
+  dollars/tokens;
+- exposing raw agent logs without secret redaction and privacy filtering;
 - hiding failed provisioning, missing repo attachment, or missing credentials
   behind optimistic statuses.
 

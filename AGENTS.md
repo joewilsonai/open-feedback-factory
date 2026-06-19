@@ -54,6 +54,12 @@ Private dogfood auth:
   run output. Include defaults chosen, alternatives skipped, files intentionally
   left untouched, checks that could not be run, and questions that need human
   confirmation. Do not silently invent product behavior.
+- Treat learning artifacts as durable product data. When a run reveals a better
+  routing rule, cost-estimate correction, provider/model performance signal,
+  recurring assumption, missing eval, guardrail gap, or rollback/failure pattern,
+  record it as structured evidence instead of leaving it only in chat or logs.
+  Learning must improve future autonomy without weakening privacy, cost,
+  security, or merge gates.
 
 ## Development Commands
 
@@ -176,6 +182,25 @@ metadata, PR body/comment when safe, and final report. The record should answer:
 
 If an assumption affects privacy, cost, merge safety, or release status, the work
 must not auto-merge until a reviewer lane or human operator resolves it.
+
+## Learning Records
+
+Planner, builder, reviewer, release, and reconciliation agents should emit a
+learning record when they discover evidence that should improve future work.
+Examples:
+
+- demand cluster or not-planned decision should be reconsidered;
+- cost estimate was too high or too low;
+- model/provider choice was effective or wasteful for this task type;
+- a guardrail blocked correctly or needs a clearer explanation;
+- a recurring assumption should become a policy default or install question;
+- a failed check, rollback, or review finding should become an eval/regression
+  case;
+- a user-facing status message should be clearer.
+
+Learning records are advisory. They may inform router rules, scorecards,
+documentation, evals, and control-center recommendations, but they must not
+silently relax safety gates.
 
 ## Codebase Map
 

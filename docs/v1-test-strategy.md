@@ -21,14 +21,14 @@ capture, release proof, and agent assumptions.
 
 | Area | Required coverage |
 | --- | --- |
-| Core policy | Sanitization, clustering, routing, demand thresholds, cost estimates, status copy, auto-merge gates, assumption blocking |
-| API | SDK feedback, user-safe status, feature usage, admin config, control-room snapshots, explicit not-planned/blocked decisions, demand-memory promotion, work-item evidence ledger, runner claims, release markers, GitHub webhooks |
-| Database | Migrations, feedback, clusters, signal counts, work items, work-item evidence detail, agent runs, assumptions, costs, GitHub artifacts, releases, notifications, usage, audit events, workspace scope, RLS policies when enabled |
+| Core policy | Sanitization, clustering, routing, demand thresholds, cost estimates, status copy, auto-merge gates, assumption blocking, learning-informed router decisions that preserve hard gates |
+| API | SDK feedback, user-safe status, feature usage, admin config, control-room snapshots, explicit not-planned/blocked decisions, demand-memory promotion, work-item evidence ledger, runner claims, release markers, GitHub webhooks, learning-event writes |
+| Database | Migrations, feedback, clusters, signal counts, work items, work-item evidence detail, agent runs, assumptions, learning events, costs, GitHub artifacts, releases, notifications, usage, audit events, workspace scope, RLS policies when enabled |
 | Security | Workspace/tenant isolation, RBAC, raw-feedback permissions, admin token gate, runner token gate, secret masking/storage, webhook signatures, prompt injection, SSRF/tunnel URL rejection, GitHub App installation boundaries, path traversal, command injection, branch-name injection, SQL injection, CSRF/CORS, rate limits, replay/idempotency, package-script sandboxing, token scope, audit tamper resistance, retention/delete |
 | SDK | Feedback submission, floating suggestion launcher, status polling, feature usage, privacy-safe metadata |
 | Runner | Disabled mode, manual approval, auto approval, Codex CLI args, `cli` auth, `api_key` auth, host worker installer generation, Docker API-key worker snippet, sanitized prompt, JSONL parsing, usage/cost capture, skipped checks, assumptions |
 | GitHub | App manifest, localhost rejection, webhook reachability, signature validation, sanitized issue body, PR artifact storage, branch cleanup, guarded merge refusal |
-| Control center | Setup states, queue states, realtime lifecycle view, demand-memory panel, worker install guidance, human-readable labels, no raw enum leaks, evidence ledger, assumptions panel, cost panel, release state, follow-up state, missing-config explanations |
+| Control center | Setup states, queue states, realtime lifecycle view, demand-memory panel, worker install guidance, human-readable labels, no raw enum leaks, evidence ledger, assumptions panel, learning panel, cost panel, release state, follow-up state, missing-config explanations |
 | Demo app | Real Daybook workflow, positive request, negative request, status display, feature usage event |
 | Dry-run E2E | Docker stack starts, seeded data labeled, sample reset works, integration tests do not pollute the control center, no fake PRs, no fake costs, no fake agent runs, no fake releases, no fake shipped states |
 | Private dogfood E2E | Real GitHub/Codex issue, branch, PR, usage record, cost or token actual, assumptions, release marker, user status |
@@ -146,6 +146,22 @@ capture, release proof, and agent assumptions.
   promotes into backlog or guarded work when the configured threshold is met.
 - Assumptions affecting privacy, cost, merge safety, or release status prevent
   auto-merge.
+- Learning records from feedback decisions, assumptions, agent runs, reviews,
+  costs, releases, usage, blocked policy results, and rollbacks are persisted as
+  evidence and visible in the control center.
+- Learning-informed router recommendations explain which historical evidence
+  influenced them and cannot silently relax privacy, cost, security, rate-limit,
+  or merge gates.
+- Cost-estimate calibration samples update confidence and future estimates
+  without overwriting actual token/cost records.
+- Model/provider score events are scoped by workspace/repo/category/risk tier
+  and cannot leak raw feedback or secrets.
+- Repeated demand after a not-planned or blocked decision creates a
+  reconsideration candidate when policy allows it, and leaves non-reopenable
+  categories closed when configured.
+- Failed checks, rollbacks, bad assumptions, and privacy/security findings can
+  generate suggested eval/regression cases without auto-applying unsafe code
+  changes.
 - The admin evidence endpoint and control center work-item ledger show agent
   runs, estimate and actual cost records, assumptions, GitHub artifacts, review
   decisions, release markers, feature-usage attribution, user notifications, and
