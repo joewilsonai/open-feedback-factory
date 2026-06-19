@@ -1,0 +1,2265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Open Feedback Factory PRD</title>
+  <meta name="description" content="A polished HTML version of the Open Feedback Factory product requirements document.">
+  <style>
+    :root {
+      --paper: #f4f5f1;
+      --paper-strong: #ffffff;
+      --ink: #171a1f;
+      --muted: #5c6470;
+      --line: #d9ddd5;
+      --line-strong: #b8c0b1;
+      --green: #0f6b4f;
+      --blue: #255bc7;
+      --coral: #c84f3b;
+      --amber: #a36a00;
+      --shadow: 0 18px 55px rgba(23, 26, 31, 0.12);
+      --radius: 8px;
+      --mono: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--paper);
+      color: var(--ink);
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      line-height: 1.58;
+      background:
+        linear-gradient(90deg, rgba(23, 26, 31, 0.045) 1px, transparent 1px) 0 0 / 48px 48px,
+        linear-gradient(0deg, rgba(23, 26, 31, 0.035) 1px, transparent 1px) 0 0 / 48px 48px,
+        radial-gradient(circle at 18% 8%, rgba(37, 91, 199, 0.12), transparent 34rem),
+        radial-gradient(circle at 84% 16%, rgba(15, 107, 79, 0.12), transparent 32rem),
+        var(--paper);
+    }
+
+    a {
+      color: inherit;
+      text-decoration-color: rgba(37, 91, 199, 0.45);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.18em;
+    }
+
+    a:hover { color: var(--blue); }
+
+    .skip-link {
+      position: absolute;
+      left: 1rem;
+      top: -5rem;
+      z-index: 20;
+      padding: 0.75rem 1rem;
+      background: var(--ink);
+      color: white;
+      border-radius: var(--radius);
+    }
+
+    .skip-link:focus { top: 1rem; }
+
+    .progress {
+      position: fixed;
+      inset: 0 0 auto;
+      height: 4px;
+      z-index: 30;
+      background: linear-gradient(90deg, var(--green), var(--blue), var(--coral));
+      transform-origin: left;
+      transform: scaleX(0);
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 1.25rem clamp(1rem, 3vw, 2rem);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      color: var(--ink);
+      font-weight: 750;
+      letter-spacing: 0;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 2rem;
+      height: 2rem;
+      border: 1px solid var(--ink);
+      border-radius: 7px;
+      background: linear-gradient(135deg, var(--ink) 0 49%, var(--paper-strong) 50% 100%);
+      box-shadow: 4px 4px 0 rgba(23, 26, 31, 0.14);
+    }
+
+    .top-links {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .hero {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: clamp(2rem, 6vw, 5.5rem) clamp(1rem, 3vw, 2rem) 3rem;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+      gap: clamp(1.5rem, 4vw, 4rem);
+      align-items: end;
+    }
+
+    .eyebrow,
+    .kicker {
+      margin: 0 0 0.85rem;
+      font-family: var(--mono);
+      font-size: 0.77rem;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 800;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 11ch;
+      font-family: var(--serif);
+      font-size: clamp(3.8rem, 10vw, 8.75rem);
+      line-height: 0.86;
+      letter-spacing: 0;
+    }
+
+    .hero-copy {
+      max-width: 820px;
+    }
+
+    .lede {
+      max-width: 66ch;
+      margin: 1.5rem 0 0;
+      color: #303640;
+      font-size: clamp(1.08rem, 2vw, 1.34rem);
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 0.85rem;
+      flex-wrap: wrap;
+      margin-top: 1.65rem;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0.78rem 1rem;
+      border: 1px solid var(--ink);
+      border-radius: 7px;
+      background: var(--ink);
+      color: white;
+      font-weight: 760;
+      text-decoration: none;
+      box-shadow: 5px 5px 0 rgba(23, 26, 31, 0.16);
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    .button.secondary {
+      background: var(--paper-strong);
+      color: var(--ink);
+    }
+
+    .button:hover,
+    .button:focus-visible {
+      color: white;
+      transform: translate(-2px, -2px);
+      box-shadow: 7px 7px 0 rgba(23, 26, 31, 0.17);
+    }
+
+    .button.secondary:hover,
+    .button.secondary:focus-visible { color: var(--ink); }
+
+    .hero-panel {
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.74);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-row {
+      display: grid;
+      grid-template-columns: 8.5rem 1fr;
+      gap: 1rem;
+      padding: 1rem 1.1rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-row:last-child { border-bottom: 0; }
+
+    .panel-label {
+      font-family: var(--mono);
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .panel-value {
+      font-weight: 720;
+    }
+
+    .summary-band {
+      border-block: 1px solid var(--line-strong);
+      background: rgba(255, 255, 255, 0.46);
+    }
+
+    .summary-grid {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 1.2rem clamp(1rem, 3vw, 2rem);
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      background: var(--line-strong);
+      border-inline: 1px solid var(--line-strong);
+    }
+
+    .summary-item {
+      min-height: 11rem;
+      padding: 1.15rem;
+      background: var(--paper-strong);
+    }
+
+    .summary-number {
+      font-family: var(--mono);
+      color: var(--blue);
+      font-size: 0.78rem;
+      font-weight: 850;
+    }
+
+    .summary-title {
+      margin: 1rem 0 0.35rem;
+      font-weight: 820;
+      font-size: 1.05rem;
+    }
+
+    .summary-text {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .layout {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 3rem clamp(1rem, 3vw, 2rem) 5rem;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: clamp(2rem, 4vw, 4.5rem);
+      align-items: start;
+    }
+
+    .toc {
+      position: sticky;
+      top: 1.4rem;
+      max-height: calc(100vh - 2.8rem);
+      overflow: auto;
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(244, 245, 241, 0.82);
+      backdrop-filter: blur(16px);
+    }
+
+    .toc-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin: 0 0 0.75rem;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 850;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .toc-link {
+      display: block;
+      padding: 0.45rem 0.55rem;
+      border-left: 3px solid transparent;
+      border-radius: 0 6px 6px 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      text-decoration: none;
+      line-height: 1.25;
+    }
+
+    .toc-link.level-3 {
+      padding-left: 1.15rem;
+      font-size: 0.8rem;
+    }
+
+    .toc-link:hover,
+    .toc-link.active {
+      background: rgba(37, 91, 199, 0.08);
+      border-left-color: var(--blue);
+      color: var(--ink);
+    }
+
+    .content {
+      min-width: 0;
+    }
+
+    .doc-intro {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, 0.42fr);
+      gap: 1rem;
+      margin-bottom: 2.2rem;
+      align-items: stretch;
+    }
+
+    .intro-statement,
+    .intro-note {
+      padding: 1.25rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.62);
+    }
+
+    .intro-statement p,
+    .intro-note p {
+      margin: 0;
+      color: #333942;
+    }
+
+    .intro-note {
+      background:
+        repeating-linear-gradient(-45deg, rgba(15, 107, 79, 0.075), rgba(15, 107, 79, 0.075) 1px, transparent 1px, transparent 8px),
+        rgba(255, 255, 255, 0.72);
+    }
+
+    .prd-body {
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: clamp(1.25rem, 4vw, 3.25rem);
+    }
+
+    .prd-body h2,
+    .prd-body h3,
+    .prd-body h4 {
+      position: relative;
+      scroll-margin-top: 1.5rem;
+      letter-spacing: 0;
+    }
+
+    .prd-body h2 {
+      margin: 3.5rem 0 1rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--line-strong);
+      font-family: var(--serif);
+      font-size: clamp(2rem, 4vw, 3.05rem);
+      line-height: 1.02;
+    }
+
+    .prd-body h2:first-child {
+      margin-top: 0;
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .prd-body h3 {
+      margin: 2.2rem 0 0.75rem;
+      color: var(--green);
+      font-size: clamp(1.25rem, 2vw, 1.55rem);
+    }
+
+    .prd-body h4 {
+      margin: 1.5rem 0 0.5rem;
+      color: var(--coral);
+      font-size: 1.02rem;
+      text-transform: uppercase;
+      font-family: var(--mono);
+      letter-spacing: 0.06em;
+    }
+
+    .heading-anchor {
+      position: absolute;
+      left: -1.45rem;
+      color: var(--blue);
+      opacity: 0;
+      text-decoration: none;
+      font-family: var(--mono);
+      font-size: 1rem;
+    }
+
+    .prd-body h2:hover .heading-anchor,
+    .prd-body h3:hover .heading-anchor,
+    .prd-body h4:hover .heading-anchor,
+    .heading-anchor:focus-visible {
+      opacity: 1;
+    }
+
+    .prd-body p {
+      max-width: 76ch;
+      color: #2d333d;
+      margin: 0.72rem 0;
+    }
+
+    .prd-body ul,
+    .prd-body ol {
+      max-width: 78ch;
+      padding-left: 1.3rem;
+      margin: 0.8rem 0 1rem;
+    }
+
+    .prd-body li {
+      margin: 0.34rem 0;
+      color: #2d333d;
+    }
+
+    .prd-body li::marker {
+      color: var(--green);
+      font-weight: 800;
+    }
+
+    .prd-body blockquote {
+      max-width: 70ch;
+      margin: 1.4rem 0;
+      padding: 1rem 1.2rem;
+      border-left: 5px solid var(--coral);
+      background: rgba(200, 79, 59, 0.08);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      font-family: var(--serif);
+      font-size: 1.2rem;
+      line-height: 1.45;
+    }
+
+    code {
+      font-family: var(--mono);
+      font-size: 0.88em;
+      background: rgba(37, 91, 199, 0.09);
+      color: #183b82;
+      padding: 0.1rem 0.3rem;
+      border-radius: 5px;
+    }
+
+    pre {
+      max-width: 100%;
+      margin: 1.3rem 0;
+      padding: 1rem;
+      overflow: auto;
+      border: 1px solid #252b34;
+      border-radius: var(--radius);
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0 / 34px 34px,
+        #11161d;
+      color: #f4f5f1;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    pre code {
+      display: block;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font-size: 0.86rem;
+      line-height: 1.55;
+    }
+
+    .footer {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 2rem clamp(1rem, 3vw, 2rem) 4rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .footer a { color: var(--blue); }
+
+    :focus-visible {
+      outline: 3px solid rgba(37, 91, 199, 0.36);
+      outline-offset: 3px;
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid,
+      .layout,
+      .doc-intro {
+        grid-template-columns: 1fr;
+      }
+
+      .toc {
+        position: relative;
+        top: 0;
+        max-height: none;
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .heading-anchor {
+        position: static;
+        opacity: 1;
+        margin-right: 0.45rem;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-row {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
+      }
+
+      .prd-body {
+        padding: 1rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+      }
+    }
+
+    @media print {
+      body { background: white; }
+      .topbar,
+      .hero-actions,
+      .summary-band,
+      .toc,
+      .progress { display: none; }
+      .hero,
+      .layout,
+      .footer {
+        max-width: none;
+        padding: 0;
+      }
+      .hero-grid,
+      .layout,
+      .doc-intro { display: block; }
+      .hero-panel,
+      .prd-body,
+      .intro-statement,
+      .intro-note {
+        box-shadow: none;
+        border-color: #bbb;
+      }
+      .prd-body h2 { break-after: avoid; }
+      pre { white-space: pre-wrap; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to PRD</a>
+  <div class="progress" aria-hidden="true"></div>
+
+  <header>
+    <div class="topbar" aria-label="Document header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Open Feedback Factory</span>
+      </div>
+      <div class="top-links">
+        <a href="./feedback-to-feature-platform-prd.md">Markdown source</a>
+        <a href="./superpowers/specs/2026-06-19-open-feedback-factory-v1-design.md">V1 design</a>
+      </div>
+    </div>
+
+    <section class="hero" aria-labelledby="page-title">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">Product Requirements Document</p>
+          <h1 id="page-title">Open Feedback Factory</h1>
+          <p class="lede">
+            A feedback-to-feature control plane for turning user requests into
+            safe GitHub issues, agent work, cost records, shipped outcomes, and
+            usage-backed product learning.
+          </p>
+          <div class="hero-actions">
+            <a class="button" href="#main">Read the PRD</a>
+            <a class="button secondary" href="#7-core-product-loop">Jump to loop</a>
+          </div>
+        </div>
+
+        <aside class="hero-panel" aria-label="Document metadata">
+          <div class="panel-row">
+            <div class="panel-label">Category</div>
+            <div class="panel-value">Open-source feedback-to-feature infrastructure</div>
+          </div>
+          <div class="panel-row">
+            <div class="panel-label">Audience</div>
+            <div class="panel-value">Indie developers and small product teams</div>
+          </div>
+          <div class="panel-row">
+            <div class="panel-label">Status</div>
+            <div class="panel-value">Draft v0.1</div>
+          </div>
+          <div class="panel-row">
+            <div class="panel-label">Distribution</div>
+            <div class="panel-value">Open-source first; hosted product later</div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </header>
+
+  <section class="summary-band" aria-label="V1 anchors">
+    <div class="summary-grid">
+      <article class="summary-item">
+        <div class="summary-number">01</div>
+        <h2 class="summary-title">User feedback becomes work</h2>
+        <p class="summary-text">Signals are sanitized, clustered, routed, and either built or answered honestly.</p>
+      </article>
+      <article class="summary-item">
+        <div class="summary-number">02</div>
+        <h2 class="summary-title">Agents work inside policy</h2>
+        <p class="summary-text">Codex runs on sanitized context with cost caps, protected paths, and review gates.</p>
+      </article>
+      <article class="summary-item">
+        <div class="summary-number">03</div>
+        <h2 class="summary-title">Safe changes can ship</h2>
+        <p class="summary-text">Auto-merge exists only for narrow, explicitly enabled, low-risk work.</p>
+      </article>
+      <article class="summary-item">
+        <div class="summary-number">04</div>
+        <h2 class="summary-title">Usage closes the loop</h2>
+        <p class="summary-text">The system tracks whether shipped features actually get used.</p>
+      </article>
+    </div>
+  </section>
+
+  <div class="layout">
+    <aside class="toc" aria-label="Table of contents">
+      <p class="toc-title">Contents <span>73</span></p>
+      <a class="toc-link level-2" href="#1-product-thesis" data-for="1-product-thesis">1. Product Thesis</a>
+<a class="toc-link level-2" href="#2-positioning" data-for="2-positioning">2. Positioning</a>
+<a class="toc-link level-2" href="#3-target-users" data-for="3-target-users">3. Target Users</a>
+<a class="toc-link level-3" href="#primary" data-for="primary">Primary</a>
+<a class="toc-link level-3" href="#secondary" data-for="secondary">Secondary</a>
+<a class="toc-link level-3" href="#later" data-for="later">Later</a>
+<a class="toc-link level-2" href="#4-problems" data-for="4-problems">4. Problems</a>
+<a class="toc-link level-3" href="#user-feedback-disappears" data-for="user-feedback-disappears">User feedback disappears</a>
+<a class="toc-link level-3" href="#agents-lack-product-context" data-for="agents-lack-product-context">Agents lack product context</a>
+<a class="toc-link level-3" href="#developers-lack-control-and-trust" data-for="developers-lack-control-and-trust">Developers lack control and trust</a>
+<a class="toc-link level-3" href="#feedback-tools-stop-too-early" data-for="feedback-tools-stop-too-early">Feedback tools stop too early</a>
+<a class="toc-link level-3" href="#cost-is-invisible" data-for="cost-is-invisible">Cost is invisible</a>
+<a class="toc-link level-2" href="#5-goals" data-for="5-goals">5. Goals</a>
+<a class="toc-link level-2" href="#6-non-goals" data-for="6-non-goals">6. Non-Goals</a>
+<a class="toc-link level-2" href="#7-core-product-loop" data-for="7-core-product-loop">7. Core Product Loop</a>
+<a class="toc-link level-2" href="#8-v1-product-surface" data-for="8-v1-product-surface">8. V1 Product Surface</a>
+<a class="toc-link level-3" href="#8-1-sdk" data-for="8-1-sdk">8.1 SDK</a>
+<a class="toc-link level-3" href="#8-2-api-and-database" data-for="8-2-api-and-database">8.2 API and Database</a>
+<a class="toc-link level-3" href="#8-3-control-center" data-for="8-3-control-center">8.3 Control Center</a>
+<a class="toc-link level-3" href="#8-4-github-integration" data-for="8-4-github-integration">8.4 GitHub Integration</a>
+<a class="toc-link level-3" href="#8-5-agent-runner" data-for="8-5-agent-runner">8.5 Agent Runner</a>
+<a class="toc-link level-3" href="#8-6-review-gates" data-for="8-6-review-gates">8.6 Review Gates</a>
+<a class="toc-link level-3" href="#8-7-user-follow-up" data-for="8-7-user-follow-up">8.7 User Follow-Up</a>
+<a class="toc-link level-3" href="#8-8-codex-integration-strategy" data-for="8-8-codex-integration-strategy">8.8 Codex Integration Strategy</a>
+<a class="toc-link level-2" href="#9-cost-model" data-for="9-cost-model">9. Cost Model</a>
+<a class="toc-link level-2" href="#10-two-router-architecture" data-for="10-two-router-architecture">10. Two-Router Architecture</a>
+<a class="toc-link level-3" href="#10-1-work-router" data-for="10-1-work-router">10.1 Work Router</a>
+<a class="toc-link level-3" href="#10-2-model-gateway" data-for="10-2-model-gateway">10.2 Model Gateway</a>
+<a class="toc-link level-3" href="#10-3-forking-policy" data-for="10-3-forking-policy">10.3 Forking Policy</a>
+<a class="toc-link level-3" href="#10-4-managed-gateway-partner-candidates" data-for="10-4-managed-gateway-partner-candidates">10.4 Managed Gateway Partner Candidates</a>
+<a class="toc-link level-3" href="#10-5-openrouter-fusion-deliberation-lane" data-for="10-5-openrouter-fusion-deliberation-lane">10.5 OpenRouter Fusion Deliberation Lane</a>
+<a class="toc-link level-2" href="#11-developer-guardrails-and-cost-controls" data-for="11-developer-guardrails-and-cost-controls">11. Developer Guardrails and Cost Controls</a>
+<a class="toc-link level-2" href="#12-execution-cadence-and-queues" data-for="12-execution-cadence-and-queues">12. Execution Cadence and Queues</a>
+<a class="toc-link level-2" href="#13-demand-thresholds-and-backlog-promotion" data-for="13-demand-thresholds-and-backlog-promotion">13. Demand Thresholds and Backlog Promotion</a>
+<a class="toc-link level-2" href="#14-privacy-and-safety-requirements" data-for="14-privacy-and-safety-requirements">14. Privacy and Safety Requirements</a>
+<a class="toc-link level-2" href="#15-operational-security-and-governance-requirements" data-for="15-operational-security-and-governance-requirements">15. Operational, Security, and Governance Requirements</a>
+<a class="toc-link level-3" href="#15-1-runner-sandbox-and-code-execution" data-for="15-1-runner-sandbox-and-code-execution">15.1 Runner Sandbox and Code Execution</a>
+<a class="toc-link level-3" href="#15-2-open-source-governance" data-for="15-2-open-source-governance">15.2 Open-Source Governance</a>
+<a class="toc-link level-3" href="#15-3-admin-auth-and-roles" data-for="15-3-admin-auth-and-roles">15.3 Admin Auth and Roles</a>
+<a class="toc-link level-3" href="#15-4-data-retention-and-deletion" data-for="15-4-data-retention-and-deletion">15.4 Data Retention and Deletion</a>
+<a class="toc-link level-3" href="#15-5-rollback-and-failure-handling" data-for="15-5-rollback-and-failure-handling">15.5 Rollback and Failure Handling</a>
+<a class="toc-link level-3" href="#15-6-feature-flags-and-gradual-rollout" data-for="15-6-feature-flags-and-gradual-rollout">15.6 Feature Flags and Gradual Rollout</a>
+<a class="toc-link level-3" href="#15-7-product-strategy-override" data-for="15-7-product-strategy-override">15.7 Product Strategy Override</a>
+<a class="toc-link level-3" href="#15-8-multi-model-deliberation" data-for="15-8-multi-model-deliberation">15.8 Multi-Model Deliberation</a>
+<a class="toc-link level-3" href="#15-9-agent-quality-evaluation" data-for="15-9-agent-quality-evaluation">15.9 Agent Quality Evaluation</a>
+<a class="toc-link level-3" href="#15-10-integration-surface-and-webhooks" data-for="15-10-integration-surface-and-webhooks">15.10 Integration Surface and Webhooks</a>
+<a class="toc-link level-3" href="#15-11-config-versioning-and-upgrades" data-for="15-11-config-versioning-and-upgrades">15.11 Config Versioning and Upgrades</a>
+<a class="toc-link level-2" href="#16-open-source-launch-strategy" data-for="16-open-source-launch-strategy">16. Open-Source Launch Strategy</a>
+<a class="toc-link level-2" href="#17-installation-and-admin-ui" data-for="17-installation-and-admin-ui">17. Installation and Admin UI</a>
+<a class="toc-link level-3" href="#17-1-installation-paths" data-for="17-1-installation-paths">17.1 Installation Paths</a>
+<a class="toc-link level-3" href="#17-2-admin-ui-onboarding" data-for="17-2-admin-ui-onboarding">17.2 Admin UI Onboarding</a>
+<a class="toc-link level-3" href="#17-3-admin-ui-control-surfaces" data-for="17-3-admin-ui-control-surfaces">17.3 Admin UI Control Surfaces</a>
+<a class="toc-link level-3" href="#17-4-security-defaults" data-for="17-4-security-defaults">17.4 Security Defaults</a>
+<a class="toc-link level-3" href="#17-5-maintenance-commands" data-for="17-5-maintenance-commands">17.5 Maintenance Commands</a>
+<a class="toc-link level-2" href="#18-hosted-product-strategy" data-for="18-hosted-product-strategy">18. Hosted Product Strategy</a>
+<a class="toc-link level-2" href="#19-mvp-requirements" data-for="19-mvp-requirements">19. MVP Requirements</a>
+<a class="toc-link level-3" href="#must-have" data-for="must-have">Must Have</a>
+<a class="toc-link level-3" href="#should-have" data-for="should-have">Should Have</a>
+<a class="toc-link level-3" href="#could-have" data-for="could-have">Could Have</a>
+<a class="toc-link level-2" href="#20-detailed-requirements-draft" data-for="20-detailed-requirements-draft">20. Detailed Requirements Draft</a>
+<a class="toc-link level-3" href="#20-1-product-requirements" data-for="20-1-product-requirements">20.1 Product Requirements</a>
+<a class="toc-link level-3" href="#20-2-workflow-requirements" data-for="20-2-workflow-requirements">20.2 Workflow Requirements</a>
+<a class="toc-link level-3" href="#20-3-technical-requirements" data-for="20-3-technical-requirements">20.3 Technical Requirements</a>
+<a class="toc-link level-3" href="#20-4-trust-safety-and-control-requirements" data-for="20-4-trust-safety-and-control-requirements">20.4 Trust, Safety, and Control Requirements</a>
+<a class="toc-link level-2" href="#21-success-metrics" data-for="21-success-metrics">21. Success Metrics</a>
+<a class="toc-link level-2" href="#22-competitive-landscape" data-for="22-competitive-landscape">22. Competitive Landscape</a>
+<a class="toc-link level-3" href="#coding-agents" data-for="coding-agents">Coding agents</a>
+<a class="toc-link level-3" href="#feedback-tools" data-for="feedback-tools">Feedback tools</a>
+<a class="toc-link level-3" href="#error-tools" data-for="error-tools">Error tools</a>
+<a class="toc-link level-3" href="#differentiation" data-for="differentiation">Differentiation</a>
+<a class="toc-link level-2" href="#23-open-questions" data-for="23-open-questions">23. Open Questions</a>
+<a class="toc-link level-2" href="#24-first-demo-script" data-for="24-first-demo-script">24. First Demo Script</a>
+<a class="toc-link level-2" href="#25-product-principle" data-for="25-product-principle">25. Product Principle</a>
+    </aside>
+
+    <main id="main" class="content" tabindex="-1">
+      <section class="doc-intro" aria-label="Document framing">
+        <div class="intro-statement">
+          <p><strong>Read this as the product spine.</strong> The PRD below is intentionally expansive: it captures the full product vision before V1 is reduced into implementation slices.</p>
+        </div>
+        <div class="intro-note">
+          <p><strong>V1 posture:</strong> internal dogfood first, standalone open-source architecture, no HeyTelli coupling.</p>
+        </div>
+      </section>
+
+      <article class="prd-body">
+        <h2 id="1-product-thesis"><a class="heading-anchor" href="#1-product-thesis" aria-label="Link to 1. Product Thesis">#</a>1. Product Thesis</h2>
+<p>Beta users should be able to ask for improvements from inside a product and receive a real answer: shipped, already available, planned, needs more signal, not planned, blocked, or unsafe to build.</p>
+<p>Developers should not have to manually copy feedback into GitHub, decide whether it is actionable, ask an agent to work on it, track the PR, calculate cost, ship the release, and remember to follow up with the user.</p>
+<p>This product turns user feedback into a controlled product-development loop:</p>
+<pre><code class="language-text">user feedback -&gt; private signal -&gt; triage -&gt; sanitized issue -&gt; agent work
+-&gt; PR -&gt; review -&gt; merge/deploy -&gt; user follow-up</code></pre>
+<p>The goal is not to replace product judgment. The goal is to make the full loop observable, repeatable, safe, and dramatically faster for small teams.</p>
+<h2 id="2-positioning"><a class="heading-anchor" href="#2-positioning" aria-label="Link to 2. Positioning">#</a>2. Positioning</h2>
+<p>The product is not another coding agent and not another feedback board.</p>
+<p>It is the connective tissue between:</p>
+<ul>
+<li>customer feedback tools like Canny, Featurebase, Productboard, and Linear</li>
+<p>Customer Requests;</p>
+<li>coding agents like Codex, GitHub Copilot coding agent, OpenHands, Devin,</li>
+<p>Factory Droid, Claude Code, and similar tools;</p>
+<li>GitHub-native engineering workflows: issues, branches, PRs, reviews, checks,</li>
+<p>releases, and changelogs.</p>
+</ul>
+<p>The wedge:</p>
+<blockquote>Add this to your app and your beta users can request features, watch status,</blockquote>
+<blockquote>trigger safe agent work, and get told what shipped or why it will not.</blockquote>
+<h2 id="3-target-users"><a class="heading-anchor" href="#3-target-users" aria-label="Link to 3. Target Users">#</a>3. Target Users</h2>
+<h3 id="primary"><a class="heading-anchor" href="#primary" aria-label="Link to Primary">#</a>Primary</h3>
+<p>Indie developers, solo founders, and small teams with active beta users.</p>
+<p>They are building web apps, iOS apps, SaaS products, developer tools, or open source projects. They already use GitHub and are experimenting with AI coding agents, but they do not have a reliable system for turning feedback into shipped improvements.</p>
+<h3 id="secondary"><a class="heading-anchor" href="#secondary" aria-label="Link to Secondary">#</a>Secondary</h3>
+<p>Open-source maintainers with many issues and limited review bandwidth.</p>
+<h3 id="later"><a class="heading-anchor" href="#later" aria-label="Link to Later">#</a>Later</h3>
+<p>Larger teams and enterprises with Jira, Linear, SOC2, approval workflows, audit requirements, and more complex permissions.</p>
+<p>Enterprise is intentionally out of scope for the open-source launch story.</p>
+<h2 id="4-problems"><a class="heading-anchor" href="#4-problems" aria-label="Link to 4. Problems">#</a>4. Problems</h2>
+<h3 id="user-feedback-disappears"><a class="heading-anchor" href="#user-feedback-disappears" aria-label="Link to User feedback disappears">#</a>User feedback disappears</h3>
+<p>Beta users submit requests, bug reports, or confusing error reports, then never hear what happened. Even when the founder builds the feature, the user often does not know their feedback mattered.</p>
+<h3 id="agents-lack-product-context"><a class="heading-anchor" href="#agents-lack-product-context" aria-label="Link to Agents lack product context">#</a>Agents lack product context</h3>
+<p>Coding agents can implement GitHub issues, but most beta feedback is not a good GitHub issue. It may be private, vague, duplicated, emotional, incomplete, or not yet worth building.</p>
+<h3 id="developers-lack-control-and-trust"><a class="heading-anchor" href="#developers-lack-control-and-trust" aria-label="Link to Developers lack control and trust">#</a>Developers lack control and trust</h3>
+<p>Small teams are excited by agentic coding but afraid of repository damage, privacy leaks, runaway costs, low-quality PRs, and noisy automation.</p>
+<h3 id="feedback-tools-stop-too-early"><a class="heading-anchor" href="#feedback-tools-stop-too-early" aria-label="Link to Feedback tools stop too early">#</a>Feedback tools stop too early</h3>
+<p>Feedback products collect, cluster, and prioritize requests, but they usually stop before implementation. The developer still has to manually bridge the gap from &quot;users want this&quot; to &quot;a tested PR exists.&quot;</p>
+<h3 id="cost-is-invisible"><a class="heading-anchor" href="#cost-is-invisible" aria-label="Link to Cost is invisible">#</a>Cost is invisible</h3>
+<p>Agent-driven development has real model and infrastructure cost. Developers need an estimate before work starts and actual cost after it finishes.</p>
+<h2 id="5-goals"><a class="heading-anchor" href="#5-goals" aria-label="Link to 5. Goals">#</a>5. Goals</h2>
+<ul>
+<li>Make feedback submission easy to embed in web and mobile apps.</li>
+<li>Keep raw user feedback private by default.</li>
+<li>Convert safe, actionable feedback into sanitized GitHub issues.</li>
+<li>Cluster duplicates and use repeated demand to reconsider earlier decisions.</li>
+<li>Let agents implement only work that passes policy gates.</li>
+<li>Let developers define their own guardrails, approval rules, and cost limits.</li>
+<li>Always create PRs, never push directly to <code>main</code>.</li>
+<li>Run checks and review lanes before merge.</li>
+<li>Track estimated and actual agent cost per feature.</li>
+<li>Notify users when something ships, already exists, is not planned, needs more</li>
+<p>signal, or is blocked.</p>
+<li>Be open-source and self-hostable from day one.</li>
+<li>Provide a demo that feels magical within minutes.</li>
+</ul>
+<h2 id="6-non-goals"><a class="heading-anchor" href="#6-non-goals" aria-label="Link to 6. Non-Goals">#</a>6. Non-Goals</h2>
+<ul>
+<li>No enterprise approval trees in V1.</li>
+<li>No Jira-first or Linear-first workflow in V1.</li>
+<li>No public voting board in V1.</li>
+<li>No autonomous direct commits to default branches.</li>
+<li>No raw private feedback in GitHub issues, PRs, CI logs, or agent prompts.</li>
+<li>No promise that every user request will be built.</li>
+<li>No general-purpose coding-agent replacement.</li>
+<li>No agent marketplace in V1.</li>
+</ul>
+<h2 id="7-core-product-loop"><a class="heading-anchor" href="#7-core-product-loop" aria-label="Link to 7. Core Product Loop">#</a>7. Core Product Loop</h2>
+<ol>
+<li>A user submits feedback inside an app.</li>
+<li>The SDK sends the signal to the product API.</li>
+<li>The API stores raw feedback privately and creates a sanitized summary.</li>
+<li>Triage clusters similar feedback and assigns category, priority, risk, and</li>
+<p>decision state.</p>
+<li>If safe and actionable, the system creates or updates a GitHub issue.</li>
+<li>A planner turns the issue into a PR-sized implementation plan.</li>
+<li>An agent runner creates an isolated workspace, implements the change, runs</li>
+<p>checks, records actual cost, pushes a branch, and opens a PR.</p>
+<li>Reviewer agents and GitHub checks gate merge.</li>
+<li>Release tracking watches for deployment or TestFlight availability.</li>
+<li>The original users are notified with a clear outcome.</li>
+</ol>
+<h2 id="8-v1-product-surface"><a class="heading-anchor" href="#8-v1-product-surface" aria-label="Link to 8. V1 Product Surface">#</a>8. V1 Product Surface</h2>
+<h3 id="8-1-sdk"><a class="heading-anchor" href="#8-1-sdk" aria-label="Link to 8.1 SDK">#</a>8.1 SDK</h3>
+<p>Small SDKs for web and mobile apps.</p>
+<p>V1 functions:</p>
+<pre><code class="language-ts">submitFeedback({
+  message,
+  source,
+  severity,
+  userId,
+  metadata,
+});
+
+captureClientError({
+  error,
+  route,
+  userId,
+  metadata,
+});
+
+getFeedbackStatus({
+  feedbackId,
+});
+
+trackFeatureExposure({
+  featureId,
+  userId,
+  metadata,
+});
+
+trackFeatureUsage({
+  featureId,
+  userId,
+  action,
+  metadata,
+});
+
+trackFeatureOutcome({
+  featureId,
+  userId,
+  outcome,
+  metadata,
+});</code></pre>
+<p>The SDK must support privacy-safe metadata and avoid sending secrets, full session recordings, raw screenshots, or large transcripts by default.</p>
+<p>Feature usage tracking should be optional and privacy-safe. It should let the system connect shipped feedback to real adoption without becoming a surveillance tool.</p>
+<h3 id="8-2-api-and-database"><a class="heading-anchor" href="#8-2-api-and-database" aria-label="Link to 8.2 API and Database">#</a>8.2 API and Database</h3>
+<p>Stores:</p>
+<ul>
+<li>raw private feedback;</li>
+<li>sanitized summaries;</li>
+<li>feedback clusters;</li>
+<li>work items;</li>
+<li>decisions and decision reasons;</li>
+<li>GitHub issue and PR links;</li>
+<li>agent runs;</li>
+<li>estimated and actual cost;</li>
+<li>feature exposure, usage, and outcome events;</li>
+<li>feedback-to-feature impact attribution;</li>
+<li>developer-defined guardrail and cost-control policies;</li>
+<li>release/deploy state;</li>
+<li>user notification history.</li>
+</ul>
+<p>V1 should support Postgres. A lightweight SQLite mode is desirable for local demo and open-source adoption, but it should not block launch.</p>
+<h3 id="8-3-control-center"><a class="heading-anchor" href="#8-3-control-center" aria-label="Link to 8.3 Control Center">#</a>8.3 Control Center</h3>
+<p>A web dashboard for developers.</p>
+<p>Primary views:</p>
+<ul>
+<li>incoming feedback;</li>
+<li>clusters and demand count;</li>
+<li>work item status;</li>
+<li>agent lanes;</li>
+<li>estimated vs actual cost;</li>
+<li>PR/release state;</li>
+<li>feature usage and impact attribution;</li>
+<li>decisions not to build;</li>
+<li>guardrail and cost-control configuration;</li>
+<li>reconsideration candidates;</li>
+<li>user follow-up status.</li>
+</ul>
+<p>The control center should make the loop easy to demo without exposing private feedback.</p>
+<h3 id="8-4-github-integration"><a class="heading-anchor" href="#8-4-github-integration" aria-label="Link to 8.4 GitHub Integration">#</a>8.4 GitHub Integration</h3>
+<p>V1 is GitHub-first.</p>
+<p>Capabilities:</p>
+<ul>
+<li>create sanitized issues;</li>
+<li>apply labels;</li>
+<li>comment status updates;</li>
+<li>create branches and PRs;</li>
+<li>link PRs back to issues;</li>
+<li>read check status;</li>
+<li>close issues when shipped or resolved;</li>
+<li>clean up generated branches/workspaces.</li>
+</ul>
+<p>The preferred long-term shape is a GitHub App. The early open-source version may support a GitHub token for setup simplicity.</p>
+<h3 id="8-5-agent-runner"><a class="heading-anchor" href="#8-5-agent-runner" aria-label="Link to 8.5 Agent Runner">#</a>8.5 Agent Runner</h3>
+<p>The runner performs implementation work in an isolated workspace.</p>
+<p>Supported V1 runner modes:</p>
+<ul>
+<li>local runner;</li>
+<li>GitHub Actions runner;</li>
+<li>optional hosted runner later.</li>
+</ul>
+<p>The runner should be agent-provider agnostic, but the initial implementation can optimize for Codex because Codex already supports noninteractive runs, cloud tasks, GitHub issue/PR workflows, review, MCP, image input, structured output, and usage capture.</p>
+<p>Required runner behavior:</p>
+<ul>
+<li>create a branch or worktree;</li>
+<li>read only sanitized context;</li>
+<li>check the configured guardrail and cost policy before starting;</li>
+<li>run an implementation agent;</li>
+<li>run configured tests/checks;</li>
+<li>collect token and cost data when available;</li>
+<li>open a PR;</li>
+<li>never merge unless gates allow it;</li>
+<li>clean up temporary workspace state.</li>
+</ul>
+<h3 id="8-6-review-gates"><a class="heading-anchor" href="#8-6-review-gates" aria-label="Link to 8.6 Review Gates">#</a>8.6 Review Gates</h3>
+<p>V1 risk tiers:</p>
+<ul>
+<li><code>safe_auto_merge</code>: low-risk copy/docs/small UI fixes after checks pass;</li>
+<li><code>guarded_auto_merge</code>: normal product changes requiring reviewer lanes;</li>
+<li><code>extra_review</code>: auth, privacy, payments, release, or data changes;</li>
+<li><code>plan_only</code>: safe to analyze, not safe to implement automatically.</li>
+</ul>
+<p>Reviewer lanes:</p>
+<ul>
+<li>code review;</li>
+<li>product review;</li>
+<li>privacy/security review;</li>
+<li>test review;</li>
+<li>release review when applicable.</li>
+</ul>
+<h3 id="8-7-user-follow-up"><a class="heading-anchor" href="#8-7-user-follow-up" aria-label="Link to 8.7 User Follow-Up">#</a>8.7 User Follow-Up</h3>
+<p>Every submitted item must eventually have a user-safe status.</p>
+<p>Statuses:</p>
+<ul>
+<li>received;</li>
+<li>grouped with similar requests;</li>
+<li>planned;</li>
+<li>in progress;</li>
+<li>shipped;</li>
+<li>already available;</li>
+<li>needs more signal;</li>
+<li>not planned;</li>
+<li>not reproducible;</li>
+<li>blocked by privacy/safety;</li>
+<li>out of scope.</li>
+</ul>
+<p>The follow-up message should be specific enough to feel human and honest, but should not expose internal GitHub links, private reasoning, raw agent output, or other users' feedback.</p>
+<h3 id="8-8-codex-integration-strategy"><a class="heading-anchor" href="#8-8-codex-integration-strategy" aria-label="Link to 8.8 Codex Integration Strategy">#</a>8.8 Codex Integration Strategy</h3>
+<p>Codex should be the default first implementation target, while the product remains agent-provider agnostic.</p>
+<p>As of the June 2026 research pass, useful Codex surfaces include:</p>
+<ul>
+<li>Codex Cloud and GitHub issue/PR delegation for sanitized GitHub issues;</li>
+<li>Codex Cloud environments for disposable containerized work;</li>
+<li>noninteractive <code>codex exec --json</code> for local/self-hosted runners, lifecycle</li>
+<p>events, usage capture, and actual cost accounting;</p>
+<li><code>--output-schema</code> for stable final run summaries such as outcome, PR URL,</li>
+<p>shipped status, cost summary, and user-safe follow-up copy;</p>
+<li>Codex SDK as the longer-term server-side control-plane integration after the</li>
+<p>MVP moves beyond shelling out;</p>
+<li>Codex GitHub Action as a CI-native lane for review, release prep, failed CI</li>
+<p>repair, and guardrail checks;</p>
+<li>Codex GitHub code review as a reviewer lane before guarded auto-merge;</li>
+<li>MCP as the safe bridge between agents and the private control plane.</li>
+</ul>
+<p>The product should expose safe MCP tools for agent access, such as:</p>
+<ul>
+<li><code>get_sanitized_feedback</code>;</li>
+<li><code>get_work_item</code>;</li>
+<li><code>record_decision</code>;</li>
+<li><code>record_cost</code>;</li>
+<li><code>notify_user</code>;</li>
+<li><code>check_release_status</code>.</li>
+</ul>
+<p>Agents should not query raw private feedback directly. Raw beta data should not be sent to Codex Cloud. The private database remains the source of truth; Codex receives sanitized summaries and narrow tool access.</p>
+<p>Experimental Codex surfaces such as app-server, exec-server, and remote-control should not be core MVP dependencies. They can be revisited later if they become stable and materially simplify hosted execution.</p>
+<p>The admin UI should include a Codex capability health panel showing:</p>
+<ul>
+<li>local CLI version;</li>
+<li>latest known version;</li>
+<li>auth state;</li>
+<li>GitHub Action installation state;</li>
+<li>MCP server configuration;</li>
+<li>cloud environment IDs;</li>
+<li>model and effort defaults;</li>
+<li>JSON usage capture status;</li>
+<li>last successful runner health check.</li>
+</ul>
+<p>Primary Codex documentation references:</p>
+<ul>
+<li><a href="https://developers.openai.com/codex/changelog">Codex changelog</a></li>
+<li><a href="https://developers.openai.com/codex/cloud">Codex Cloud</a></li>
+<li><a href="https://developers.openai.com/codex/cloud/environments">Cloud environments</a></li>
+<li><a href="https://developers.openai.com/codex/noninteractive">Noninteractive mode</a></li>
+<li><a href="https://developers.openai.com/codex/sdk">Codex SDK</a></li>
+<li><a href="https://developers.openai.com/codex/github-action">GitHub Action</a></li>
+<li><a href="https://developers.openai.com/codex/integrations/github">GitHub integration</a></li>
+<li><a href="https://developers.openai.com/codex/mcp">MCP</a></li>
+<li><a href="https://developers.openai.com/cookbook/examples/agents_sdk/agent_improvement_loop">Agent improvement loop cookbook</a></li>
+</ul>
+<h2 id="9-cost-model"><a class="heading-anchor" href="#9-cost-model" aria-label="Link to 9. Cost Model">#</a>9. Cost Model</h2>
+<p>Each work item should store both estimate and actual.</p>
+<p>Estimate inputs:</p>
+<ul>
+<li>model/provider;</li>
+<li>effort setting;</li>
+<li>risk tier;</li>
+<li>expected reviewer agents;</li>
+<li>expected test/release runs;</li>
+<li>historical averages;</li>
+<li>request frequency.</li>
+</ul>
+<p>Actual inputs:</p>
+<ul>
+<li>model/provider;</li>
+<li>input/output/reasoning tokens when available;</li>
+<li>agent attempts;</li>
+<li>reviewer runs;</li>
+<li>CI runs;</li>
+<li>release runs;</li>
+<li>elapsed time;</li>
+<li>retries.</li>
+</ul>
+<p>Display:</p>
+<ul>
+<li>estimated total cost;</li>
+<li>actual total cost;</li>
+<li>range/confidence;</li>
+<li>cost per requesting user;</li>
+<li>delta from estimate.</li>
+</ul>
+<p>Cost is a product feature, not just an internal metric. Indie developers need to know whether a feature request is economically reasonable before letting an agent run.</p>
+<h2 id="10-two-router-architecture"><a class="heading-anchor" href="#10-two-router-architecture" aria-label="Link to 10. Two-Router Architecture">#</a>10. Two-Router Architecture</h2>
+<p>The product should separate product-level work routing from lower-level model routing.</p>
+<h3 id="10-1-work-router"><a class="heading-anchor" href="#10-1-work-router" aria-label="Link to 10.1 Work Router">#</a>10.1 Work Router</h3>
+<p>The work router is core product logic and should be owned by this product.</p>
+<p>It decides:</p>
+<ul>
+<li>whether feedback should become work at all;</li>
+<li>whether a work item is ignored, blocked, waiting for signal, plan-only, or</li>
+<p>executable;</p>
+<li>risk tier;</li>
+<li>priority;</li>
+<li>cost cap;</li>
+<li>agent provider;</li>
+<li>model/effort tier;</li>
+<li>allowed files and forbidden files;</li>
+<li>required reviewer lanes;</li>
+<li>retry limits;</li>
+<li>auto-merge eligibility;</li>
+<li>user-facing follow-up status.</li>
+</ul>
+<p>No external router or gateway should be allowed to define product policy. The meaning of &quot;safe to run&quot;, &quot;too expensive&quot;, &quot;requires approval&quot;, &quot;not planned&quot;, or &quot;eligible for auto-merge&quot; belongs to this product.</p>
+<h3 id="10-2-model-gateway"><a class="heading-anchor" href="#10-2-model-gateway" aria-label="Link to 10.2 Model Gateway">#</a>10.2 Model Gateway</h3>
+<p>The model gateway is lower-level infrastructure. It handles provider access and model-call routing.</p>
+<p>It may handle:</p>
+<ul>
+<li>OpenAI/Anthropic/Gemini/Bedrock/etc. provider access;</li>
+<li>OpenRouter as an optional provider aggregator for broad model access with one</li>
+<p>key;</p>
+<li>OpenRouter Fusion as an optional multi-model deliberation lane for research,</li>
+<p>critique, planning, and high-cost-of-being-wrong decisions;</p>
+<li>Requesty as an optional managed AI gateway for OpenAI-compatible routing,</li>
+<p>fallback policies, approved model lists, spend limits, EU routing, usage analytics, and cost governance;</p>
+<li>model fallbacks;</li>
+<li>rate limits;</li>
+<li>provider failover;</li>
+<li>virtual keys;</li>
+<li>low-level spend logs;</li>
+<li>request-level guardrails;</li>
+<li>caching;</li>
+<li>load balancing;</li>
+<li>latency and token observability.</li>
+</ul>
+<p>The product should support direct provider execution first, OpenRouter and Requesty as optional managed setup paths, then optional integration with open-source gateways such as LiteLLM, Portkey Gateway, Helicone AI Gateway, Envoy AI Gateway, or similar tools.</p>
+<p>The gateway should be wrapped behind a narrow adapter interface so the product does not become dependent on one gateway's internal behavior.</p>
+<p>Example adapter:</p>
+<pre><code class="language-ts">interface ModelGateway {
+  run(input: ModelRequest): Promise&lt;ModelResult&gt;;
+  estimate(input: ModelEstimateRequest): Promise&lt;ModelEstimate&gt;;
+  health(): Promise&lt;ModelGatewayHealth&gt;;
+}</code></pre>
+<h3 id="10-3-forking-policy"><a class="heading-anchor" href="#10-3-forking-policy" aria-label="Link to 10.3 Forking Policy">#</a>10.3 Forking Policy</h3>
+<p>The default approach should be wrap, pin, and test rather than fork.</p>
+<p>Required practices:</p>
+<ul>
+<li>pin exact package or Docker image versions;</li>
+<li>use contract tests around gateway behavior;</li>
+<li>keep direct OpenAI/Anthropic/OpenRouter/Requesty/Codex/Claude execution as a</li>
+<p>fallback path;</p>
+<li>avoid letting gateway configuration become product policy;</li>
+<li>make &quot;bring your own gateway&quot; possible for advanced users;</li>
+<li>fork only after repeated friction proves that the gateway layer is a</li>
+<p>strategic bottleneck.</p>
+</ul>
+<p>The product should own the work router. It should treat model gateways as replaceable infrastructure.</p>
+<h3 id="10-4-managed-gateway-partner-candidates"><a class="heading-anchor" href="#10-4-managed-gateway-partner-candidates" aria-label="Link to 10.4 Managed Gateway Partner Candidates">#</a>10.4 Managed Gateway Partner Candidates</h3>
+<p>OpenRouter and Requesty should both be supported, but they should be framed slightly differently.</p>
+<p>OpenRouter is useful as a broad model-access aggregator with one key. It is a good fit for experimentation, developer choice, and fast access to many hosted models.</p>
+<p>Requesty is useful as a managed AI gateway for production-ish routing and governance. Its docs position it as an OpenAI-compatible gateway that can route requests through one base URL, apply fallback policies, enforce approved model lists, set per-key or project spend limits, route through EU endpoints, and provide usage/cost analytics.</p>
+<p>Because there is a founder relationship, Requesty could be a strong early partner integration. The product should still implement Requesty through the same narrow gateway adapter as every other provider, with contract tests and a direct-provider fallback path.</p>
+<p>Requesty-specific setup should support:</p>
+<ul>
+<li>Requesty API key;</li>
+<li>global or EU base URL;</li>
+<li>approved model list inspection;</li>
+<li>fallback policy selection;</li>
+<li>spend limit visibility;</li>
+<li>analytics/cost reconciliation;</li>
+<li>health checks for routing, model availability, and tool-calling support.</li>
+</ul>
+<h3 id="10-5-openrouter-fusion-deliberation-lane"><a class="heading-anchor" href="#10-5-openrouter-fusion-deliberation-lane" aria-label="Link to 10.5 OpenRouter Fusion Deliberation Lane">#</a>10.5 OpenRouter Fusion Deliberation Lane</h3>
+<p>OpenRouter Fusion should be supported as an optional multi-model deliberation lane, not as the default implementation agent.</p>
+<p>Fusion can be called through the OpenRouter <code>openrouter/fusion</code> model alias or as the <code>openrouter:fusion</code> server tool. The useful product concept is a temporary model council: several models analyze the same sanitized prompt in parallel, a judge model compares their outputs, and the final answer is written from the structured analysis.</p>
+<p>The work router should decide when Fusion is allowed. Fusion should be reserved for cases where the cost of a bad decision is higher than the extra model spend.</p>
+<p>Good Fusion use cases:</p>
+<ul>
+<li>ambiguous feedback triage;</li>
+<li>duplicate and cluster validation;</li>
+<li>product strategy decisions;</li>
+<li>&quot;not planned&quot; or &quot;needs more signal&quot; reasoning;</li>
+<li>architecture planning before implementation;</li>
+<li>privacy/security review;</li>
+<li>reviewer disagreement resolution;</li>
+<li>risky release or rollback analysis;</li>
+<li>market, legal, technical, or UX research that benefits from multiple</li>
+<p>perspectives.</p>
+</ul>
+<p>Fusion should not be the default for:</p>
+<ul>
+<li>routine coding;</li>
+<li>small copy changes;</li>
+<li>simple bug fixes;</li>
+<li>high-volume low-risk triage;</li>
+<li>any prompt that would include raw private feedback.</li>
+</ul>
+<p>Fusion configuration should support:</p>
+<ul>
+<li>disabled, budget, high-quality, and custom modes;</li>
+<li>per-category and per-risk-tier enablement;</li>
+<li>max estimated cost per Fusion call;</li>
+<li>max panel size;</li>
+<li>approved analysis models;</li>
+<li>approved judge models;</li>
+<li>max tool calls;</li>
+<li>forced invocation versus model-decided invocation;</li>
+<li>whether OpenRouter web search and web fetch tools are allowed;</li>
+<li>a requirement that only sanitized context can be sent.</li>
+</ul>
+<p>Fusion cost tracking should be explicit. The cost model should treat Fusion as multiple underlying model calls, not as one ordinary completion. Estimates should include panel calls, judge calls, final response calls, expected latency, and confidence range. Actuals should record model list, judge model, token use, router metadata, latency, whether Fusion was invoked, and whether it changed the work router decision.</p>
+<p>Recommended default: Fusion is off for new installs, available as an opt-in review or planning lane, and first exposed through a &quot;Use multi-model review&quot; button in the control center.</p>
+<p>OpenRouter Fusion references:</p>
+<ul>
+<li><a href="https://openrouter.ai/docs/guides/features/plugins/fusion">Fusion plugin docs</a></li>
+<li><a href="https://openrouter.ai/docs/guides/routing/routers/fusion-router">Fusion Router docs</a></li>
+<li><a href="https://openrouter.ai/blog/announcements/fusion-beats-frontier/">Fusion announcement</a></li>
+</ul>
+<h2 id="11-developer-guardrails-and-cost-controls"><a class="heading-anchor" href="#11-developer-guardrails-and-cost-controls" aria-label="Link to 11. Developer Guardrails and Cost Controls">#</a>11. Developer Guardrails and Cost Controls</h2>
+<p>Developers must be able to define how autonomous the system is allowed to be. The default should be conservative, but the product should support teams that want more automation after trust is earned.</p>
+<p>Guardrails should be configurable at the repo, environment, category, and risk tier level.</p>
+<p>Examples:</p>
+<ul>
+<li>never touch authentication, billing, privacy, legal, encryption, or data</li>
+<p>deletion code without explicit approval;</p>
+<li>never open more than a set number of PRs per day;</li>
+<li>never auto-merge changes touching configured paths;</li>
+<li>require extra review for migrations, native mobile release code, infra,</li>
+<p>permissions, or customer-facing pricing;</p>
+<li>only work on issues with specific labels;</li>
+<li>only use sanitized issue text, not raw feedback;</li>
+<li>block tasks that mention secrets, credentials, private keys, PII, or unsafe</li>
+<p>product changes;</p>
+<li>cap agent attempts and retries per work item;</li>
+<li>pause the runner when CI failure rate crosses a threshold;</li>
+<li>pause auto-merge when rollback or production incident signals are active.</li>
+</ul>
+<p>Cost controls should be explicit and visible before work starts.</p>
+<p>Examples:</p>
+<ul>
+<li>maximum estimated cost per feature;</li>
+<li>maximum actual spend per day/week/month;</li>
+<li>maximum token budget per work item;</li>
+<li>maximum reviewer-agent count by risk tier;</li>
+<li>lower-cost model for triage, stronger model for implementation/review;</li>
+<li>require manual approval when estimated cost exceeds a threshold;</li>
+<li>stop or downgrade work when actual spend crosses the estimate by a configured</li>
+<p>percentage;</p>
+<li>prioritize repeated requests by cost per requesting user.</li>
+</ul>
+<p>The control center should show whether a work item is blocked by policy, over budget, waiting for approval, safe to run, or eligible for auto-merge.</p>
+<p>Policy decisions should be stored and auditable. When work is blocked by a custom guardrail or cost limit, the original user should receive a respectful product-safe follow-up if the developer exposes feedback status.</p>
+<h2 id="12-execution-cadence-and-queues"><a class="heading-anchor" href="#12-execution-cadence-and-queues" aria-label="Link to 12. Execution Cadence and Queues">#</a>12. Execution Cadence and Queues</h2>
+<p>Developers should control when feedback turns into agent work. Not every incoming request should immediately wake up an implementation agent.</p>
+<p>The product should support queue modes:</p>
+<ul>
+<li><code>manual</code>: collect feedback; developer chooses what runs.</li>
+<li><code>scheduled_batch</code>: run daily, weekly, monthly, or on a custom cron.</li>
+<li><code>threshold_based</code>: run when a cluster reaches enough users, severity, impact,</li>
+<p>or confidence.</p>
+<li><code>immediate_safe_lane</code>: allow tiny low-risk items to run as they arrive.</li>
+<li><code>hybrid</code>: combine modes by category and risk tier.</li>
+</ul>
+<p>Execution cadence helps with:</p>
+<ul>
+<li>cost control;</li>
+<li>avoiding noisy PR spam;</li>
+<li>batching similar feedback;</li>
+<li>giving demand time to accumulate;</li>
+<li>letting indie founders work in product cycles;</li>
+<li>preventing agents from thrashing on one-off requests.</li>
+</ul>
+<p>Cadence should be configurable by category and risk tier.</p>
+<p>Example:</p>
+<pre><code class="language-yaml">cadence:
+  bug:
+    safe_auto_merge: immediate
+    guarded_auto_merge: daily
+    extra_review: manual
+
+  feature_request:
+    safe_auto_merge: weekly
+    guarded_auto_merge: weekly
+    extra_review: manual
+
+  ux_confusion:
+    safe_auto_merge: daily
+    guarded_auto_merge: weekly</code></pre>
+<p>The admin UI should make pending work visible by queue: immediate, next daily batch, next weekly batch, waiting for threshold, and manual approval.</p>
+<p>Cadence is part of the product operating rhythm. Coding agents are usually task-triggered; this product should let developers run a calm, predictable feedback-to-feature cycle.</p>
+<h2 id="13-demand-thresholds-and-backlog-promotion"><a class="heading-anchor" href="#13-demand-thresholds-and-backlog-promotion" aria-label="Link to 13. Demand Thresholds and Backlog Promotion">#</a>13. Demand Thresholds and Backlog Promotion</h2>
+<p>The product should let developers define how many similar requests it takes to create a backlog item, start planning, or allow implementation.</p>
+<p>Thresholds should be relative to the size and shape of the user base, not only raw request counts. Two similar requests can be meaningful in a 12-person beta and meaningless in a 10,000-user SaaS unless severity is high.</p>
+<p>Threshold inputs:</p>
+<ul>
+<li>raw request count;</li>
+<li>unique requesting users;</li>
+<li>percentage of active users;</li>
+<li>percentage of affected users when known;</li>
+<li>severity;</li>
+<li>paid user or revenue signal;</li>
+<li>strategic category;</li>
+<li>recency;</li>
+<li>confidence;</li>
+<li>estimated cost;</li>
+<li>risk tier.</li>
+</ul>
+<p>Default threshold templates:</p>
+<pre><code class="language-yaml">demand_thresholds:
+  tiny_beta:
+    active_users: &quot;1-50&quot;
+    backlog_candidate:
+      min_unique_users: 2
+    plan_candidate:
+      min_unique_users: 3
+      min_active_user_percent: 10
+    implementation_candidate:
+      min_unique_users: 3
+      min_active_user_percent: 10
+
+  small_app:
+    active_users: &quot;51-500&quot;
+    backlog_candidate:
+      min_unique_users: 2
+    plan_candidate:
+      min_unique_users: 5
+      min_active_user_percent: 3
+    implementation_candidate:
+      min_unique_users: 10
+      min_active_user_percent: 5
+
+  growing_app:
+    active_users: &quot;501-5000&quot;
+    backlog_candidate:
+      min_unique_users: 5
+    plan_candidate:
+      min_unique_users: 15
+      min_active_user_percent: 1
+    implementation_candidate:
+      min_unique_users: 30
+      min_active_user_percent: 2
+
+  larger_indie:
+    active_users: &quot;5000+&quot;
+    backlog_candidate:
+      min_unique_users: 10
+    plan_candidate:
+      min_unique_users: 50
+      min_active_user_percent: 0.5
+    implementation_candidate:
+      min_unique_users: 100
+      min_active_user_percent: 1</code></pre>
+<p>Developers should be able to choose a preset:</p>
+<ul>
+<li>aggressive beta mode;</li>
+<li>balanced;</li>
+<li>conservative;</li>
+<li>custom.</li>
+</ul>
+<p>The product can also compute a demand score:</p>
+<pre><code class="language-text">demand_score =
+  unique_requesting_users
+  + active_user_percentage
+  + severity
+  + paid_user_or_revenue_signal
+  + strategic_category
+  + recency
+  - estimated_cost
+  - risk</code></pre>
+<p>Promotion behavior:</p>
+<ul>
+<li>below threshold: store and cluster only;</li>
+<li>backlog threshold: visible backlog candidate;</li>
+<li>planning threshold: eligible for agent research/planning;</li>
+<li>implementation threshold: eligible for agent work if guardrails, cost caps,</li>
+<p>and cadence allow;</p>
+<li>severe bug, security, privacy, crash, or data-loss signal: bypass demand</li>
+<p>thresholds and route immediately, while still respecting risk gates.</p>
+</ul>
+<p>The admin UI should show why an item is or is not promoted: &quot;2 of 5 requests needed&quot;, &quot;3.2% of active users&quot;, &quot;blocked by cost cap&quot;, or &quot;bypassed threshold because severity is critical.&quot;</p>
+<h2 id="14-privacy-and-safety-requirements"><a class="heading-anchor" href="#14-privacy-and-safety-requirements" aria-label="Link to 14. Privacy and Safety Requirements">#</a>14. Privacy and Safety Requirements</h2>
+<ul>
+<li>Raw feedback stays in the product database.</li>
+<li>GitHub only receives sanitized summaries.</li>
+<li>Prompts sent to agents must be sanitized.</li>
+<li>Secrets, credentials, PII, screenshots, transcripts, and private support</li>
+<p>context must be redacted before GitHub or agent handoff.</p>
+<li>The system should store why something was not built.</li>
+<li>Privacy/safety-blocked items should not auto-reopen from demand alone.</li>
+<li>Generated PRs must be clearly labeled as agent-created.</li>
+<li>All destructive operations must be opt-in and scoped.</li>
+</ul>
+<h2 id="15-operational-security-and-governance-requirements"><a class="heading-anchor" href="#15-operational-security-and-governance-requirements" aria-label="Link to 15. Operational, Security, and Governance Requirements">#</a>15. Operational, Security, and Governance Requirements</h2>
+<h3 id="15-1-runner-sandbox-and-code-execution"><a class="heading-anchor" href="#15-1-runner-sandbox-and-code-execution" aria-label="Link to 15.1 Runner Sandbox and Code Execution">#</a>15.1 Runner Sandbox and Code Execution</h3>
+<p>The highest-risk surface is not the feedback API. It is letting agents clone repos, install dependencies, run tests, and execute commands.</p>
+<p>Agent runners must have a strict sandbox story:</p>
+<ul>
+<li>no broad secrets by default;</li>
+<li>isolated workspaces per run;</li>
+<li>ephemeral worktrees or containers where possible;</li>
+<li>controlled network egress;</li>
+<li>explicit allowlist/denylist for dangerous commands;</li>
+<li>no direct access to production databases by default;</li>
+<li>no direct writes to default branches;</li>
+<li>no deployment credentials unless the release step explicitly needs them;</li>
+<li>artifact and workspace cleanup;</li>
+<li>immutable run logs and audit events;</li>
+<li>clear display of what code and commands ran.</li>
+</ul>
+<p>Repo code executed during installs/tests should be treated as untrusted. The runner must assume package scripts, test setup, and local tooling can execute arbitrary code.</p>
+<h3 id="15-2-open-source-governance"><a class="heading-anchor" href="#15-2-open-source-governance" aria-label="Link to 15.2 Open-Source Governance">#</a>15.2 Open-Source Governance</h3>
+<p>If the product is meant to spread through open source, the repository must communicate trust from day one.</p>
+<p>Launch governance should include:</p>
+<ul>
+<li>license;</li>
+<li>contribution guide;</li>
+<li>code of conduct;</li>
+<li>security disclosure policy;</li>
+<li>issue templates;</li>
+<li>PR templates;</li>
+<li>public roadmap;</li>
+<li>release notes;</li>
+<li>threat model;</li>
+<li>&quot;safe agent patterns&quot; philosophy;</li>
+<li>clear maintainer boundaries.</li>
+</ul>
+<p>The project should avoid normalizing unsafe agent patterns, even when they make demos look faster.</p>
+<h3 id="15-3-admin-auth-and-roles"><a class="heading-anchor" href="#15-3-admin-auth-and-roles" aria-label="Link to 15.3 Admin Auth and Roles">#</a>15.3 Admin Auth and Roles</h3>
+<p>The admin UI needs roles, even for small teams.</p>
+<p>Suggested roles:</p>
+<ul>
+<li>owner: all settings, billing, secrets, and destructive controls;</li>
+<li>developer: work items, queues, PRs, agent runs, and approvals;</li>
+<li>reviewer: review gates and approval decisions;</li>
+<li>viewer: read-only dashboard access;</li>
+<li>billing/admin: cost, billing, and provider configuration;</li>
+<li>privacy/admin: raw feedback access and retention controls.</li>
+</ul>
+<p>Permissions should control:</p>
+<ul>
+<li>who can change policies;</li>
+<li>who can enable real agent execution;</li>
+<li>who can approve agent runs;</li>
+<li>who can view raw feedback;</li>
+<li>who can view or rotate secrets;</li>
+<li>who can toggle the kill switch;</li>
+<li>who can delete or export data.</li>
+</ul>
+<h3 id="15-4-data-retention-and-deletion"><a class="heading-anchor" href="#15-4-data-retention-and-deletion" aria-label="Link to 15.4 Data Retention and Deletion">#</a>15.4 Data Retention and Deletion</h3>
+<p>Developers need control over how long raw feedback and derived data are kept.</p>
+<p>The product should support:</p>
+<ul>
+<li>raw feedback retention windows;</li>
+<li>automatic raw payload purging;</li>
+<li>keeping aggregate demand counts after raw data deletion;</li>
+<li>user deletion requests;</li>
+<li>workspace deletion;</li>
+<li>export;</li>
+<li>backup and restore;</li>
+<li>audit-safe deletion records;</li>
+<li>retention policies by signal source.</li>
+</ul>
+<p>Privacy-sensitive products should be able to purge raw feedback while keeping sanitized clusters, demand counts, and product decision history.</p>
+<h3 id="15-5-rollback-and-failure-handling"><a class="heading-anchor" href="#15-5-rollback-and-failure-handling" aria-label="Link to 15.5 Rollback and Failure Handling">#</a>15.5 Rollback and Failure Handling</h3>
+<p>The system needs a path for bad agent changes.</p>
+<p>Required capabilities:</p>
+<ul>
+<li>failed-run classification;</li>
+<li>automatic pause when failure rates spike;</li>
+<li>rollback/incident state on work items;</li>
+<li>revert PR creation;</li>
+<li>release rollback tracking;</li>
+<li>user notification correction when needed;</li>
+<li>post-merge monitoring hook;</li>
+<li>incident pause mode;</li>
+<li>root-cause notes for agent failure.</li>
+</ul>
+<p>The admin UI should make it obvious when an agent change merged but failed to deploy, was rolled back, or needs human intervention.</p>
+<h3 id="15-6-feature-flags-and-gradual-rollout"><a class="heading-anchor" href="#15-6-feature-flags-and-gradual-rollout" aria-label="Link to 15.6 Feature Flags and Gradual Rollout">#</a>15.6 Feature Flags and Gradual Rollout</h3>
+<p>The product should support staged rollout rather than assuming every merged feature reaches every user immediately.</p>
+<p>Potential integrations:</p>
+<ul>
+<li>feature flag providers;</li>
+<li>app-specific rollout APIs;</li>
+<li>beta cohorts;</li>
+<li>&quot;ship to requesting users first&quot;;</li>
+<li>percentage rollout;</li>
+<li>kill switch per shipped feature;</li>
+<li>rollout metrics tied to usage tracking.</li>
+</ul>
+<p>This is especially important when feature usage attribution is enabled. The system should know who was exposed before judging whether a shipped feature was used.</p>
+<h3 id="15-7-product-strategy-override"><a class="heading-anchor" href="#15-7-product-strategy-override" aria-label="Link to 15.7 Product Strategy Override">#</a>15.7 Product Strategy Override</h3>
+<p>Demand should inform product decisions, not blindly drive them.</p>
+<p>Developers need strategy controls:</p>
+<ul>
+<li>founder bet;</li>
+<li>strategic priority;</li>
+<li>wrong customer segment;</li>
+<li>never build;</li>
+<li>defer until later;</li>
+<li>needs research;</li>
+<li>duplicate of broader initiative;</li>
+<li>blocked by business model;</li>
+<li>blocked by brand/product direction.</li>
+</ul>
+<p>The system should let developers override demand-driven recommendations and store the reason. Repeated future demand can still surface reconsideration candidates unless the category is configured as non-reopenable.</p>
+<h3 id="15-8-multi-model-deliberation"><a class="heading-anchor" href="#15-8-multi-model-deliberation" aria-label="Link to 15.8 Multi-Model Deliberation">#</a>15.8 Multi-Model Deliberation</h3>
+<p>The product should support optional multi-model deliberation for decisions that benefit from more than one model perspective.</p>
+<p>OpenRouter Fusion is the first concrete candidate for this lane. The work router should be able to escalate a sanitized work item to Fusion when:</p>
+<ul>
+<li>confidence is low;</li>
+<li>risk is high;</li>
+<li>user demand is high but product fit is unclear;</li>
+<li>a reviewer agent disagrees with an implementation agent;</li>
+<li>a feature is expensive enough that better planning could prevent wasted work;</li>
+<li>a not-planned decision needs a stronger explanation.</li>
+</ul>
+<p>Fusion output should be stored as advisory evidence, not as an automatic decision. The work router remains responsible for final state transitions, budget enforcement, user-facing status, and whether an agent run starts.</p>
+<h3 id="15-9-agent-quality-evaluation"><a class="heading-anchor" href="#15-9-agent-quality-evaluation" aria-label="Link to 15.9 Agent Quality Evaluation">#</a>15.9 Agent Quality Evaluation</h3>
+<p>The product should evaluate agent quality over time.</p>
+<p>Reports should include:</p>
+<ul>
+<li>PR acceptance rate;</li>
+<li>PR merge rate;</li>
+<li>rollback rate;</li>
+<li>review findings per PR;</li>
+<li>failed checks;</li>
+<li>repeated retries;</li>
+<li>cost per merged PR;</li>
+<li>time to PR;</li>
+<li>time to accepted PR;</li>
+<li>model/provider performance by category;</li>
+<li>which agent/model/effort combinations perform best;</li>
+<li>failure patterns by repo and task type.</li>
+</ul>
+<p>This should feed the work router so low-risk tasks can use cheaper models while risky tasks receive stronger models and stricter review.</p>
+<h3 id="15-10-integration-surface-and-webhooks"><a class="heading-anchor" href="#15-10-integration-surface-and-webhooks" aria-label="Link to 15.10 Integration Surface and Webhooks">#</a>15.10 Integration Surface and Webhooks</h3>
+<p>V1 should expose outbound webhooks, even if native integrations come later.</p>
+<p>Webhook events:</p>
+<ul>
+<li>feedback received;</li>
+<li>cluster promoted;</li>
+<li>work item planned;</li>
+<li>issue created;</li>
+<li>agent run started/completed/failed;</li>
+<li>PR opened/merged/closed;</li>
+<li>deployment detected;</li>
+<li>feature exposed/used;</li>
+<li>user notified;</li>
+<li>work blocked by policy;</li>
+<li>threshold reached;</li>
+<li>spend threshold reached.</li>
+</ul>
+<p>Webhooks let indie developers connect Slack, Discord, Linear, Jira, PostHog, Sentry, email, or their own scripts without waiting for native integrations.</p>
+<h3 id="15-11-config-versioning-and-upgrades"><a class="heading-anchor" href="#15-11-config-versioning-and-upgrades" aria-label="Link to 15.11 Config Versioning and Upgrades">#</a>15.11 Config Versioning and Upgrades</h3>
+<p>Self-hosted users need safe upgrades.</p>
+<p>Required:</p>
+<ul>
+<li>versioned config schema;</li>
+<li>migration commands;</li>
+<li>backup before migration;</li>
+<li>deprecated setting detection;</li>
+<li>doctor checks;</li>
+<li>policy validation;</li>
+<li>rollback guidance;</li>
+<li>changelog with breaking changes;</li>
+<li>compatibility checks for agents, gateways, and database migrations.</li>
+</ul>
+<p>Upgrades must not silently weaken security policies, broaden agent access, or turn on real execution.</p>
+<h2 id="16-open-source-launch-strategy"><a class="heading-anchor" href="#16-open-source-launch-strategy" aria-label="Link to 16. Open-Source Launch Strategy">#</a>16. Open-Source Launch Strategy</h2>
+<p>The open-source repo should be useful without the hosted product.</p>
+<p>Launch package:</p>
+<ul>
+<li>one-command local setup;</li>
+<li>sample app;</li>
+<li>sample GitHub repo flow;</li>
+<li>local control center;</li>
+<li>Codex-based runner;</li>
+<li>GitHub token setup;</li>
+<li>Postgres Docker compose;</li>
+<li>demo feedback items;</li>
+<li>security disclosure policy and threat model;</li>
+<li>README with a short video/GIF.</li>
+</ul>
+<p>The viral demo:</p>
+<ol>
+<li>Run the sample app.</li>
+<li>Submit feedback as a beta user.</li>
+<li>Watch it appear in the control center.</li>
+<li>See it become a GitHub issue.</li>
+<li>Watch the agent open a PR.</li>
+<li>Merge/deploy.</li>
+<li>See the user-facing status change to shipped.</li>
+</ol>
+<p>The story should be simple:</p>
+<blockquote>Your beta users do not just file feedback. They start a safe, observable</blockquote>
+<blockquote>feature-creation loop.</blockquote>
+<h2 id="17-installation-and-admin-ui"><a class="heading-anchor" href="#17-installation-and-admin-ui" aria-label="Link to 17. Installation and Admin UI">#</a>17. Installation and Admin UI</h2>
+<p>Installation has to be stupid easy without becoming a security nightmare. OpenClaw-style virality proves that developers will try magical agent tools, but the product should avoid hard installation, unclear privileges, and unsafe defaults.</p>
+<p>The product should optimize for:</p>
+<ul>
+<li>two-minute demo value;</li>
+<li>clear upgrade path from demo to production;</li>
+<li>strict security defaults;</li>
+<li>easy maintenance;</li>
+<li>obvious visibility into what agents can access and do.</li>
+</ul>
+<h3 id="17-1-installation-paths"><a class="heading-anchor" href="#17-1-installation-paths" aria-label="Link to 17.1 Installation Paths">#</a>17.1 Installation Paths</h3>
+<h4 id="demo-mode"><a class="heading-anchor" href="#demo-mode" aria-label="Link to Demo Mode">#</a>Demo Mode</h4>
+<p>Demo mode should require no real GitHub mutations, no production secrets, and no model spend.</p>
+<p>Example target flow:</p>
+<pre><code class="language-bash">npx create-feedback-factory
+cd my-feedback-factory
+pnpm demo</code></pre>
+<p>It should launch:</p>
+<ul>
+<li>sample app;</li>
+<li>local control center;</li>
+<li>local API;</li>
+<li>fake or seeded feedback;</li>
+<li>simulated agent run;</li>
+<li>simulated PR lifecycle;</li>
+<li>user-facing status updates.</li>
+</ul>
+<p>This is the viral path. A developer should understand the product loop in a few minutes before connecting real infrastructure.</p>
+<h4 id="indie-self-hosted-mode"><a class="heading-anchor" href="#indie-self-hosted-mode" aria-label="Link to Indie Self-Hosted Mode">#</a>Indie Self-Hosted Mode</h4>
+<p>Self-hosted mode should work on common indie-friendly infrastructure.</p>
+<p>Targets:</p>
+<ul>
+<li>Docker Compose;</li>
+<li>Railway template;</li>
+<li>Render/Fly/DigitalOcean/VPS deployment;</li>
+<li>optional GitHub Actions runner for implementation work.</li>
+</ul>
+<p>It should include:</p>
+<ul>
+<li>API service;</li>
+<li>worker service;</li>
+<li>database;</li>
+<li>queue if needed;</li>
+<li>control center;</li>
+<li>optional model gateway adapter;</li>
+<li>setup wizard for GitHub and model/provider credentials.</li>
+</ul>
+<p>The happy path should be: copy environment variables, run one command, open the admin UI, and complete a setup checklist.</p>
+<h4 id="local-device-testing-mode"><a class="heading-anchor" href="#local-device-testing-mode" aria-label="Link to Local Device Testing Mode">#</a>Local Device Testing Mode</h4>
+<p>Developers should be able to run the product locally in Docker and test it from real devices before deploying it.</p>
+<p>Docker Compose should be able to run:</p>
+<ul>
+<li>feedback API;</li>
+<li>worker;</li>
+<li>database;</li>
+<li>queue if needed;</li>
+<li>control center UI;</li>
+<li>optional model gateway.</li>
+</ul>
+<p>Supported local exposure modes:</p>
+<ul>
+<li><code>localhost</code>: safest default for browser-only demo;</li>
+<li><code>lan</code>: test from another device on the same Wi-Fi network;</li>
+<li><code>tailscale</code>: private testing from a phone, laptop, or remote device on the</li>
+<p>developer's tailnet;</p>
+<li><code>tunnel</code>: temporary public testing through tools such as ngrok or Cloudflare</li>
+<p>Tunnel;</p>
+<li><code>production</code>: hosted domain with proper TLS and production secrets.</li>
+</ul>
+<p>Example local-device path:</p>
+<pre><code class="language-text">iPhone beta app -&gt; Tailscale URL -&gt; local Docker feedback API -&gt; local DB</code></pre>
+<p>Security defaults:</p>
+<ul>
+<li>local Docker binds to <code>127.0.0.1</code> by default;</li>
+<li>LAN, Tailscale, and tunnel exposure require explicit enabling;</li>
+<li>the admin UI clearly shows when the instance is reachable beyond localhost;</li>
+<li>temporary tunnel URLs should be treated as development-only;</li>
+<li>production mode should require a real domain, TLS, backups, and production</li>
+<p>secrets.</p>
+</ul>
+<h4 id="production-mode"><a class="heading-anchor" href="#production-mode" aria-label="Link to Production Mode">#</a>Production Mode</h4>
+<p>Production mode adds stricter controls and operational tooling.</p>
+<p>Required:</p>
+<ul>
+<li>GitHub App rather than broad personal access token as the preferred path;</li>
+<li>narrow repository permissions;</li>
+<li>separate runner secrets;</li>
+<li>database backups;</li>
+<li>migrations;</li>
+<li>health checks;</li>
+<li>audit logs;</li>
+<li>policy-as-code;</li>
+<li>global pause/kill switch;</li>
+<li>upgrade and rollback guidance.</li>
+</ul>
+<h3 id="17-2-admin-ui-onboarding"><a class="heading-anchor" href="#17-2-admin-ui-onboarding" aria-label="Link to 17.2 Admin UI Onboarding">#</a>17.2 Admin UI Onboarding</h3>
+<p>The admin UI should be wizard-driven.</p>
+<p>Setup steps:</p>
+<ol>
+<li>Connect GitHub repo.</li>
+<li>Choose install mode: dry-run, PR-only, guarded auto-merge.</li>
+<li>Add model provider, OpenRouter key, Requesty key, or model gateway.</li>
+<li>Set cost caps.</li>
+<li>Pick guardrail template: web app, iOS app, SaaS app, or open-source</li>
+<p>library.</p>
+<li>Choose execution cadence: manual, immediate safe lane, daily batch, weekly</li>
+<p>batch, threshold-based, or hybrid.</p>
+<li>Choose demand threshold preset: aggressive beta, balanced, conservative, or</li>
+<p>custom.</p>
+<li>Install SDK snippet.</li>
+<li>Submit test feedback.</li>
+<li>Watch a dry-run issue/PR simulation.</li>
+<li>Explicitly enable real agent execution.</li>
+</ol>
+<p>The default path should start in dry-run. Real GitHub mutations and real model spend should require explicit enabling.</p>
+<h3 id="17-3-admin-ui-control-surfaces"><a class="heading-anchor" href="#17-3-admin-ui-control-surfaces" aria-label="Link to 17.3 Admin UI Control Surfaces">#</a>17.3 Admin UI Control Surfaces</h3>
+<p>The admin UI should always answer:</p>
+<ul>
+<li>What is connected?</li>
+<li>What can agents access?</li>
+<li>What did agents do?</li>
+<li>What did it cost?</li>
+<li>What is blocked and why?</li>
+<li>What is queued and when will it run?</li>
+<li>What is below threshold and how close is it?</li>
+<li>What needs approval?</li>
+<li>What reached users?</li>
+<li>What were users told?</li>
+<li>What is paused or unhealthy?</li>
+</ul>
+<p>Core admin views:</p>
+<ul>
+<li>setup checklist;</li>
+<li>overview;</li>
+<li>feedback inbox;</li>
+<li>demand and backlog;</li>
+<li>queues;</li>
+<li>work items;</li>
+<li>agent runs;</li>
+<li>cost center;</li>
+<li>releases;</li>
+<li>policies;</li>
+<li>integrations health;</li>
+<li>OpenRouter provider health when configured;</li>
+<li>Requesty gateway health when configured;</li>
+<li>Codex capability health;</li>
+<li>user follow-up tracker;</li>
+<li>audit log;</li>
+<li>reports;</li>
+<li>maintenance/doctor page.</li>
+</ul>
+<p>The admin UI should be the mission control and audit room for the product. A developer should be able to understand the whole system without reading server logs.</p>
+<h4 id="overview"><a class="heading-anchor" href="#overview" aria-label="Link to Overview">#</a>Overview</h4>
+<p>The overview should show:</p>
+<ul>
+<li>current feedback volume;</li>
+<li>queued work;</li>
+<li>backlog candidates;</li>
+<li>active agent runs;</li>
+<li>open PRs;</li>
+<li>blocked items;</li>
+<li>spend today/week/month;</li>
+<li>shipped items this week;</li>
+<li>shipped-feature usage and adoption;</li>
+<li>unhealthy integrations.</li>
+</ul>
+<h4 id="provider-and-gateway-health"><a class="heading-anchor" href="#provider-and-gateway-health" aria-label="Link to Provider And Gateway Health">#</a>Provider And Gateway Health</h4>
+<p>Provider and gateway health views should show:</p>
+<ul>
+<li>configured direct providers;</li>
+<li>configured managed gateways;</li>
+<li>active base URL or endpoint region;</li>
+<li>API key status;</li>
+<li>approved or allowed model list;</li>
+<li>fallback and routing policy status;</li>
+<li>OpenRouter Fusion availability and selected default preset when configured;</li>
+<li>spend limit status;</li>
+<li>tool-calling support by selected model;</li>
+<li>recent provider errors, timeouts, and fallbacks.</li>
+</ul>
+<p>When Requesty is configured, the view should make the selected Requesty base URL, approved models, fallback policy, spend caps, EU routing mode, and recent analytics sync state visible without requiring the developer to open the Requesty dashboard for basic diagnosis.</p>
+<h4 id="feedback-inbox"><a class="heading-anchor" href="#feedback-inbox" aria-label="Link to Feedback Inbox">#</a>Feedback Inbox</h4>
+<p>The feedback inbox should show:</p>
+<ul>
+<li>raw/private feedback access, gated by permissions;</li>
+<li>sanitized summary;</li>
+<li>source app/version/user segment;</li>
+<li>severity;</li>
+<li>category;</li>
+<li>cluster assignment;</li>
+<li>user-facing status;</li>
+<li>whether the user was notified.</li>
+</ul>
+<h4 id="demand-and-backlog"><a class="heading-anchor" href="#demand-and-backlog" aria-label="Link to Demand and Backlog">#</a>Demand and Backlog</h4>
+<p>The demand/backlog view should show:</p>
+<ul>
+<li>clusters by request count;</li>
+<li>unique requesting users;</li>
+<li>percentage of active users;</li>
+<li>threshold progress;</li>
+<li>backlog candidates;</li>
+<li>reconsideration candidates;</li>
+<li>demand trend over time;</li>
+<li>estimated impact;</li>
+<li>post-ship usage impact where available;</li>
+<li>users or segments whose requests tend to produce highly used features.</li>
+</ul>
+<h4 id="queues"><a class="heading-anchor" href="#queues" aria-label="Link to Queues">#</a>Queues</h4>
+<p>The queue view should show:</p>
+<ul>
+<li>immediate queue;</li>
+<li>daily/weekly/monthly batch queues;</li>
+<li>threshold queue;</li>
+<li>manual approval queue;</li>
+<li>blocked-by-policy queue;</li>
+<li>next scheduled run;</li>
+<li>why each item is queued or held.</li>
+</ul>
+<h4 id="work-items"><a class="heading-anchor" href="#work-items" aria-label="Link to Work Items">#</a>Work Items</h4>
+<p>The work item view should show:</p>
+<ul>
+<li>status machine state;</li>
+<li>GitHub issue/PR;</li>
+<li>assigned agent/router decision;</li>
+<li>risk tier;</li>
+<li>guardrails applied;</li>
+<li>cost estimate;</li>
+<li>actual cost;</li>
+<li>post-ship feature usage;</li>
+<li>cost per activated user;</li>
+<li>timeline.</li>
+</ul>
+<h4 id="agent-runs"><a class="heading-anchor" href="#agent-runs" aria-label="Link to Agent Runs">#</a>Agent Runs</h4>
+<p>The agent run view should show every agent invocation:</p>
+<ul>
+<li>provider/model/effort;</li>
+<li>prompt version or sanitized prompt reference;</li>
+<li>sanitized input reference;</li>
+<li>tools used;</li>
+<li>files changed;</li>
+<li>checks run;</li>
+<li>result;</li>
+<li>tokens/cost;</li>
+<li>duration;</li>
+<li>retry count;</li>
+<li>failure reason.</li>
+</ul>
+<p>Raw prompts and raw private feedback should not be exposed by default.</p>
+<h4 id="cost-center"><a class="heading-anchor" href="#cost-center" aria-label="Link to Cost Center">#</a>Cost Center</h4>
+<p>The cost center should show:</p>
+<ul>
+<li>cost per feature;</li>
+<li>cost by model/provider;</li>
+<li>cost by gateway or direct provider path;</li>
+<li>cost by deliberation lane, including OpenRouter Fusion panel and judge costs;</li>
+<li>cost by stage: triage, planning, build, review, release;</li>
+<li>estimate vs actual;</li>
+<li>cost per requesting user;</li>
+<li>daily/weekly/monthly budget;</li>
+<li>projected monthly spend;</li>
+<li>prevented spend from guardrails.</li>
+</ul>
+<p>When Requesty is configured, the cost center should reconcile internal run costs with Requesty usage analytics where possible, including request count, tokens, cache savings, fallback behavior, and spend by model or routing policy.</p>
+<p>When OpenRouter Fusion is configured, the cost center should show the panel models, judge model, estimated versus actual Fusion cost, latency, invocation reason, and whether the fused result changed a triage, planning, review, or release decision.</p>
+<h4 id="releases"><a class="heading-anchor" href="#releases" aria-label="Link to Releases">#</a>Releases</h4>
+<p>The release view should show:</p>
+<ul>
+<li>what merged;</li>
+<li>what deployed;</li>
+<li>what reached users;</li>
+<li>TestFlight/App Store/web deployment state when available;</li>
+<li>release failures;</li>
+<li>rollback state;</li>
+<li>users notified;</li>
+<li>feature exposure and usage after release.</li>
+</ul>
+<h4 id="feature-impact"><a class="heading-anchor" href="#feature-impact" aria-label="Link to Feature Impact">#</a>Feature Impact</h4>
+<p>The feature impact view should show:</p>
+<ul>
+<li>shipped features linked to original feedback clusters;</li>
+<li>requesting users;</li>
+<li>exposed users;</li>
+<li>activated users;</li>
+<li>repeat users;</li>
+<li>usage count;</li>
+<li>request-to-usage conversion;</li>
+<li>cost per activated user;</li>
+<li>user segments that predicted broader usage;</li>
+<li>shipped features with low adoption;</li>
+<li>high-usage features that should influence future prioritization.</li>
+</ul>
+<p>This should be an internal developer view, not a public user leaderboard.</p>
+<h4 id="policies"><a class="heading-anchor" href="#policies" aria-label="Link to Policies">#</a>Policies</h4>
+<p>The policy view should show and edit:</p>
+<ul>
+<li>guardrails;</li>
+<li>cost caps;</li>
+<li>cadence;</li>
+<li>thresholds;</li>
+<li>protected paths;</li>
+<li>roles and permissions;</li>
+<li>retention settings;</li>
+<li>rollout settings;</li>
+<li>auto-merge rules;</li>
+<li>model/router rules;</li>
+<li>approval rules.</li>
+</ul>
+<h4 id="audit-log"><a class="heading-anchor" href="#audit-log" aria-label="Link to Audit Log">#</a>Audit Log</h4>
+<p>The audit log should record every meaningful system event:</p>
+<ul>
+<li>feedback received;</li>
+<li>feedback sanitized;</li>
+<li>feedback clustered;</li>
+<li>decision made;</li>
+<li>issue created;</li>
+<li>agent started/stopped;</li>
+<li>policy blocked;</li>
+<li>PR opened/merged/closed;</li>
+<li>deploy detected;</li>
+<li>user notified;</li>
+<li>settings changed;</li>
+<li>credentials changed;</li>
+<li>retention/deletion action;</li>
+<li>role or permission changed;</li>
+<li>kill switch toggled.</li>
+</ul>
+<p>Audit entries should be append-only and filterable by work item, user, agent run, policy, integration, and time range.</p>
+<h4 id="reports"><a class="heading-anchor" href="#reports" aria-label="Link to Reports">#</a>Reports</h4>
+<p>Reports should be simple enough for indie developers to use weekly:</p>
+<ul>
+<li>what users asked for this week;</li>
+<li>what shipped because of feedback;</li>
+<li>what the system said no to;</li>
+<li>what agents cost;</li>
+<li>which shipped feedback produced real usage;</li>
+<li>which users or segments suggested high-impact features;</li>
+<li>what is waiting on the developer;</li>
+<li>what is becoming popular;</li>
+<li>where agents are failing;</li>
+<li>which requests are closest to threshold.</li>
+<li>which agent/model combinations are performing best.</li>
+</ul>
+<p>The admin UI should show the whole causal chain:</p>
+<pre><code class="language-text">user asked -&gt; system decided -&gt; agent worked -&gt; PR shipped -&gt; user notified
+-&gt; cost recorded</code></pre>
+<h3 id="17-4-security-defaults"><a class="heading-anchor" href="#17-4-security-defaults" aria-label="Link to 17.4 Security Defaults">#</a>17.4 Security Defaults</h3>
+<p>Default behavior must be conservative:</p>
+<ul>
+<li>dry-run by default;</li>
+<li>no direct commits to <code>main</code>;</li>
+<li>no auto-merge until enabled;</li>
+<li>GitHub App preferred over broad personal access token;</li>
+<li>raw feedback never sent to GitHub by default;</li>
+<li>raw feedback never sent to agent prompts by default;</li>
+<li>secrets and PII redacted from prompts/logs;</li>
+<li>auth, billing, privacy, legal, data deletion, encryption, infra,</li>
+<p>permissions, and production-release code are review-only or blocked by default;</p>
+<li>agent work happens in isolated temporary workspaces;</li>
+<li>all generated branches and PRs are clearly labeled;</li>
+<li>global pause button;</li>
+<li>per-run and monthly budget caps;</li>
+<li>full audit log for policy decisions and agent actions.</li>
+</ul>
+<h3 id="17-5-maintenance-commands"><a class="heading-anchor" href="#17-5-maintenance-commands" aria-label="Link to 17.5 Maintenance Commands">#</a>17.5 Maintenance Commands</h3>
+<p>The CLI should make maintenance boring.</p>
+<p>Target commands:</p>
+<pre><code class="language-bash">feedback-factory doctor
+feedback-factory upgrade
+feedback-factory migrate
+feedback-factory backup
+feedback-factory verify-security
+feedback-factory validate-config
+feedback-factory demo</code></pre>
+<p>The product should prefer boring, explicit maintenance over hidden magic.</p>
+<h2 id="18-hosted-product-strategy"><a class="heading-anchor" href="#18-hosted-product-strategy" aria-label="Link to 18. Hosted Product Strategy">#</a>18. Hosted Product Strategy</h2>
+<p>The hosted product can monetize convenience, reliability, and trust.</p>
+<p>Potential paid features:</p>
+<ul>
+<li>hosted control plane;</li>
+<li>hosted runners;</li>
+<li>GitHub App installation;</li>
+<li>managed secrets;</li>
+<li>managed guardrail and budget policy templates;</li>
+<li>team roles;</li>
+<li>managed backups and retention policies;</li>
+<li>webhook delivery logs;</li>
+<li>feature flag/rollout integrations;</li>
+<li>higher run concurrency;</li>
+<li>release tracking integrations;</li>
+<li>advanced cost analytics;</li>
+<li>agent quality analytics;</li>
+<li>Slack/Discord/email notifications;</li>
+<li>custom domains/status pages;</li>
+<li>priority support.</li>
+</ul>
+<p>The open-source product should remain credible and useful. The hosted product should win on setup, reliability, observability, and scale.</p>
+<h2 id="19-mvp-requirements"><a class="heading-anchor" href="#19-mvp-requirements" aria-label="Link to 19. MVP Requirements">#</a>19. MVP Requirements</h2>
+<h3 id="must-have"><a class="heading-anchor" href="#must-have" aria-label="Link to Must Have">#</a>Must Have</h3>
+<ul>
+<li>Web SDK feedback submission.</li>
+<li>API with feedback, work item, run, and cost tables.</li>
+<li>Control center showing queue, status, PRs, cost, and decisions.</li>
+<li>Wizard-driven setup and strict dry-run default.</li>
+<li>Triage and dedupe.</li>
+<li>Sanitized GitHub issue creation.</li>
+<li>Owned work router for risk, budget, agent, and merge decisions.</li>
+<li>Configurable execution cadence and queue modes.</li>
+<li>Demand thresholds for backlog, planning, and implementation promotion.</li>
+<li>Local or GitHub Actions runner that can run Codex noninteractively.</li>
+<li>Developer-configurable guardrails and cost caps.</li>
+<li>Strict runner sandbox and command/network controls.</li>
+<li>Basic admin roles.</li>
+<li>Audit log.</li>
+<li>PR creation.</li>
+<li>Basic reviewer gate.</li>
+<li>Estimated and actual cost capture.</li>
+<li>User-safe status endpoint.</li>
+<li>Optional feature usage tracking and feedback-impact attribution.</li>
+<li>Demo app and seed scenario.</li>
+<li>Maintenance/doctor command.</li>
+<li>Versioned config and migration path.</li>
+</ul>
+<h3 id="should-have"><a class="heading-anchor" href="#should-have" aria-label="Link to Should Have">#</a>Should Have</h3>
+<ul>
+<li>iOS SDK/example.</li>
+<li>Error capture.</li>
+<li>Release/deploy tracking.</li>
+<li>Feature exposure/usage/outcome tracking.</li>
+<li>Data retention controls.</li>
+<li>Rollback/revert workflow.</li>
+<li>Outbound webhooks.</li>
+<li>Reconsideration thresholds for repeated requests.</li>
+<li>Configurable risk policy.</li>
+<li>Guardrail templates for common repo types.</li>
+<li>Per-category cadence templates.</li>
+<li>User-base-size threshold presets.</li>
+<li>Optional model gateway adapter.</li>
+<li>OpenRouter provider support.</li>
+<li>OpenRouter Fusion deliberation lane support.</li>
+<li>Requesty gateway/provider support.</li>
+<li>MCP tool surface for agent-safe access to work items.</li>
+<li>Codex capability health panel.</li>
+<li>GitHub App install path.</li>
+<li>Feature flag/rollout hooks.</li>
+<li>Agent quality reporting.</li>
+<li>OpenTelemetry or similar trace export.</li>
+</ul>
+<h3 id="could-have"><a class="heading-anchor" href="#could-have" aria-label="Link to Could Have">#</a>Could Have</h3>
+<ul>
+<li>Linear sync.</li>
+<li>Jira sync.</li>
+<li>Slack notifications.</li>
+<li>Hosted runner.</li>
+<li>Agent provider marketplace.</li>
+<li>Public changelog widget.</li>
+<li>Feedback voting board.</li>
+</ul>
+<h2 id="20-detailed-requirements-draft"><a class="heading-anchor" href="#20-detailed-requirements-draft" aria-label="Link to 20. Detailed Requirements Draft">#</a>20. Detailed Requirements Draft</h2>
+<p>This section is intentionally rough and expansive. It captures the requirement universe before the official product brainstorm and cleanup pass.</p>
+<h3 id="20-1-product-requirements"><a class="heading-anchor" href="#20-1-product-requirements" aria-label="Link to 20.1 Product Requirements">#</a>20.1 Product Requirements</h3>
+<p>These requirements define the experience and value, independent of implementation details.</p>
+<p>Beta users need a simple way to submit feedback from inside the app. This could be a feedback button, bug report, feature request form, or automatic error capture. It should feel lightweight, not like filing a support ticket.</p>
+<p>Developers need a control center where they can see what users are asking for, how often it has come up, what the system decided, whether an agent is working on it, what PR exists, what it cost, and whether it shipped.</p>
+<p>Every request needs a status. The important thing is that nothing disappears. A request can be shipped, already available, planned, waiting for more signal, blocked, out of scope, not reproducible, or not planned.</p>
+<p>The system must be able to say no. A good product system does not build everything users ask for. It should store the reason and tell the user in a respectful, product-safe way.</p>
+<p>Repeated similar requests should matter. If one user asks for something and it is not planned, that may be fine. If many users ask for the same thing, the system should surface it as a reconsideration candidate.</p>
+<p>Developers need configurable guardrails and cost controls. They should be able to decide which paths, categories, risk levels, models, budgets, and merge behaviors are allowed.</p>
+<p>Developers need configurable execution cadence. They should be able to collect feedback continuously but choose whether agents run manually, immediately for small safe work, on a daily/weekly/monthly batch, or when enough users request the same thing.</p>
+<p>Developers need demand thresholds that scale with their user base. The product should distinguish between one-off feedback, backlog-worthy demand, planning-worthy demand, and implementation-worthy demand.</p>
+<p>Developers need to know which requests created product value after shipping. The system should connect shipped work back to feature exposure, usage, activation, repeat use, and cost per activated user when the SDK integration supports it.</p>
+<p>Developers need strategic override controls so demand does not blindly drive the roadmap. They should be able to mark items as founder bets, strategic priorities, wrong segment, never build, defer, needs research, or blocked by product direction.</p>
+<p>The open-source version must be useful by itself. It cannot feel like fake open source where the real value is locked behind hosting. The hosted version should win on convenience, reliability, and scale.</p>
+<h3 id="20-2-workflow-requirements"><a class="heading-anchor" href="#20-2-workflow-requirements" aria-label="Link to 20.2 Workflow Requirements">#</a>20.2 Workflow Requirements</h3>
+<p>These requirements define the end-to-end pipeline.</p>
+<p>The system ingests feedback from the SDK, API, errors, or manual developer entry.</p>
+<p>It sanitizes feedback before anything leaves the private database. Raw user text may include private details, secrets, screenshots, emotional context, or personal information. GitHub and agents should receive only safe summaries.</p>
+<p>It classifies each request by category, priority, risk, and likely action. For example: bug, feature request, UX confusion, performance issue, privacy concern, or support issue.</p>
+<p>It deduplicates similar requests into clusters. This is how the system knows whether something is a one-off or emerging demand.</p>
+<p>It evaluates each cluster against demand thresholds relative to the active user base, affected user base, severity, paid-user signal, estimated cost, and risk.</p>
+<p>It decides the next action: ignore, wait for more signal, block, create an issue, plan only, or implement.</p>
+<p>It assigns executable work to the correct queue based on developer cadence settings, risk tier, category, demand threshold, and budget policy.</p>
+<p>If the request is safe and actionable, it creates a sanitized GitHub issue with labels, priority, risk tier, and enough context for an agent.</p>
+<p>A planner turns that issue into a PR-sized plan. Broad requests need to be split before implementation.</p>
+<p>An implementation agent runs in an isolated workspace. It should create a branch, edit code, run checks, and never directly touch <code>main</code>.</p>
+<p>The system opens a PR, links it back to the issue and work item, and records actual cost.</p>
+<p>Reviewer agents and CI checks decide whether the PR can merge, needs changes, or must be blocked.</p>
+<p>After merge, release tracking watches whether the change actually reached users. For web this may be deployment status; for iOS this may be TestFlight or App Store status.</p>
+<p>After release, optional SDK events track feature exposure, usage, and outcomes so the system can attribute shipped feature impact back to feedback clusters and requesting users or segments.</p>
+<p>For staged rollouts, the system should know who was exposed before judging feature usage or notifying users that something reached them.</p>
+<p>Finally, the system updates the original user-facing status: shipped, already available, not planned, blocked, needs more signal, or another safe outcome.</p>
+<h3 id="20-3-technical-requirements"><a class="heading-anchor" href="#20-3-technical-requirements" aria-label="Link to 20.3 Technical Requirements">#</a>20.3 Technical Requirements</h3>
+<p>These requirements define the components needed to build the product.</p>
+<p>A web SDK should come first because it is easiest for indie developers to adopt. It should support feedback submission, error capture, and status reads.</p>
+<p>An iOS SDK or example should follow because the story is especially strong for beta mobile apps.</p>
+<p>An API server owns ingestion, auth, sanitization, status reads, control center data, and webhooks.</p>
+<p>The database needs tables for feedback signals, sanitized summaries, clusters, work items, decisions, agent runs, cost estimates, actual cost, policies, GitHub links, release status, feature usage events, impact attribution, and notifications.</p>
+<p>The control center is the developer UI. It shows the queue, clusters, statuses, PRs, agents, costs, guardrails, blocked items, and reconsideration candidates.</p>
+<p>The queue system should support immediate jobs, scheduled batches, threshold queues, manual approval queues, and per-category cadence rules.</p>
+<p>The promotion system should support user-base-size presets and custom thresholds for backlog, planning, and implementation eligibility.</p>
+<p>The GitHub integration should create issues, apply labels, comment status, open PRs, read checks, close resolved issues, and clean up generated branches.</p>
+<p>The agent runner should be abstract. Codex can be first, but the platform should eventually support other agents.</p>
+<p>A Codex runner should use noninteractive runs, structured output, usage capture, and review mode where possible.</p>
+<p>The work router should be owned by this product. It decides risk, budget, agent, model tier, review lanes, merge policy, and whether work runs at all.</p>
+<p>The model gateway should be optional and replaceable. It can use direct providers, managed gateways such as OpenRouter or Requesty, or open-source tools for provider routing, fallbacks, rate limits, and low-level spend logs, but product policy should remain in the work router.</p>
+<p>A policy engine enforces guardrails: allowed files, forbidden files, risk tiers, cost caps, model limits, auto-merge settings, and approval rules.</p>
+<p>A cost system estimates before work starts and records actual spend after completion.</p>
+<p>A queue and worker system runs triage, planning, implementation, review, release tracking, notification, cleanup, and reconciliation.</p>
+<p>Runner infrastructure must isolate code execution, restrict secrets, control network egress, clean up artifacts, and log commands/actions.</p>
+<p>The product should expose outbound webhooks for major lifecycle events.</p>
+<p>Configuration should be versioned, validated, migratable, and safe to upgrade.</p>
+<p>The local demo setup needs to be excellent: one command, sample app, sample feedback, GitHub flow, control center, and visible PR.</p>
+<p>The admin UI should be wizard-driven, start in dry-run, and make security, permissions, cost caps, connected repos, agent access, blocked work, and maintenance health obvious.</p>
+<p>The hosted version later needs multi-tenant auth, billing, hosted workers, team roles, managed secrets, managed backups, and webhook delivery monitoring.</p>
+<h3 id="20-4-trust-safety-and-control-requirements"><a class="heading-anchor" href="#20-4-trust-safety-and-control-requirements" aria-label="Link to 20.4 Trust, Safety, and Control Requirements">#</a>20.4 Trust, Safety, and Control Requirements</h3>
+<p>These requirements make people willing to run the product on their repos.</p>
+<p>Raw feedback must stay private by default. The system can store it internally, but GitHub issues, PRs, CI logs, and agent prompts should receive sanitized context only.</p>
+<p>Feature usage tracking must be optional, configurable, and privacy-safe. It should avoid raw session recordings or sensitive behavior capture by default.</p>
+<p>Secrets and PII must be redacted. This includes tokens, API keys, credentials, emails, phone numbers, private user details, screenshots, transcripts, and sensitive support context.</p>
+<p>Agents must never commit directly to <code>main</code>. They work through branches and PRs.</p>
+<p>Repo code run by agents should be treated as untrusted. Package install scripts, test setup, and project tooling can execute arbitrary code and must be sandboxed accordingly.</p>
+<p>Certain categories should be blocked or review-only by default: auth, billing, privacy, legal, data deletion, encryption, infrastructure, permissions, and production release logic.</p>
+<p>Cost caps must be enforced before and during work. If a feature is estimated above budget, it waits. If actual cost exceeds the configured limit, the system stops or escalates.</p>
+<p>There needs to be an audit trail for every decision: why it was built, blocked, not planned, merged, reopened, or reconsidered.</p>
+<p>Admin auth and roles are required so raw feedback, secrets, policy changes, approvals, deletion, billing, and kill-switch access are not all controlled by one undifferentiated admin permission.</p>
+<p>Data retention and deletion are required so developers can purge raw feedback, delete users/workspaces, and keep aggregate demand history where appropriate.</p>
+<p>The developer needs a kill switch. One control should pause agent execution while still allowing feedback intake.</p>
+<p>Dry-run mode is required. Indie developers should be able to see what would happen before letting agents touch code.</p>
+<p>Cadence controls are required. Developers should be able to pause immediate execution, batch work, or require manual approval without turning off feedback intake.</p>
+<p>Demand thresholds are required. Developers should be able to prevent one-off requests from becoming agent work while still letting severe bugs and high-severity safety/security issues bypass normal demand thresholds.</p>
+<p>Production setup should prefer GitHub Apps and narrow permissions over broad personal access tokens.</p>
+<p>The system needs cleanup and reconciliation. Branches, worktrees, labels, stuck work items, failed runs, and stale PR states should not pile up forever.</p>
+<p>Rollback and failure handling are required. Bad agent changes should be classifiable, revertable, reportable, and able to trigger incident pause mode.</p>
+<p>The user-facing follow-up must be safe and respectful. It should not expose internal GitHub links, raw agent reasoning, other users' requests, or private operational details.</p>
+<p>The concise requirement:</p>
+<blockquote>The product is not just an agent that makes PRs. It is intake, judgment,</blockquote>
+<blockquote>control, cost, implementation, release, rollout, learning, and follow-up.</blockquote>
+<h2 id="21-success-metrics"><a class="heading-anchor" href="#21-success-metrics" aria-label="Link to 21. Success Metrics">#</a>21. Success Metrics</h2>
+<p>Open-source launch:</p>
+<ul>
+<li>stars;</li>
+<li>installs;</li>
+<li>completed demos;</li>
+<li>time to first local demo;</li>
+<li>time to first safe dry-run;</li>
+<li>successful local demos;</li>
+<li>Discord/GitHub discussion activity;</li>
+<li>external demo videos/posts;</li>
+<li>number of repos with the GitHub integration installed.</li>
+</ul>
+<p>Product value:</p>
+<ul>
+<li>feedback-to-issue conversion rate;</li>
+<li>issue-to-PR conversion rate;</li>
+<li>PR merge rate;</li>
+<li>average queue wait time by cadence mode;</li>
+<li>average time from feedback to PR;</li>
+<li>average time from feedback to shipped;</li>
+<li>percentage of users receiving follow-up;</li>
+<li>estimated vs actual cost accuracy;</li>
+<li>reopened/reconsidered requests from repeated demand;</li>
+<li>backlog promotion rate by threshold template;</li>
+<li>implementation promotion rate by threshold template;</li>
+<li>request-to-usage conversion;</li>
+<li>cost per activated user;</li>
+<li>shipped-feature adoption by feedback cluster;</li>
+</ul>
+<p>Trust:</p>
+<ul>
+<li>blocked unsafe handoffs;</li>
+<li>redaction success rate;</li>
+<li>failed/rolled-back agent PRs;</li>
+<li>rollback/revert rate;</li>
+<li>review findings per agent PR;</li>
+<li>cost cap violations;</li>
+<li>sandbox/policy violations blocked;</li>
+<li>webhook delivery success rate;</li>
+<li>config migration success rate;</li>
+<li>agent PR acceptance rate by model/provider;</li>
+<li>agent failure rate by category;</li>
+<li>work items blocked by developer policy;</li>
+<li>estimated spend prevented by policy;</li>
+<li>manual intervention rate.</li>
+</ul>
+<h2 id="22-competitive-landscape"><a class="heading-anchor" href="#22-competitive-landscape" aria-label="Link to 22. Competitive Landscape">#</a>22. Competitive Landscape</h2>
+<h3 id="coding-agents"><a class="heading-anchor" href="#coding-agents" aria-label="Link to Coding agents">#</a>Coding agents</h3>
+<p>GitHub Copilot coding agent, Codex, OpenHands, Devin, Factory Droid, Claude Code, and similar systems can work from tasks or issues and produce code.</p>
+<p>They are not primarily feedback intake, product-decision, cost-accounting, or user-follow-up systems.</p>
+<h3 id="feedback-tools"><a class="heading-anchor" href="#feedback-tools" aria-label="Link to Feedback tools">#</a>Feedback tools</h3>
+<p>Canny, Featurebase, Productboard, Linear Customer Requests, and similar tools capture and organize user feedback.</p>
+<p>They are not primarily agent implementation systems.</p>
+<h3 id="error-tools"><a class="heading-anchor" href="#error-tools" aria-label="Link to Error tools">#</a>Error tools</h3>
+<p>Sentry Seer and similar systems can use production error data to review or fix bugs.</p>
+<p>They are not primarily product-request systems.</p>
+<h3 id="differentiation"><a class="heading-anchor" href="#differentiation" aria-label="Link to Differentiation">#</a>Differentiation</h3>
+<p>This product owns the whole loop between user request and shipped outcome, with an open-source wedge and GitHub-native developer workflow.</p>
+<h2 id="23-open-questions"><a class="heading-anchor" href="#23-open-questions" aria-label="Link to 23. Open Questions">#</a>23. Open Questions</h2>
+<ul>
+<li>What is the product name?</li>
+<li>Should V1 support only Codex, or a pluggable agent interface from day one?</li>
+<li>Should SQLite be part of V1 for dead-simple local setup?</li>
+<li>Should hosted runners exist at launch, or wait until OSS demand is proven?</li>
+<li>Which OSS model gateway should be the default optional adapter, if any?</li>
+<li>Should OpenRouter be a first-class setup option in V1 or a documented</li>
+<p>provider adapter?</p>
+<li>Should OpenRouter Fusion ship as a visible planning/review button in V1 or</li>
+<p>remain an advanced policy option?</p>
+<li>What default Fusion presets should ship for budget, high-quality, and custom</li>
+<p>review lanes?</p>
+<li>Should Requesty be a first-class setup option in V1, especially as a possible</li>
+<p>early partner integration?</p>
+<li>Which install path should be the launch default: Docker Compose, Railway</li>
+<p>template, GitHub Actions, or all three?</p>
+<li>What sandbox model is strict enough for local and hosted agent execution?</li>
+<li>What admin roles should ship in V1?</li>
+<li>What raw feedback retention default should ship in V1?</li>
+<li>Which feature flag/rollout providers should be first-class integrations?</li>
+<li>Which outbound webhook events should ship in V1?</li>
+<li>What execution cadence should be the default for new installs?</li>
+<li>Which demand threshold preset should be the default for new installs?</li>
+<li>What is the default cost cap for indie developers?</li>
+<li>What guardrail templates should ship by default for web apps, iOS apps,</li>
+<p>open-source libraries, and SaaS products?</p>
+<li>What is the minimum useful iOS SDK?</li>
+<li>Should user notifications be owned by the product or exposed as webhook-only</li>
+<p>in V1?</p>
+</ul>
+<h2 id="24-first-demo-script"><a class="heading-anchor" href="#24-first-demo-script" aria-label="Link to 24. First Demo Script">#</a>24. First Demo Script</h2>
+<p>The demo should use a tiny real app, not a mock dashboard.</p>
+<p>Scenario:</p>
+<ol>
+<li>A beta user says: &quot;Please add dark mode to the settings screen.&quot;</li>
+<li>The control center receives and clusters the request.</li>
+<li>The system estimates cost and marks it safe.</li>
+<li>A sanitized GitHub issue is created.</li>
+<li>The agent opens a PR adding dark mode.</li>
+<li>Tests pass.</li>
+<li>The PR merges.</li>
+<li>The demo app deploys.</li>
+<li>The user sees: &quot;Shipped: dark mode is now available in settings.&quot;</li>
+</ol>
+<p>The demo must also show a negative path:</p>
+<ol>
+<li>A user asks for something unsafe or out of scope.</li>
+<li>No GitHub issue is created.</li>
+<li>The request is stored as a decision category.</li>
+<li>The user sees a respectful reason.</li>
+<li>Repeated similar requests can trigger reconsideration if the category allows</li>
+<p>it.</p>
+</ol>
+<h2 id="25-product-principle"><a class="heading-anchor" href="#25-product-principle" aria-label="Link to 25. Product Principle">#</a>25. Product Principle</h2>
+<p>The product should feel like a trustworthy product operator, not an overeager agent.</p>
+<p>It should be fast, but not reckless. It should be autonomous, but explainable. It should make users feel heard and developers feel in control.</p>
+      </article>
+    </main>
+  </div>
+
+  <footer class="footer">
+    Generated from <a href="./feedback-to-feature-platform-prd.md">docs/feedback-to-feature-platform-prd.md</a>.
+  </footer>
+
+  <script>
+    const progress = document.querySelector(".progress");
+    const tocLinks = [...document.querySelectorAll(".toc-link")];
+    const headings = tocLinks
+      .map((link) => document.getElementById(link.dataset.for))
+      .filter(Boolean);
+
+    function updateProgress() {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = docHeight > 0 ? scrollTop / docHeight : 0;
+      progress.style.transform = "scaleX(" + Math.min(1, Math.max(0, ratio)) + ")";
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+
+      if (!visible) return;
+      tocLinks.forEach((link) => {
+        link.classList.toggle("active", link.dataset.for === visible.target.id);
+      });
+    }, { rootMargin: "-15% 0px -70% 0px", threshold: [0, 1] });
+
+    headings.forEach((heading) => observer.observe(heading));
+    updateProgress();
+    window.addEventListener("scroll", updateProgress, { passive: true });
+  </script>
+</body>
+</html>

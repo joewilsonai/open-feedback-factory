@@ -26,4 +26,5 @@ the first implementation should prove the loop privately before public launch.
 ## Docs
 
 - [PRD](docs/feedback-to-feature-platform-prd.md)
+- [Polished PRD HTML](docs/feedback-to-feature-platform-prd.html)
 - [V1 design](docs/superpowers/specs/2026-06-19-open-feedback-factory-v1-design.md)
