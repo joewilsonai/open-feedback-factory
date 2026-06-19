@@ -55,6 +55,8 @@ export function App() {
   const [note, setNote] = useState(readNote);
   const [result, setResult] = useState<SubmitFeedbackResult | null>(null);
   const [status, setStatus] = useState("Ready");
+  const [editingTaskDraft, setEditingTaskDraft] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [taskDraft, setTaskDraft] = useState("");
   const [tasks, setTasks] = useState<Task[]>(readTasks);
   const [theme, setTheme] = useState<Theme>(readInitialTheme);
@@ -120,8 +122,50 @@ export function App() {
     const nextTasks = tasks.map((task) => (task.id === id ? { ...task, done: !task.done } : task));
     const changed = nextTasks.find((task) => task.id === id);
     setTasks(nextTasks);
+    if (changed?.done && editingTaskId === id) {
+      setEditingTaskId(null);
+      setEditingTaskDraft("");
+    }
     void client.trackFeatureUsage({
       action: changed?.done ? "completed" : "reopened",
+      featureId: "todo-item",
+      metadata: {
+        appName: "Daybook",
+        source: "notepad-todo",
+      },
+    });
+  }
+
+  function startEditingTask(task: Task) {
+    if (task.done) return;
+    setEditingTaskId(task.id);
+    setEditingTaskDraft(task.text);
+  }
+
+  function cancelTaskEdit() {
+    setEditingTaskId(null);
+    setEditingTaskDraft("");
+  }
+
+  function saveTaskEdit(id: string) {
+    const text = editingTaskDraft.trim();
+    if (!text) return;
+
+    const task = tasks.find((item) => item.id === id);
+    if (!task || task.done) {
+      cancelTaskEdit();
+      return;
+    }
+
+    if (task.text === text) {
+      cancelTaskEdit();
+      return;
+    }
+
+    setTasks(tasks.map((item) => (item.id === id ? { ...item, text } : item)));
+    cancelTaskEdit();
+    void client.trackFeatureUsage({
+      action: "edited",
       featureId: "todo-item",
       metadata: {
         appName: "Daybook",
@@ -198,12 +242,54 @@ export function App() {
             </div>
           </div>
           <div className="task-list">
-            {tasks.map((task) => (
-              <button className={task.done ? "task-row done" : "task-row"} key={task.id} type="button" onClick={() => toggleTask(task.id)}>
-                <span>{task.done ? "Done" : "Open"}</span>
-                <strong>{task.text}</strong>
-              </button>
-            ))}
+            {tasks.map((task) => {
+              const isEditing = editingTaskId === task.id && !task.done;
+              return (
+                <article className={task.done ? "task-row done" : isEditing ? "task-row editing" : "task-row"} key={task.id}>
+                  <button
+                    className="task-toggle"
+                    type="button"
+                    aria-pressed={task.done}
+                    onClick={() => toggleTask(task.id)}
+                  >
+                    {task.done ? "Done" : "Open"}
+                  </button>
+                  {isEditing ? (
+                    <div className="task-edit-form">
+                      <label className="visually-hidden" htmlFor={`edit-${task.id}`}>
+                        Edit task
+                      </label>
+                      <input
+                        id={`edit-${task.id}`}
+                        value={editingTaskDraft}
+                        onChange={(event) => setEditingTaskDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") saveTaskEdit(task.id);
+                          if (event.key === "Escape") cancelTaskEdit();
+                        }}
+                      />
+                      <div className="task-edit-actions">
+                        <button type="button" onClick={() => saveTaskEdit(task.id)} disabled={!editingTaskDraft.trim()}>
+                          Save
+                        </button>
+                        <button type="button" onClick={cancelTaskEdit}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <strong>{task.text}</strong>
+                      {!task.done ? (
+                        <button className="task-edit-button" type="button" onClick={() => startEditingTask(task)}>
+                          Edit
+                        </button>
+                      ) : null}
+                    </>
+                  )}
+                </article>
+              );
+            })}
           </div>
         </div>
 

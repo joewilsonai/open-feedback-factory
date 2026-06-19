@@ -36,8 +36,13 @@ describe("demo app UI contract", () => {
     expect(source).toContain("window.localStorage.setItem");
     expect(source).toContain('role="switch"');
     expect(source).toContain("todo-item");
+    expect(source).toContain("startEditingTask");
+    expect(source).toContain("saveTaskEdit");
+    expect(source).toContain('action: "edited"');
+    expect(source).toContain("!task.done");
     expect(source).toContain("Notes and todos");
     expect(styles).toContain(".theme-switch");
     expect(styles).toContain(".task-list");
+    expect(styles).toContain(".task-edit-form");
   });
 });

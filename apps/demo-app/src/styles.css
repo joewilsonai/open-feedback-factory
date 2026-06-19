@@ -251,8 +251,12 @@ textarea {
 
 .task-row {
   display: grid;
-  justify-items: start;
-  gap: 0.28rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid rgba(24, 32, 29, 0.22);
+  border-radius: 7px;
+  padding: 0.55rem;
   width: 100%;
   text-align: left;
 }
@@ -261,16 +265,56 @@ textarea {
   border-color: rgba(15, 112, 84, 0.55);
 }
 
+:root[data-theme="dark"] .task-row {
+  border-color: rgba(244, 240, 232, 0.2);
+}
+
 .task-row.done strong {
   text-decoration: line-through;
   text-decoration-thickness: 2px;
 }
 
-.task-row span {
+.task-toggle,
+.task-edit-button {
+  min-height: 36px;
+  padding: 0.45rem 0.65rem;
+}
+
+.task-toggle {
   color: #0f7054;
   font-size: 0.76rem;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+:root[data-theme="dark"] .task-toggle {
+  color: #75d9b4;
+}
+
+.task-edit-button {
+  justify-self: end;
+}
+
+.task-edit-form {
+  display: grid;
+  grid-column: span 2;
+  gap: 0.5rem;
+}
+
+.task-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
 .preset-row {
@@ -349,5 +393,18 @@ dd {
 
   .task-entry > div {
     grid-template-columns: 1fr;
+  }
+
+  .task-row {
+    grid-template-columns: 1fr;
+  }
+
+  .task-edit-button,
+  .task-edit-form {
+    justify-self: stretch;
+  }
+
+  .task-edit-form {
+    grid-column: span 1;
   }
 }
