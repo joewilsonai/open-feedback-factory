@@ -1771,6 +1771,8 @@ pnpm demo</code></pre>
 <li>local control center;</li>
 <li>local API;</li>
 <li>clearly seeded sample feedback, labeled as sample input;</li>
+<li>sample reset command that removes seed/test rows without touching real app</li>
+<p>submissions;</p>
 <li>queued or blocked agent lane unless a real runner is configured;</li>
 <li>no fake PR URLs, fake costs, fake agent runs, fake releases, or fake shipped</li>
 <p>state;</p>
@@ -2227,6 +2229,8 @@ feedback-factory demo</code></pre>
 <li>Feature usage tracking and feedback-impact attribution.</li>
 <li>Real Daybook demo app and seed scenario with no fake PRs, fake costs, fake</li>
 <p>releases, or fake shipped states.</p>
+<li>Sample seed/reset path that keeps dry-run installs honest and prevents</li>
+<p>integration-test rows from polluting the control center.</p>
 <li>Maintenance/doctor command.</li>
 <li>Versioned config and migration path.</li>
 </ul>
@@ -2464,7 +2468,7 @@ feedback-factory demo</code></pre>
 <p>The first demo has two modes:</p>
 <ul>
 <li>dry-run demo: local education mode with seeded/sample data clearly labeled,</li>
-<p>no GitHub mutation, no model spend, and no fake PR/cost/release claims;</p>
+<p>no GitHub mutation, no model spend, no fake PR/cost/release claims, and a reset path for sample/test rows;</p>
 <li>private dogfood demo: real internal mode with GitHub and Codex connected,</li>
 <p>real PRs, real run results, real cost records, and release/user status updates only when proven.</p>
 </ul>

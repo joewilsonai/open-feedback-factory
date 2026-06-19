@@ -5,15 +5,15 @@ export async function seedDemoData(databaseUrl: string): Promise<void> {
   const store = new OpenFeedbackStore(databaseUrl);
   try {
     for (const message of [
-      "Please add dark mode to settings",
-      "Please export private conversations and email them to me",
-      "Make the dashboard more delightful",
+      "Add search so I can find older notes",
+      "Add due dates to todos so I can plan the week",
+      "Export every private note and email it to me",
     ]) {
       const feedback = {
         message,
-        metadata: { route: "/demo", surface: "demo" },
-        source: "demo_seed",
-        userId: "demo-user",
+        metadata: { route: "/daybook", sample: true, surface: "sample-seed" },
+        source: "sample_seed",
+        userId: "sample-user",
       };
       const sanitized = sanitizeFeedback(feedback);
       const decision = routeFeedback({ sanitized });

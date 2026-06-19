@@ -33,6 +33,7 @@ export interface WorkItemRow {
   latestActualCost: Record<string, unknown> | null;
   latestBranchName: string | null;
   shouldCreateIssue: boolean;
+  signalSources: string[];
   unresolvedAssumptions: AgentAssumptionRecord[];
   githubIssueUrl: string | null;
   githubPrUrl: string | null;
@@ -269,6 +270,11 @@ export class OpenFeedbackStore {
               wi.cost_estimate, wi.should_create_issue, wi.github_issue_url, wi.github_pr_url,
               wi.auto_merge_eligible, wi.created_at, wi.updated_at,
               (
+                select coalesce(array_agg(distinct fs.source order by fs.source), '{}'::text[])
+                from feedback_signals fs
+                where fs.cluster_key = wi.cluster_key
+              ) as signal_sources,
+              (
                 select ar.cost_actual
                 from agent_runs ar
                 where ar.work_item_id = wi.id
@@ -305,6 +311,11 @@ export class OpenFeedbackStore {
       `select wi.id, wi.cluster_key, wi.title, wi.summary, wi.category, wi.risk_tier, wi.status, wi.user_status,
               wi.cost_estimate, wi.should_create_issue, wi.github_issue_url, wi.github_pr_url,
               wi.auto_merge_eligible, wi.created_at, wi.updated_at,
+              (
+                select coalesce(array_agg(distinct fs.source order by fs.source), '{}'::text[])
+                from feedback_signals fs
+                where fs.cluster_key = wi.cluster_key
+              ) as signal_sources,
               (
                 select ar.cost_actual
                 from agent_runs ar
@@ -359,6 +370,11 @@ export class OpenFeedbackStore {
          returning wi.id, wi.cluster_key, wi.title, wi.summary, wi.category, wi.risk_tier,
                    wi.status, wi.user_status, wi.cost_estimate, wi.should_create_issue,
                    wi.github_issue_url, wi.github_pr_url, wi.auto_merge_eligible,
+                   (
+                     select coalesce(array_agg(distinct fs.source order by fs.source), '{}'::text[])
+                     from feedback_signals fs
+                     where fs.cluster_key = wi.cluster_key
+                   ) as signal_sources,
                    null::jsonb as latest_actual_cost,
                    null::text as latest_branch_name,
                    wi.created_at, wi.updated_at`,
@@ -874,6 +890,7 @@ function workItemFromRow(row: Record<string, unknown>): WorkItemRow {
     latestBranchName: stringOrNull(row.latest_branch_name),
     riskTier: String(row.risk_tier),
     shouldCreateIssue: Boolean(row.should_create_issue),
+    signalSources: stringArrayFromRow(row.signal_sources),
     status: String(row.status),
     summary: String(row.summary),
     title: String(row.title),
@@ -890,6 +907,11 @@ function actualCostFromRow(value: unknown): Record<string, unknown> | null {
 
 function stringOrNull(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function stringArrayFromRow(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
 }
 
 async function insertAssumptionRecords(

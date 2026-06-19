@@ -35,6 +35,7 @@ interface WorkItem {
     tokens?: number;
   } | null;
   riskTier: string;
+  signalSources: string[];
   status: string;
   summary: string;
   title: string;
@@ -308,6 +309,7 @@ export function App() {
                 >
                   <span>{item.title}</span>
                   <small>{workStatusLabel(item.status)} / {riskTierLabel(item.riskTier)}</small>
+                  <em>{sourceLabel(item.signalSources)}</em>
                 </button>
               ))}
             </div>
@@ -333,6 +335,7 @@ export function App() {
                 <Detail label="Actual cost" value={actualCostLabel(selected)} />
                 <Detail label="Model" value={selected.costEstimate.model} />
                 <Detail label="Category" value={selected.category} />
+                <Detail label="Signals" value={sourceLabel(selected.signalSources)} />
               </dl>
               <div className="artifact-row">
                 {selected.githubIssueUrl ? <a href={selected.githubIssueUrl}>GitHub issue</a> : <span>No issue yet</span>}
@@ -808,6 +811,14 @@ function actualCostLabel(item: WorkItem): string {
   const confidence = actual.confidence ? ` ${actual.confidence}` : "";
   const tokens = typeof actual.tokens === "number" ? ` / ${actual.tokens} tokens` : "";
   return `$${actual.amountUsd.toFixed(4)}${confidence}${tokens}`;
+}
+
+function sourceLabel(sources: string[]): string {
+  if (sources.some((source) => source === "sample_seed" || source === "demo_seed")) return "Sample seed";
+  if (sources.some((source) => source === "test" || source.startsWith("test_"))) return "Integration test";
+  if (sources.length === 0) return "No signal source";
+  if (sources.every((source) => source === "daybook_demo_app")) return "Connected app";
+  return sources.map(titleCase).join(", ");
 }
 
 function titleCase(value: string): string {

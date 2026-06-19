@@ -17,6 +17,8 @@ describe("control center UI contract", () => {
     expect(source).toContain("Feature usage");
     expect(source).toContain("Cost");
     expect(source).toContain("Actual cost");
+    expect(source).toContain("Sample seed");
+    expect(source).toContain("Connected app");
     expect(source).toContain("Reconciliation");
     expect(source).toContain("Run reconciliation");
     expect(source).toContain("Auto-merge");

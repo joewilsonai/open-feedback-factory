@@ -1393,6 +1393,8 @@ It should launch:
 - local control center;
 - local API;
 - clearly seeded sample feedback, labeled as sample input;
+- sample reset command that removes seed/test rows without touching real app
+  submissions;
 - queued or blocked agent lane unless a real runner is configured;
 - no fake PR URLs, fake costs, fake agent runs, fake releases, or fake shipped
   state;
@@ -1931,6 +1933,8 @@ should win on setup, reliability, observability, and scale.
 - Feature usage tracking and feedback-impact attribution.
 - Real Daybook demo app and seed scenario with no fake PRs, fake costs, fake
   releases, or fake shipped states.
+- Sample seed/reset path that keeps dry-run installs honest and prevents
+  integration-test rows from polluting the control center.
 - Maintenance/doctor command.
 - Versioned config and migration path.
 
@@ -2377,7 +2381,8 @@ The demo should use a tiny real app, not a mock dashboard.
 The first demo has two modes:
 
 - dry-run demo: local education mode with seeded/sample data clearly labeled,
-  no GitHub mutation, no model spend, and no fake PR/cost/release claims;
+  no GitHub mutation, no model spend, no fake PR/cost/release claims, and a
+  reset path for sample/test rows;
 - private dogfood demo: real internal mode with GitHub and Codex connected,
   real PRs, real run results, real cost records, and release/user status updates
   only when proven.

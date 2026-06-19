@@ -30,7 +30,7 @@ capture, release proof, and agent assumptions.
 | GitHub | App manifest, localhost rejection, webhook reachability, signature validation, sanitized issue body, PR artifact storage, branch cleanup, guarded merge refusal |
 | Control center | Setup states, queue states, human-readable labels, no raw enum leaks, assumptions panel, cost panel, release state, follow-up state, missing-config explanations |
 | Demo app | Real Daybook workflow, positive request, negative request, status display, feature usage event |
-| Dry-run E2E | Docker stack starts, seeded data labeled, no fake PRs, no fake costs, no fake agent runs, no fake releases, no fake shipped states |
+| Dry-run E2E | Docker stack starts, seeded data labeled, sample reset works, integration tests do not pollute the control center, no fake PRs, no fake costs, no fake agent runs, no fake releases, no fake shipped states |
 | Private dogfood E2E | Real GitHub/Codex issue, branch, PR, usage record, cost or token actual, assumptions, release marker, user status |
 | Reconciliation | Interrupted runs, stale branches/workspaces, failed checks, failed agent runs, missing release proof, rollback pause |
 
@@ -103,6 +103,11 @@ capture, release proof, and agent assumptions.
   sanitized aggregates, demand counts, and audit-safe deletion records remain.
 - Disabled runner queues work without creating agent runs, costs, commits, PRs,
   or shipped states.
+- Local sample seeding is idempotent enough for repeated smoke runs and can be
+  reset without deleting real Daybook feedback.
+- Postgres integration tests clean their own rows, so running the test suite
+  against the Docker database does not leave test work items in the control
+  center.
 - Auto approval lets an attached worker claim eligible work but does not merge.
 - Auto-merge is denied unless reviewer, check, policy, provenance, cost, and
   release gates pass.
