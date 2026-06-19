@@ -86,15 +86,22 @@ TEST_DATABASE_URL=postgres://off:off@127.0.0.1:55432/open_feedback_factory pnpm 
 
 ## GitHub App Setup
 
-Use the control center wizard as the primary path:
+Use the control center wizard as the primary path. GitHub will not create a
+manifest-based App from `localhost` URLs, so local installs need a public HTTPS
+tunnel first.
 
-1. Open `http://localhost:5173`.
-2. In **Install wizard**, click **Create GitHub App**.
-3. GitHub opens a required confirmation screen.
-4. After confirmation, GitHub returns to `/github/app/installed`.
-5. Click **Generate env values**.
-6. Copy the generated values into `.env`.
-7. Restart:
+1. Start a tunnel: `tailscale funnel --bg --yes 4100`.
+2. Get the HTTPS URL: `tailscale funnel status`.
+3. If Tailscale Funnel is not enabled, use `cloudflared tunnel --url http://localhost:4100`.
+4. Put the printed HTTPS URL in `.env` as `PUBLIC_BASE_URL`.
+5. Restart Docker: `docker compose up -d --build`.
+6. Open `http://localhost:5173`.
+7. In **Install wizard**, click **Create GitHub App**.
+8. GitHub opens a required confirmation screen.
+9. After confirmation, GitHub returns to `/github/app/installed`.
+10. Click **Generate env values**.
+11. Copy the generated values into `.env`.
+12. Restart:
 
 ```bash
 docker compose up -d --build
@@ -105,11 +112,6 @@ Expected result after credentials are configured:
 
 - `githubMode` is `app` when `.env` contains `GITHUB_MODE=app`.
 - `githubAppConfigured` is `true`.
-
-Local `localhost` installs intentionally use a disabled placeholder webhook and
-subscribe to no webhook events because GitHub cannot reach local webhook URLs.
-For webhook testing, set `PUBLIC_BASE_URL` to an HTTPS tunnel or deployed URL,
-restart Docker, then run the wizard again.
 
 Do not print the private key or webhook secret in chat. Summarize only that
 credentials were added.

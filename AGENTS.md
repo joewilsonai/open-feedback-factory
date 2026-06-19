@@ -71,9 +71,11 @@ The canonical setup path is the control center wizard:
 GitHub requires the confirmation click. Agents should not pretend that step can
 be skipped.
 
-Local `localhost` installs intentionally use a disabled placeholder webhook and
-subscribe to no GitHub webhook events. To test webhooks, set `PUBLIC_BASE_URL`
-to an HTTPS tunnel or deployed URL before starting the wizard.
+GitHub will not create a manifest-based App from `localhost` URLs. For local
+GitHub App setup, start an HTTPS tunnel such as
+`tailscale funnel --bg --yes 4100` or
+`cloudflared tunnel --url http://localhost:4100`, set `PUBLIC_BASE_URL` to the
+tunnel URL, restart Docker, then start the wizard.
 
 ## Codex Runner Path
 

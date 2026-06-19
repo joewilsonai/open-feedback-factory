@@ -17,6 +17,31 @@ export async function registerGithubRoutes(app: FastifyInstance, deps: AppDeps):
         : "https://github.com/settings/apps/new";
     const manifest = JSON.stringify(buildGithubAppManifest(deps));
 
+    if (!webhooksEnabled) {
+      return reply.type("text/html").send(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Prepare Open Feedback Factory GitHub App</title>
+  </head>
+  <body>
+    <main>
+      <h1>Prepare GitHub App Setup</h1>
+      <p>GitHub will not create a manifest-based App from localhost URLs. Start a public HTTPS tunnel, set <code>PUBLIC_BASE_URL</code> to that tunnel URL, restart Docker, then return here.</p>
+      <pre>tailscale funnel --bg --yes 4100
+tailscale funnel status</pre>
+      <p>Cloudflared also works if Tailscale Funnel is not enabled:</p>
+      <pre>cloudflared tunnel --url http://localhost:4100</pre>
+      <p>After the tunnel prints an HTTPS URL:</p>
+      <pre>PUBLIC_BASE_URL=https://your-tunnel.trycloudflare.com
+docker compose up -d --build</pre>
+      <p><a href="/github/app/manifest">View current local manifest</a></p>
+    </main>
+  </body>
+</html>`);
+    }
+
     return reply.type("text/html").send(`<!doctype html>
 <html lang="en">
   <head>
@@ -28,11 +53,7 @@ export async function registerGithubRoutes(app: FastifyInstance, deps: AppDeps):
     <main>
       <h1>Create Open Feedback Factory GitHub App</h1>
       <p>This posts the V1 GitHub App manifest to GitHub. GitHub will ask you to confirm the app name and permissions.</p>
-      <p>${
-        webhooksEnabled
-          ? "Webhook events are enabled because PUBLIC_BASE_URL is publicly reachable."
-          : "Local mode: GitHub cannot reach localhost webhooks, so this manifest uses a disabled placeholder webhook and subscribes to no webhook events. Set PUBLIC_BASE_URL to an HTTPS tunnel or deployed URL to enable webhooks."
-      }</p>
+      <p>Webhook events are enabled because PUBLIC_BASE_URL is publicly reachable.</p>
       <form method="post" action="${escapeHtml(action)}">
         <input type="hidden" name="manifest" value="${escapeHtml(manifest)}">
         <input type="hidden" name="state" value="open-feedback-factory">
@@ -182,9 +203,12 @@ export function buildGithubAppManifest(deps: AppDeps): Record<string, unknown> {
     name: "Open Feedback Factory",
     public: false,
     redirect_url: `${deps.config.publicBaseUrl}/github/app/installed`,
-    setup_url: deps.config.controlCenterUrl,
     url: `https://github.com/${deps.config.githubOwner}/${deps.config.githubRepo}`,
   };
+
+  if (githubWebhooksEnabledForBaseUrl(deps.config.controlCenterUrl)) {
+    manifest.setup_url = deps.config.controlCenterUrl;
+  }
 
   if (githubWebhooksEnabledForBaseUrl(deps.config.publicBaseUrl)) {
     manifest.default_events = ["check_suite", "issues", "pull_request", "push"];

@@ -213,12 +213,44 @@ test("GitHub App manifest disables webhooks for localhost setup", async () => {
   assert.equal(body.hook_attributes.active, false);
   assert.equal(body.hook_attributes.url, "https://example.com/open-feedback-factory/webhook-disabled");
   assert.equal("default_events" in body, false);
+  assert.equal("setup_url" in body, false);
   assert.deepEqual(body.callback_urls, ["http://localhost:4100/github/app/installed"]);
 
   const setup = await app.inject({ method: "GET", url: "/github/app/setup" });
-  assert.match(setup.body, /Local mode: GitHub cannot reach localhost webhooks/);
-  assert.match(setup.body, /webhook-disabled/);
-  assert.doesNotMatch(setup.body, /http:\/\/localhost:4100\/github\/webhook/);
+  assert.match(setup.body, /GitHub will not create a manifest-based App from localhost URLs/);
+  assert.match(setup.body, /tailscale funnel --bg --yes 4100/);
+  assert.match(setup.body, /cloudflared tunnel --url http:\/\/localhost:4100/);
+  assert.doesNotMatch(setup.body, /https:\/\/github\.com\/settings\/apps\/new/);
+
+  await app.close();
+});
+
+test("GitHub App setup posts to GitHub when the API URL is public", async () => {
+  const app = await buildApp({ config, store: new MemoryStore() });
+  const response = await app.inject({ method: "GET", url: "/github/app/setup" });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(response.body, /https:\/\/github\.com\/settings\/apps\/new/);
+  assert.match(response.body, /http:\/\/api\.test\/github\/webhook/);
+
+  await app.close();
+});
+
+test("GitHub App manifest omits local setup URL when API uses a public tunnel", async () => {
+  const tunnelConfig: ApiConfig = {
+    ...config,
+    controlCenterUrl: "http://localhost:5173",
+    publicBaseUrl: "https://off.example.com",
+  };
+  const app = await buildApp({ config: tunnelConfig, store: new MemoryStore() });
+  const response = await app.inject({ method: "GET", url: "/github/app/manifest" });
+
+  assert.equal(response.statusCode, 200);
+  const body = response.json();
+  assert.equal(body.hook_attributes.active, true);
+  assert.equal(body.hook_attributes.url, "https://off.example.com/github/webhook");
+  assert.deepEqual(body.default_events, ["check_suite", "issues", "pull_request", "push"]);
+  assert.equal("setup_url" in body, false);
 
   await app.close();
 });
