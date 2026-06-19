@@ -197,12 +197,17 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
 
     const github = buildGithubClient(deps.config);
     const mergeOutput = await github.mergePullRequest(prUrl);
+    const cleanupOutput = isGeneratedRunnerBranch(workItem.latestBranchName)
+      ? await github.cleanupBranch(workItem.latestBranchName)
+      : null;
     const runId = await deps.store.recordAgentRun({
       agentName: "github-safe-automerge",
       metadata: {
+        cleanupOutput,
         evaluation,
         mergeOutput,
         prUrl,
+        branchName: workItem.latestBranchName,
       },
       runType: "automerge",
       status: "succeeded",
@@ -210,6 +215,10 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
       workItemId: workItem.id,
     });
 
-    return { evaluation, mergeOutput, runId, status: "merged" };
+    return { cleanupOutput, evaluation, mergeOutput, runId, status: "merged" };
   });
+}
+
+function isGeneratedRunnerBranch(branchName: string | null): branchName is string {
+  return Boolean(branchName && /^(off\/codex|codex\/off|agent)\/[a-zA-Z0-9/_-]+$/.test(branchName));
 }

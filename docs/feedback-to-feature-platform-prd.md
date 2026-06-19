@@ -281,6 +281,11 @@ Capabilities:
 - close issues when shipped or resolved;
 - clean up generated branches/workspaces.
 
+Webhook handling must be idempotent. Duplicate GitHub deliveries with the same
+delivery id should be acknowledged but must not create duplicate artifacts,
+agent runs, costs, release markers, or user notifications. GitHub artifact
+storage should also be idempotent by work item, artifact type, and URL.
+
 V1 should use a GitHub App for installable GitHub integration, narrow
 permissions, webhook delivery, and auditable merge behavior. `GITHUB_MODE=gh`
 can remain an internal dogfood fallback for local testing, but the product
@@ -371,6 +376,7 @@ Agent-reviewed auto-merge requires at minimum:
 - no privacy/security redaction warnings that require escalation;
 - no reviewer-agent disagreement;
 - branch and PR provenance tied to the work item;
+- generated runner branch cleanup after a guarded merge;
 - release/deploy health checks when configured.
 
 ### 8.7 User Follow-Up

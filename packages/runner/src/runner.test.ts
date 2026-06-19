@@ -30,6 +30,7 @@ const workItem: WorkItemRow = {
   githubPrUrl: null,
   id: "work_1",
   latestActualCost: null,
+  latestBranchName: null,
   riskTier: "safe_auto_merge",
   shouldCreateIssue: true,
   status: "planned",
@@ -254,6 +255,46 @@ test("GitHubClient app mode creates sanitized issues with installation tokens", 
       "GET https://api.github.com/repos/owner/repo/installation",
       "POST https://api.github.com/app/installations/456/access_tokens",
       "POST https://api.github.com/repos/owner/repo/issues",
+    ],
+  );
+});
+
+test("GitHubClient app mode deletes generated branches with installation tokens", async () => {
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
+  const calls: Array<{ method: string; url: string }> = [];
+  const fetchImpl: typeof fetch = async (url, init) => {
+    calls.push({
+      method: init?.method ?? "GET",
+      url: String(url),
+    });
+    if (String(url).endsWith("/app/installations/456/access_tokens")) {
+      return jsonResponse({ expires_at: new Date(Date.now() + 60_000).toISOString(), token: "installation-token" });
+    }
+    if (String(url).endsWith("/repos/owner/repo/git/refs/heads/off/codex/work_1")) {
+      assert.equal((init?.headers as Record<string, string>).authorization, "Bearer installation-token");
+      return new Response(null, { status: 204 });
+    }
+    return new Response("not found", { status: 404 });
+  };
+
+  const client = new GitHubClient({
+    appId: "123",
+    appPrivateKey: normalizePrivateKey(pem.replace(/\n/g, "\\n")),
+    cwd: "/repo",
+    fetch: fetchImpl,
+    installationId: "456",
+    mode: "app",
+    owner: "owner",
+    repo: "repo",
+  });
+
+  assert.equal(await client.cleanupBranch("off/codex/work_1"), "deleted off/codex/work_1");
+  assert.deepEqual(
+    calls.map((call) => `${call.method} ${call.url}`),
+    [
+      "POST https://api.github.com/app/installations/456/access_tokens",
+      "DELETE https://api.github.com/repos/owner/repo/git/refs/heads/off/codex/work_1",
     ],
   );
 });

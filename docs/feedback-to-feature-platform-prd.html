@@ -943,6 +943,7 @@ trackFeatureOutcome({
 <li>close issues when shipped or resolved;</li>
 <li>clean up generated branches/workspaces.</li>
 </ul>
+<p>Webhook handling must be idempotent. Duplicate GitHub deliveries with the same delivery id should be acknowledged but must not create duplicate artifacts, agent runs, costs, release markers, or user notifications. GitHub artifact storage should also be idempotent by work item, artifact type, and URL.</p>
 <p>V1 should use a GitHub App for installable GitHub integration, narrow permissions, webhook delivery, and auditable merge behavior. <code>GITHUB_MODE=gh</code> can remain an internal dogfood fallback for local testing, but the product should not teach broad personal access tokens as the normal install path.</p>
 <h3 id="8-5-agent-runner"><a class="heading-anchor" href="#8-5-agent-runner" aria-label="Link to 8.5 Agent Runner">#</a>8.5 Agent Runner</h3>
 <p>The runner performs implementation work in an isolated workspace.</p>
@@ -1006,6 +1007,7 @@ trackFeatureOutcome({
 <li>no privacy/security redaction warnings that require escalation;</li>
 <li>no reviewer-agent disagreement;</li>
 <li>branch and PR provenance tied to the work item;</li>
+<li>generated runner branch cleanup after a guarded merge;</li>
 <li>release/deploy health checks when configured.</li>
 </ul>
 <h3 id="8-7-user-follow-up"><a class="heading-anchor" href="#8-7-user-follow-up" aria-label="Link to 8.7 User Follow-Up">#</a>8.7 User Follow-Up</h3>

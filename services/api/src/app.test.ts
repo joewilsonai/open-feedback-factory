@@ -36,7 +36,9 @@ const config: ApiConfig = {
 class MemoryStore implements AppStore {
   approvalMode: ApiConfig["approvalMode"] | null = null;
   codexAuthMode: ApiConfig["codexAuthMode"] | null = null;
+  deliveries = new Set<string>();
   feedbackStatuses = new Map<string, UserFeedbackStatus>();
+  githubArtifacts = new Map<string, string>();
   recentAssumptions: AgentAssumptionRecord[] = [];
   usageCount = 0;
   workItems: WorkItemRow[] = [];
@@ -64,6 +66,7 @@ class MemoryStore implements AppStore {
         githubPrUrl: null,
         id: workItemId,
         latestActualCost: null,
+        latestBranchName: null,
         riskTier: input.decision.riskTier,
         shouldCreateIssue: input.decision.shouldCreateIssue,
         status: "planned",
@@ -126,6 +129,7 @@ class MemoryStore implements AppStore {
       item.status = input.status === "succeeded" ? "implemented" : input.status;
       item.userStatus = input.status === "succeeded" ? "implemented" : "blocked";
       item.latestActualCost = input.costActual ?? null;
+      item.latestBranchName = typeof input.metadata?.branchName === "string" ? input.metadata.branchName : item.latestBranchName;
       item.unresolvedAssumptions = (input.assumptions ?? []).filter((assumption) => assumption.unresolved);
     }
     this.recentAssumptions.unshift(...(input.assumptions ?? []));
@@ -200,10 +204,23 @@ class MemoryStore implements AppStore {
   }
 
   async recordGithubArtifact(input: Parameters<AppStore["recordGithubArtifact"]>[0]) {
+    const artifactKey = `${input.workItemId}:${input.artifactType}:${input.url}`;
+    const existing = this.githubArtifacts.get(artifactKey);
+    if (existing) return existing;
+
     const item = this.workItems.find((workItem) => workItem.id === input.workItemId);
     if (item && input.artifactType === "issue") item.githubIssueUrl = input.url;
     if (item && input.artifactType === "pull_request") item.githubPrUrl = input.url;
-    return "gh_1";
+    const id = `gh_${this.githubArtifacts.size + 1}`;
+    this.githubArtifacts.set(artifactKey, id);
+    return id;
+  }
+
+  async recordGithubWebhookDelivery(input: Parameters<AppStore["recordGithubWebhookDelivery"]>[0]) {
+    if (!input.deliveryId) return true;
+    if (this.deliveries.has(input.deliveryId)) return false;
+    this.deliveries.add(input.deliveryId);
+    return true;
   }
 }
 
@@ -583,6 +600,7 @@ test("GitHub webhook verifies signature and records PR artifact", async () => {
     githubPrUrl: null,
     id: "work_123",
     latestActualCost: null,
+    latestBranchName: null,
     riskTier: "safe_auto_merge",
     shouldCreateIssue: true,
     status: "implemented",
@@ -620,6 +638,7 @@ test("GitHub webhook verifies signature and records PR artifact", async () => {
   const response = await app.inject({
     headers: {
       "content-type": "application/json",
+      "x-github-delivery": "delivery-1",
       "x-github-event": "pull_request",
       "x-hub-signature-256": sign(payload, config.githubWebhookSecret),
     },
@@ -631,6 +650,23 @@ test("GitHub webhook verifies signature and records PR artifact", async () => {
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().workItemId, "work_123");
   assert.equal(store.workItems[0]?.githubPrUrl, "https://github.com/joewilsonai/open-feedback-factory/pull/99");
+  assert.equal(store.githubArtifacts.size, 1);
+
+  const duplicate = await app.inject({
+    headers: {
+      "content-type": "application/json",
+      "x-github-delivery": "delivery-1",
+      "x-github-event": "pull_request",
+      "x-hub-signature-256": sign(payload, config.githubWebhookSecret),
+    },
+    method: "POST",
+    payload,
+    url: "/github/webhook",
+  });
+
+  assert.equal(duplicate.statusCode, 200);
+  assert.equal(duplicate.json().duplicate, true);
+  assert.equal(store.githubArtifacts.size, 1);
 
   await app.close();
 });
@@ -764,6 +800,7 @@ test("reconciliation requeues stale in-progress work and reports release gaps", 
     githubPrUrl: null,
     id: "work_stale",
     latestActualCost: null,
+    latestBranchName: null,
     riskTier: "safe_auto_merge",
     shouldCreateIssue: true,
     status: "in_progress",
@@ -783,6 +820,7 @@ test("reconciliation requeues stale in-progress work and reports release gaps", 
     githubPrUrl: "https://github.com/joewilsonai/open-feedback-factory/pull/77",
     id: "work_waiting_release",
     latestActualCost: { amountUsd: 0.25, confidence: "high", model: "gpt-5.5" },
+    latestBranchName: "off/codex/work_waiting_release",
     riskTier: "safe_auto_merge",
     shouldCreateIssue: true,
     status: "implemented",
