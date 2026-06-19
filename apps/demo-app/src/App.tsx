@@ -1,13 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { createOpenFeedbackClient, type SubmitFeedbackResult } from "@open-feedback-factory/sdk";
 import "./styles.css";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 const themeStorageKey = "open-feedback-factory-daybook-theme";
+const colorThemeStorageKey = "open-feedback-factory-daybook-color-theme";
 const noteStorageKey = "open-feedback-factory-daybook-note";
 const tasksStorageKey = "open-feedback-factory-daybook-tasks";
 
-type Theme = "dark" | "light";
+const themeModeOptions = [
+  { id: "light", label: "Light" },
+  { id: "dark", label: "Dark" },
+] as const;
+
+const colorThemeOptions = [
+  { id: "moss", label: "Moss", swatch: "#0f7054" },
+  { id: "cobalt", label: "Cobalt", swatch: "#255bc7" },
+  { id: "rose", label: "Rose", swatch: "#be3861" },
+] as const;
+
+type ColorTheme = (typeof colorThemeOptions)[number]["id"];
+type ThemeMode = (typeof themeModeOptions)[number]["id"];
 
 interface Task {
   done: boolean;
@@ -28,9 +41,15 @@ const defaultTasks: Task[] = [
   { done: false, id: "task-3", text: "Decide what should ship next" },
 ];
 
-function readInitialTheme(): Theme {
+function readInitialThemeMode(): ThemeMode {
   if (typeof window === "undefined") return "light";
   return window.localStorage.getItem(themeStorageKey) === "dark" ? "dark" : "light";
+}
+
+function readInitialColorTheme(): ColorTheme {
+  if (typeof window === "undefined") return "moss";
+  const storedTheme = window.localStorage.getItem(colorThemeStorageKey);
+  return colorThemeOptions.some((option) => option.id === storedTheme) ? (storedTheme as ColorTheme) : "moss";
 }
 
 function readNote(): string {
@@ -57,7 +76,8 @@ export function App() {
   const [status, setStatus] = useState("Ready");
   const [taskDraft, setTaskDraft] = useState("");
   const [tasks, setTasks] = useState<Task[]>(readTasks);
-  const [theme, setTheme] = useState<Theme>(readInitialTheme);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(readInitialThemeMode);
+  const [colorTheme, setColorTheme] = useState<ColorTheme>(readInitialColorTheme);
   const client = useMemo(
     () =>
       createOpenFeedbackClient({
@@ -75,9 +95,11 @@ export function App() {
   const completedCount = tasks.filter((task) => task.done).length;
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem(themeStorageKey, theme);
-  }, [theme]);
+    document.documentElement.dataset.theme = themeMode;
+    document.documentElement.dataset.colorTheme = colorTheme;
+    window.localStorage.setItem(themeStorageKey, themeMode);
+    window.localStorage.setItem(colorThemeStorageKey, colorTheme);
+  }, [colorTheme, themeMode]);
 
   useEffect(() => {
     window.localStorage.setItem(noteStorageKey, note);
@@ -87,14 +109,28 @@ export function App() {
     window.localStorage.setItem(tasksStorageKey, JSON.stringify(tasks));
   }, [tasks]);
 
-  function toggleTheme() {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
+  function selectThemeMode(nextThemeMode: ThemeMode) {
+    if (nextThemeMode === themeMode) return;
+    setThemeMode(nextThemeMode);
     void client.trackFeatureUsage({
-      action: nextTheme === "dark" ? "enabled" : "disabled",
+      action: nextThemeMode === "dark" ? "enabled" : "disabled",
       featureId: "dark-mode",
       metadata: {
         appName: "Daybook",
+        source: "notepad-todo",
+      },
+    });
+  }
+
+  function selectColorTheme(nextColorTheme: ColorTheme) {
+    if (nextColorTheme === colorTheme) return;
+    setColorTheme(nextColorTheme);
+    void client.trackFeatureUsage({
+      action: "selected",
+      featureId: "color-theme",
+      metadata: {
+        appName: "Daybook",
+        colorTheme: nextColorTheme,
         source: "notepad-todo",
       },
     });
@@ -154,9 +190,36 @@ export function App() {
           <p className="eyebrow">Daybook</p>
           <h1>Notes and todos</h1>
         </div>
-        <button className="theme-switch" type="button" role="switch" aria-checked={theme === "dark"} onClick={toggleTheme}>
-          <span>{theme === "dark" ? "Dark mode" : "Light mode"}</span>
-        </button>
+        <div className="appearance-controls" role="group" aria-label="Appearance">
+          <div className="theme-switch" role="group" aria-label="Mode">
+            {themeModeOptions.map((option) => (
+              <button
+                aria-pressed={themeMode === option.id}
+                className={themeMode === option.id ? "mode-option active" : "mode-option"}
+                key={option.id}
+                type="button"
+                onClick={() => selectThemeMode(option.id)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div className="palette-picker" role="group" aria-label="Color theme">
+            {colorThemeOptions.map((option) => (
+              <button
+                aria-pressed={colorTheme === option.id}
+                className={colorTheme === option.id ? "palette-option active" : "palette-option"}
+                key={option.id}
+                style={{ "--swatch-color": option.swatch } as CSSProperties}
+                type="button"
+                onClick={() => selectColorTheme(option.id)}
+              >
+                <span className="swatch" aria-hidden="true" />
+                <span>{option.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </header>
 
       <section className="metric-strip" aria-label="Workspace metrics">

@@ -28,16 +28,27 @@ describe("demo app UI contract", () => {
     expect(source).toContain("trackFeatureUsage");
   });
 
-  it("has persistent notes, todos, and dark mode", () => {
+  it("has persistent notes, todos, and selectable light/dark color themes", () => {
     expect(source).toContain("open-feedback-factory-daybook-theme");
+    expect(source).toContain("open-feedback-factory-daybook-color-theme");
     expect(source).toContain("open-feedback-factory-daybook-note");
     expect(source).toContain("open-feedback-factory-daybook-tasks");
     expect(source).toContain("window.localStorage.getItem");
     expect(source).toContain("window.localStorage.setItem");
-    expect(source).toContain('role="switch"');
+    expect(source).toContain('aria-label="Mode"');
+    expect(source).toContain('aria-label="Color theme"');
+    expect(source).toContain('role="group"');
+    expect(source).toContain("aria-pressed");
+    expect(source).toContain("color-theme");
+    expect(source).toContain("Moss");
+    expect(source).toContain("Cobalt");
+    expect(source).toContain("Rose");
     expect(source).toContain("todo-item");
     expect(source).toContain("Notes and todos");
     expect(styles).toContain(".theme-switch");
+    expect(styles).toContain(".palette-picker");
+    expect(styles).toContain('[data-color-theme="cobalt"][data-theme="dark"]');
+    expect(styles).toContain('[data-color-theme="rose"][data-theme="dark"]');
     expect(styles).toContain(".task-list");
   });
 });
