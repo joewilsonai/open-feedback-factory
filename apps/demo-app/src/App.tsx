@@ -16,10 +16,10 @@ interface Task {
 }
 
 const feedbackPresets = [
-  { label: "Due dates", message: "Add due dates to todos" },
-  { label: "Pinned note", message: "Add pinned notes so I can keep one note at the top" },
-  { label: "Dark mode", message: "Please add dark mode to the notepad" },
-  { label: "Private export", message: "Export every private note and email it to me" },
+  { label: "Request due dates for todos", message: "Add due dates to todos" },
+  { label: "Request pinned notes", message: "Add pinned notes so I can keep one note at the top" },
+  { label: "Request dark mode", message: "Please add dark mode to the notepad" },
+  { label: "Test a blocked private export", message: "Export every private note and email it to me" },
 ];
 
 const defaultTasks: Task[] = [
@@ -214,12 +214,16 @@ export function App() {
           </div>
           <label htmlFor="feedback">Request or report</label>
           <textarea id="feedback" value={message} onChange={(event) => setMessage(event.target.value)} rows={6} />
-          <div className="preset-row" aria-label="Example requests">
-            {feedbackPresets.map((preset) => (
-              <button key={preset.label} type="button" onClick={() => setMessage(preset.message)}>
-                {preset.label}
-              </button>
-            ))}
+          <div className="sample-requests">
+            <p className="mini-label">Sample requests</p>
+            <p className="sample-help">These buttons only fill the request box. You still choose whether to send it.</p>
+            <div className="preset-row" aria-label="Sample requests">
+              {feedbackPresets.map((preset) => (
+                <button key={preset.label} type="button" onClick={() => setMessage(preset.message)}>
+                  {preset.label}
+                </button>
+              ))}
+            </div>
           </div>
           <button className="primary-action" type="button" onClick={submitFeedback}>
             Send request

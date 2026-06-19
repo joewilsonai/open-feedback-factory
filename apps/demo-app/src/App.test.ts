@@ -11,9 +11,12 @@ describe("demo app UI contract", () => {
     expect(source).toContain("Add pinned notes");
     expect(source).toContain("Please add dark mode to the notepad");
     expect(source).toContain("Export every private note");
-    expect(source).toContain("Due dates");
-    expect(source).toContain("Pinned note");
-    expect(source).toContain("Private export");
+    expect(source).toContain("Sample requests");
+    expect(source).toContain("These buttons only fill the request box");
+    expect(source).toContain("Request due dates for todos");
+    expect(source).toContain("Request pinned notes");
+    expect(source).toContain("Request dark mode");
+    expect(source).toContain("Test a blocked private export");
     expect(source).not.toContain(">Backlog<");
     expect(source).not.toContain(">Safe<");
     expect(source).not.toContain(">Blocked<");

@@ -279,6 +279,22 @@ textarea {
   flex-wrap: wrap;
 }
 
+.sample-requests {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.sample-help {
+  color: #59645f;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+:root[data-theme="dark"] .sample-help {
+  color: #c8d1cc;
+}
+
 .primary-action {
   width: 100%;
   margin-top: 0.8rem;
