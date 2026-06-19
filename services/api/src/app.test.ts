@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import test from "node:test";
 import type { UserFeedbackStatus } from "@open-feedback-factory/core";
 import type { ControlRoomSnapshot, WorkItemRow } from "@open-feedback-factory/db";
@@ -14,6 +15,7 @@ const config: ApiConfig = {
   githubMode: "disabled",
   githubOwner: "joewilsonai",
   githubRepo: "open-feedback-factory",
+  githubWebhookSecret: "test-secret",
   maxFeatureCostUsd: 5,
   maxSafeDiffLines: 120,
   protectedPathFragments: ["auth", "billing", "privacy"],
@@ -176,6 +178,68 @@ test("API exposes GitHub App manifest seam", async () => {
   await app.close();
 });
 
+test("GitHub webhook verifies signature and records PR artifact", async () => {
+  const store = new MemoryStore();
+  store.workItems.push({
+    autoMergeEligible: false,
+    category: "copy",
+    clusterKey: "safe.copy",
+    costEstimate: { amountUsd: 1.5, confidence: "low", currency: "USD", model: "gpt-5.5", reason: "test" },
+    createdAt: new Date().toISOString(),
+    githubIssueUrl: null,
+    githubPrUrl: null,
+    id: "work_123",
+    riskTier: "safe_auto_merge",
+    shouldCreateIssue: true,
+    status: "implemented",
+    summary: "Please improve the save label",
+    title: "Improve product copy",
+    updatedAt: new Date().toISOString(),
+    userStatus: "in_progress",
+  });
+
+  const app = await buildApp({ config, store });
+  const payload = JSON.stringify({
+    action: "opened",
+    pull_request: {
+      body: "Work item: work_123",
+      html_url: "https://github.com/joewilsonai/open-feedback-factory/pull/99",
+      number: 99,
+      state: "open",
+      title: "Improve product copy",
+    },
+  });
+
+  const bad = await app.inject({
+    headers: {
+      "content-type": "application/json",
+      "x-github-event": "pull_request",
+      "x-hub-signature-256": "sha256=bad",
+    },
+    method: "POST",
+    payload,
+    url: "/github/webhook",
+  });
+  assert.equal(bad.statusCode, 401);
+
+  const response = await app.inject({
+    headers: {
+      "content-type": "application/json",
+      "x-github-event": "pull_request",
+      "x-hub-signature-256": sign(payload, config.githubWebhookSecret),
+    },
+    method: "POST",
+    payload,
+    url: "/github/webhook",
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().workItemId, "work_123");
+  assert.equal(store.workItems[0]?.githubPrUrl, "https://github.com/joewilsonai/open-feedback-factory/pull/99");
+
+  await app.close();
+});
+
 test("runner claims planned work and completes it with actual cost", async () => {
   const store = new MemoryStore();
   const app = await buildApp({ config, store });
@@ -215,6 +279,10 @@ test("runner claims planned work and completes it with actual cost", async () =>
 
   await app.close();
 });
+
+function sign(payload: string, secret: string): string {
+  return `sha256=${createHmac("sha256", secret).update(payload).digest("hex")}`;
+}
 
 test("safe auto-merge endpoint is blocked by default guardrails", async () => {
   const store = new MemoryStore();

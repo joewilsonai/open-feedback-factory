@@ -81,6 +81,10 @@ Codex CLI.
 runs. `GITHUB_CREATE_PR=true` plus `GITHUB_MODE=gh` lets the worker push that
 branch and open a pull request after a successful Codex run.
 
+Set the optional `CODEX_*_USD_PER_1M` rate variables to convert captured Codex
+JSON usage totals into actual dollar cost records. Without rates, V1 records
+actual tokens and keeps the configured estimate as the dollar amount.
+
 ## GitHub Modes
 
 `GITHUB_MODE=disabled` is the default.

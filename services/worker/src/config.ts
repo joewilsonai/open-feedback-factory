@@ -1,9 +1,12 @@
+import type { CodexPricing } from "@open-feedback-factory/runner";
+
 export interface WorkerConfig {
   apiBaseUrl: string;
   codexCli: string;
   codexEffort: string;
   codexManageGit: boolean;
   codexModel: string;
+  codexPricing?: CodexPricing;
   githubMode: "app" | "disabled" | "gh";
   pollIntervalMs: number;
   pullRequestBase: string;
@@ -23,6 +26,7 @@ export function readWorkerConfig(env = process.env): WorkerConfig {
     codexEffort: env.CODEX_EFFORT ?? "extra-high",
     codexManageGit: env.CODEX_MANAGE_GIT === "true",
     codexModel: env.CODEX_MODEL ?? "gpt-5.5",
+    codexPricing: readCodexPricing(env),
     githubMode: githubModeFromEnv(env.GITHUB_MODE),
     pollIntervalMs: Number(env.WORKER_POLL_INTERVAL_MS ?? 5000),
     pullRequestBase: env.GITHUB_PR_BASE ?? "main",
@@ -41,4 +45,33 @@ function trimTrailingSlash(value: string): string {
 function githubModeFromEnv(value: string | undefined): WorkerConfig["githubMode"] {
   if (value === "app" || value === "gh") return value;
   return "disabled";
+}
+
+function readCodexPricing(env: NodeJS.ProcessEnv): CodexPricing | undefined {
+  const inputUsdPerMillion = numberFromEnv(env.CODEX_INPUT_USD_PER_1M);
+  const cachedInputUsdPerMillion = numberFromEnv(env.CODEX_CACHED_INPUT_USD_PER_1M);
+  const outputUsdPerMillion = numberFromEnv(env.CODEX_OUTPUT_USD_PER_1M);
+  const reasoningOutputUsdPerMillion = numberFromEnv(env.CODEX_REASONING_OUTPUT_USD_PER_1M);
+
+  if (
+    inputUsdPerMillion === undefined ||
+    cachedInputUsdPerMillion === undefined ||
+    outputUsdPerMillion === undefined ||
+    reasoningOutputUsdPerMillion === undefined
+  ) {
+    return undefined;
+  }
+
+  return {
+    cachedInputUsdPerMillion,
+    inputUsdPerMillion,
+    outputUsdPerMillion,
+    reasoningOutputUsdPerMillion,
+  };
+}
+
+function numberFromEnv(value: string | undefined): number | undefined {
+  if (value === undefined || value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }

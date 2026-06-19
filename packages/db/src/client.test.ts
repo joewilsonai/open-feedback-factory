@@ -49,7 +49,10 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     const runId = await store.completeWorkItemRun({
       agentName: "db-test-worker",
       costActual: { amountUsd: 1.25, confidence: "low", model: "gpt-5.5" },
-      metadata: { changedFiles: ["apps/demo-app/src/styles.css"] },
+      metadata: {
+        changedFiles: ["apps/demo-app/src/styles.css"],
+        githubPrUrl: "https://github.com/joewilsonai/open-feedback-factory/pull/123",
+      },
       runType: "implementation",
       status: "succeeded",
       summary: "Implemented by the DB integration test.",
@@ -59,6 +62,7 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
 
     const completed = await store.getWorkItem(claimed?.id ?? "");
     assert.equal(completed?.status, "implemented");
+    assert.equal(completed?.githubPrUrl, "https://github.com/joewilsonai/open-feedback-factory/pull/123");
 
     const progressedStatus = await store.getUserFeedbackStatus(intake.feedbackId);
     assert.equal(progressedStatus?.state, "in_progress");

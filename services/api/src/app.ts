@@ -68,6 +68,17 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     logger: false,
   });
 
+  app.removeContentTypeParser("application/json");
+  app.addContentTypeParser("application/json", { parseAs: "string" }, (request, body, done) => {
+    const rawBody = typeof body === "string" ? body : body.toString("utf8");
+    (request as typeof request & { rawBody?: string }).rawBody = rawBody;
+    try {
+      done(null, rawBody ? JSON.parse(rawBody) : {});
+    } catch (error) {
+      done(error as Error);
+    }
+  });
+
   await app.register(cors, {
     origin: true,
   });

@@ -5,6 +5,7 @@ import {
   buildCodexBranchName,
   buildCodexExecArgs,
   buildCodexPrompt,
+  costFromUsage,
   normalizeCodexEffort,
   parseCodexJsonlOutput,
 } from "./codexCliRunner.js";
@@ -112,7 +113,7 @@ test("parseCodexJsonlOutput extracts final structured result and usage", () => {
   assert.equal(parsed.errors.includes("non-fatal warning"), true);
 });
 
-test("buildCodexCostActual preserves estimate and attaches token totals", () => {
+test("buildCodexCostActual preserves estimate and attaches token totals without pricing", () => {
   assert.deepEqual(
     buildCodexCostActual({
       estimateAmountUsd: 1.5,
@@ -126,9 +127,52 @@ test("buildCodexCostActual preserves estimate and attaches token totals", () => 
     }),
     {
       amountUsd: 1.5,
-      confidence: "medium",
+      confidence: "low",
       model: "gpt-5.5",
       tokens: 1250,
     },
   );
+});
+
+test("costFromUsage prices uncached, cached, output, and reasoning tokens", () => {
+  assert.equal(
+    costFromUsage(
+      {
+        cachedInputTokens: 100,
+        inputTokens: 1100,
+        outputTokens: 200,
+        reasoningOutputTokens: 50,
+      },
+      {
+        cachedInputUsdPerMillion: 0.25,
+        inputUsdPerMillion: 1,
+        outputUsdPerMillion: 10,
+        reasoningOutputUsdPerMillion: 10,
+      },
+    ),
+    0.003525,
+  );
+});
+
+test("buildCodexCostActual uses configured pricing when usage is available", () => {
+  const cost = buildCodexCostActual({
+    estimateAmountUsd: 1.5,
+    model: "gpt-5.5",
+    pricing: {
+      cachedInputUsdPerMillion: 0.25,
+      inputUsdPerMillion: 1,
+      outputUsdPerMillion: 10,
+      reasoningOutputUsdPerMillion: 10,
+    },
+    usage: {
+      cachedInputTokens: 100,
+      inputTokens: 1100,
+      outputTokens: 200,
+      reasoningOutputTokens: 50,
+    },
+  });
+
+  assert.equal(cost.amountUsd, 0.003525);
+  assert.equal(cost.confidence, "high");
+  assert.equal(cost.tokens, 1350);
 });

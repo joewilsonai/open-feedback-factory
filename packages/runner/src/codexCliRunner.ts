@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import type { WorkItemRow } from "@open-feedback-factory/db";
-import type { CodexStructuredResult, CodexUsage, RunnerResult, WorkRunner } from "./types.js";
+import type { CodexPricing, CodexStructuredResult, CodexUsage, RunnerResult, WorkRunner } from "./types.js";
 
 export interface CodexCliRunnerOptions {
   branchPrefix?: string;
@@ -12,6 +12,7 @@ export interface CodexCliRunnerOptions {
   effort?: string;
   manageGit?: boolean;
   model?: string;
+  pricing?: CodexPricing;
   timeoutMs?: number;
 }
 
@@ -48,6 +49,7 @@ export class CodexCliRunner implements WorkRunner {
     const costActual = buildCodexCostActual({
       estimateAmountUsd: workItem.costEstimate.amountUsd,
       model,
+      pricing: this.options.pricing,
       usage: parsed.usage,
     });
 
@@ -159,18 +161,30 @@ export function parseCodexJsonlOutput(output: string): {
 export function buildCodexCostActual(input: {
   estimateAmountUsd: number;
   model: string;
+  pricing?: CodexPricing;
   usage: CodexUsage | null;
 }): RunnerResult["costActual"] {
   const tokens = input.usage
     ? input.usage.inputTokens + input.usage.outputTokens + input.usage.reasoningOutputTokens
     : undefined;
+  const amountUsd = input.usage && input.pricing ? costFromUsage(input.usage, input.pricing) : input.estimateAmountUsd;
 
   return {
-    amountUsd: input.estimateAmountUsd,
-    confidence: input.usage ? "medium" : "low",
+    amountUsd,
+    confidence: input.usage && input.pricing ? "high" : "low",
     model: input.model,
     tokens,
   };
+}
+
+export function costFromUsage(usage: CodexUsage, pricing: CodexPricing): number {
+  const uncachedInputTokens = Math.max(0, usage.inputTokens - usage.cachedInputTokens);
+  const amount =
+    (uncachedInputTokens / 1_000_000) * pricing.inputUsdPerMillion +
+    (usage.cachedInputTokens / 1_000_000) * pricing.cachedInputUsdPerMillion +
+    (usage.outputTokens / 1_000_000) * pricing.outputUsdPerMillion +
+    (usage.reasoningOutputTokens / 1_000_000) * pricing.reasoningOutputUsdPerMillion;
+  return Number(amount.toFixed(6));
 }
 
 function parseStructuredResult(text: string): CodexStructuredResult | null {

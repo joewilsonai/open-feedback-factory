@@ -34,6 +34,16 @@ interface WorkItem {
   userStatus: string;
 }
 
+interface Doctor {
+  api: string;
+  autoMergeEnabled: boolean;
+  codexRunnerMode: string;
+  databaseConfigured: boolean;
+  githubMode: string;
+  maxFeatureCostUsd: number;
+  publicBaseUrl: string;
+}
+
 const emptySnapshot: Snapshot = {
   counts: {
     agentRuns: 0,
@@ -48,6 +58,7 @@ const emptySnapshot: Snapshot = {
 };
 
 export function App() {
+  const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
   const [status, setStatus] = useState("Connecting");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -58,9 +69,12 @@ export function App() {
 
   async function refresh() {
     setStatus("Refreshing");
-    const response = await fetch(`${apiBaseUrl}/admin/control-room`);
-    const next = (await response.json()) as Snapshot;
-    setSnapshot(next);
+    const [snapshotResponse, doctorResponse] = await Promise.all([
+      fetch(`${apiBaseUrl}/admin/control-room`),
+      fetch(`${apiBaseUrl}/doctor`),
+    ]);
+    setSnapshot((await snapshotResponse.json()) as Snapshot);
+    setDoctor((await doctorResponse.json()) as Doctor);
     setStatus("Live");
   }
 
@@ -193,10 +207,36 @@ export function App() {
         </div>
 
         <ActivityPanel title="Recent feedback" rows={snapshot.recentFeedback} />
+        <SetupPanel doctor={doctor} />
         <ActivityPanel title="Agent runs" rows={snapshot.recentAgentRuns} />
         <ActivityPanel title="Feature usage" rows={snapshot.recentUsage} />
       </section>
     </main>
+  );
+}
+
+function SetupPanel(props: { doctor: Doctor | null }) {
+  const doctor = props.doctor;
+  return (
+    <div className="panel setup-panel">
+      <div className="panel-heading">
+        <p className="eyebrow">Setup</p>
+        <h2>Health</h2>
+      </div>
+      {doctor ? (
+        <dl className="setup-grid">
+          <Detail label="API" value={doctor.api} />
+          <Detail label="Database" value={doctor.databaseConfigured ? "Configured" : "Missing"} />
+          <Detail label="Runner" value={doctor.codexRunnerMode} />
+          <Detail label="GitHub" value={doctor.githubMode} />
+          <Detail label="Auto-merge" value={doctor.autoMergeEnabled ? "Enabled" : "Disabled"} />
+          <Detail label="Cost cap" value={`$${doctor.maxFeatureCostUsd.toFixed(2)}`} />
+          <Detail label="Public URL" value={doctor.publicBaseUrl} />
+        </dl>
+      ) : (
+        <p className="empty">Waiting for setup health.</p>
+      )}
+    </div>
   );
 }
 

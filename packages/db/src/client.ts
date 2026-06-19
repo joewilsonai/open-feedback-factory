@@ -379,6 +379,20 @@ export class OpenFeedbackStore {
         );
       }
 
+      if (githubPrUrl) {
+        await client.query(
+          `insert into github_artifacts (id, work_item_id, artifact_type, url, artifact_number, metadata)
+           values ($1, $2, 'pull_request', $3, $4, $5)`,
+          [
+            `gh_${randomUUID()}`,
+            input.workItemId,
+            githubPrUrl,
+            githubNumberFromUrl(githubPrUrl) ?? null,
+            JSON.stringify({ agentRunId: runId, source: "runner_completion" }),
+          ],
+        );
+      }
+
       const workItemResult = await client.query<{ cluster_key: string }>(
         `update work_items
          set status = $2,
@@ -662,4 +676,10 @@ function isActualCost(value: Record<string, unknown> | undefined): value is {
 function stringFromMetadata(metadata: Record<string, unknown> | undefined, key: string): string | null {
   const value = metadata?.[key];
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function githubNumberFromUrl(url: string): number | undefined {
+  const raw = url.split("/").filter(Boolean).at(-1);
+  const value = Number(raw);
+  return Number.isInteger(value) ? value : undefined;
 }

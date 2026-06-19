@@ -163,6 +163,20 @@ small {
   background: #ffffff;
 }
 
+.setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  background: rgba(22, 26, 31, 0.13);
+}
+
+.setup-grid div {
+  min-height: 4.5rem;
+  padding: 0.85rem;
+  background: #ffffff;
+}
+
 dd {
   margin: 0.25rem 0 0;
   overflow-wrap: anywhere;
@@ -223,6 +237,10 @@ code {
   }
 
   .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .setup-grid {
     grid-template-columns: 1fr;
   }
 }

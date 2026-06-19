@@ -27,6 +27,13 @@ export interface CodexStructuredResult {
   summary: string;
 }
 
+export interface CodexPricing {
+  cachedInputUsdPerMillion: number;
+  inputUsdPerMillion: number;
+  outputUsdPerMillion: number;
+  reasoningOutputUsdPerMillion: number;
+}
+
 export interface WorkRunner {
   run(workItem: WorkItemRow): Promise<RunnerResult>;
 }

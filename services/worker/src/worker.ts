@@ -58,6 +58,7 @@ export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike =
           effort: config.codexEffort,
           manageGit: config.codexManageGit,
           model: config.codexModel,
+          pricing: config.codexPricing,
         })
       : new DemoRunner();
 

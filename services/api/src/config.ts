@@ -7,6 +7,7 @@ export interface ApiConfig {
   githubMode: "app" | "disabled" | "gh";
   githubOwner: string;
   githubRepo: string;
+  githubWebhookSecret: string;
   maxFeatureCostUsd: number;
   maxSafeDiffLines: number;
   protectedPathFragments: string[];
@@ -24,6 +25,7 @@ export function readConfig(env = process.env): ApiConfig {
     githubMode: githubModeFromEnv(env.GITHUB_MODE),
     githubOwner: env.GITHUB_OWNER ?? "joewilsonai",
     githubRepo: env.GITHUB_REPO ?? "open-feedback-factory",
+    githubWebhookSecret: env.GITHUB_WEBHOOK_SECRET ?? "",
     maxFeatureCostUsd: Number(env.MAX_FEATURE_COST_USD ?? 5),
     maxSafeDiffLines: Number(env.MAX_SAFE_DIFF_LINES ?? 120),
     protectedPathFragments: (env.PROTECTED_PATHS ?? "auth,billing,privacy,legal,encryption,secrets,infra,migrations,release")
