@@ -268,6 +268,9 @@ mountFeedbackLauncher({
   source,
   metadata,
   suggestions,
+  trackStatus,
+  statusPollIntervalMs,
+  statusStorageKey,
   onSubmitted,
 });
 ```
@@ -280,8 +283,11 @@ Launcher requirements:
 - submit through the same privacy-safe SDK feedback endpoint;
 - attach safe app metadata such as route, surface, app version, and feature
   context;
-- expose a submitted callback so the host app can show status or lifecycle
-  progress;
+- show the latest user-safe request status inside the launcher after submit;
+- persist only the submitted `feedbackId` locally, not raw feedback text;
+- auto-fetch status when the launcher opens and poll while it remains open so
+  users never need to hit a refresh button;
+- expose a submitted callback so the host app can add its own lifecycle UI;
 - be dismissible and keyboard-accessible;
 - avoid collecting screenshots, raw session data, transcripts, secrets, or
   large private payloads by default;

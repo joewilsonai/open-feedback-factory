@@ -87,4 +87,10 @@ test("feedback launcher exposes a floating suggestion UI contract", () => {
   assert.match(widgetSource, /Send suggestion/);
   assert.match(widgetSource, /web_sdk_launcher/);
   assert.match(widgetSource, /position: fixed/);
+  assert.match(widgetSource, /getFeedbackStatus/);
+  assert.match(widgetSource, /off-launcher-tracker/);
+  assert.match(widgetSource, /Your latest request/);
+  assert.match(widgetSource, /statusPollIntervalMs/);
+  assert.match(widgetSource, /localStorage/);
+  assert.doesNotMatch(widgetSource, /Refresh status/);
 });

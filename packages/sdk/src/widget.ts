@@ -16,6 +16,9 @@ export interface FeedbackLauncherOptions {
   placeholder?: string;
   position?: "bottom-left" | "bottom-right";
   source?: string;
+  statusPollIntervalMs?: number;
+  statusStorageKey?: string;
+  trackStatus?: boolean;
   suggestions?: FeedbackSuggestion[];
   title?: string;
 }
@@ -65,6 +68,14 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
           <button class="off-launcher-submit" type="submit">Send suggestion</button>
         </form>
         <div class="off-launcher-status" role="status" aria-live="polite">Ready</div>
+        <div class="off-launcher-tracker" hidden>
+          <div>
+            <p class="off-launcher-kicker">Your latest request</p>
+            <strong class="off-launcher-tracker-label">Checking status...</strong>
+          </div>
+          <p class="off-launcher-tracker-message"></p>
+          <p class="off-launcher-tracker-id"></p>
+        </div>
       </div>
     </section>
   `;
@@ -80,6 +91,15 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
   const message = requireElement<HTMLTextAreaElement>(root, "#off-launcher-message");
   const status = requireElement<HTMLDivElement>(root, ".off-launcher-status");
   const suggestions = requireElement<HTMLDivElement>(root, ".off-launcher-suggestions");
+  const tracker = requireElement<HTMLDivElement>(root, ".off-launcher-tracker");
+  const trackerLabel = requireElement<HTMLElement>(root, ".off-launcher-tracker-label");
+  const trackerMessage = requireElement<HTMLParagraphElement>(root, ".off-launcher-tracker-message");
+  const trackerId = requireElement<HTMLParagraphElement>(root, ".off-launcher-tracker-id");
+  const trackStatus = options.trackStatus ?? true;
+  const statusStorageKey = options.statusStorageKey ?? `off:last-feedback:${options.source ?? "web_sdk_launcher"}`;
+  const statusPollIntervalMs = options.statusPollIntervalMs ?? 15_000;
+  let trackedFeedbackId = trackStatus ? readTrackedFeedbackId(statusStorageKey) : null;
+  let pollTimer: number | null = null;
 
   for (const suggestion of options.suggestions ?? []) {
     const suggestionButton = document.createElement("button");
@@ -103,6 +123,8 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
     button.setAttribute("aria-expanded", "true");
     window.requestAnimationFrame(() => root.classList.add("is-open"));
     message.focus();
+    if (trackedFeedbackId) void refreshTrackedStatus();
+    startStatusPolling();
   };
 
   const close = () => {
@@ -110,6 +132,7 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
     backdrop.hidden = true;
     panel.hidden = true;
     button.setAttribute("aria-expanded", "false");
+    stopStatusPolling();
     button.focus();
   };
 
@@ -119,6 +142,14 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
   root.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !panel.hidden) close();
   });
+
+  if (trackedFeedbackId) {
+    showTracker({
+      feedbackId: trackedFeedbackId,
+      label: "Checking status...",
+      message: "Open the panel to load the latest update.",
+    });
+  }
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -138,7 +169,15 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
     void options.client
       .submitFeedback(input)
       .then((result) => {
-        status.textContent = result.status.label;
+        status.textContent = `${result.status.label}: ${result.status.message}`;
+        trackedFeedbackId = result.feedbackId;
+        if (trackStatus) writeTrackedFeedbackId(statusStorageKey, result.feedbackId);
+        showTracker({
+          feedbackId: result.feedbackId,
+          label: result.status.label,
+          message: result.status.message,
+        });
+        startStatusPolling();
         message.value = "";
         options.onSubmitted?.(result);
       })
@@ -150,10 +189,58 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
   return {
     close,
     destroy() {
+      stopStatusPolling();
       root.remove();
     },
     open,
   };
+
+  async function refreshTrackedStatus(input: { showLoading?: boolean } = {}) {
+    if (!trackedFeedbackId) return;
+    if (input.showLoading ?? true) {
+      showTracker({
+        feedbackId: trackedFeedbackId,
+        label: "Checking status...",
+        message: "Fetching the latest update.",
+      });
+    }
+
+    try {
+      const next = await options.client.getFeedbackStatus(trackedFeedbackId);
+      showTracker({
+        feedbackId: trackedFeedbackId,
+        label: next.label,
+        message: next.message,
+      });
+    } catch (error: unknown) {
+      showTracker({
+        feedbackId: trackedFeedbackId,
+        label: "Status unavailable",
+        message: error instanceof Error ? error.message : "Could not refresh this request.",
+      });
+    }
+  }
+
+  function showTracker(input: { feedbackId: string; label: string; message: string }) {
+    if (!trackStatus) return;
+    tracker.hidden = false;
+    trackerLabel.textContent = input.label;
+    trackerMessage.textContent = input.message;
+    trackerId.textContent = `Request ${input.feedbackId}`;
+  }
+
+  function startStatusPolling() {
+    if (!trackStatus || !trackedFeedbackId || statusPollIntervalMs <= 0 || pollTimer) return;
+    pollTimer = window.setInterval(() => {
+      if (!panel.hidden) void refreshTrackedStatus({ showLoading: false });
+    }, statusPollIntervalMs);
+  }
+
+  function stopStatusPolling() {
+    if (!pollTimer) return;
+    window.clearInterval(pollTimer);
+    pollTimer = null;
+  }
 }
 
 function ensureLauncherStyles() {
@@ -234,6 +321,31 @@ function ensureLauncherStyles() {
       color: #59645f;
       font-size: 0.95rem;
     }
+    .off-launcher-tracker {
+      display: grid;
+      gap: 0.45rem;
+      border: 1px solid rgba(15, 112, 84, 0.18);
+      border-radius: 10px;
+      background: rgba(15, 112, 84, 0.07);
+      padding: 0.8rem;
+    }
+    .off-launcher-tracker[hidden] {
+      display: none;
+    }
+    .off-launcher-tracker-label {
+      display: block;
+      color: #17201d;
+      font-size: 0.98rem;
+    }
+    .off-launcher-tracker-message, .off-launcher-tracker-id {
+      margin: 0;
+      color: #59645f;
+      font-size: 0.9rem;
+    }
+    .off-launcher-tracker-id {
+      font-size: 0.78rem;
+      word-break: break-word;
+    }
     .off-launcher-form {
       display: grid;
       gap: 0.7rem;
@@ -295,6 +407,22 @@ function requireElement<T extends Element>(root: ParentNode, selector: string): 
   const element = root.querySelector(selector);
   if (!element) throw new Error(`Missing launcher element: ${selector}`);
   return element as T;
+}
+
+function readTrackedFeedbackId(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeTrackedFeedbackId(key: string, feedbackId: string) {
+  try {
+    window.localStorage.setItem(key, feedbackId);
+  } catch {
+    // Status tracking still works for the current session when storage is blocked.
+  }
 }
 
 function escapeHtml(value: string): string {

@@ -928,6 +928,9 @@ trackFeatureOutcome({
   source,
   metadata,
   suggestions,
+  trackStatus,
+  statusPollIntervalMs,
+  statusStorageKey,
   onSubmitted,
 });</code></pre>
 <p>Launcher requirements:</p>
@@ -938,8 +941,11 @@ trackFeatureOutcome({
 <li>submit through the same privacy-safe SDK feedback endpoint;</li>
 <li>attach safe app metadata such as route, surface, app version, and feature</li>
 <p>context;</p>
-<li>expose a submitted callback so the host app can show status or lifecycle</li>
-<p>progress;</p>
+<li>show the latest user-safe request status inside the launcher after submit;</li>
+<li>persist only the submitted <code>feedbackId</code> locally, not raw feedback text;</li>
+<li>auto-fetch status when the launcher opens and poll while it remains open so</li>
+<p>users never need to hit a refresh button;</p>
+<li>expose a submitted callback so the host app can add its own lifecycle UI;</li>
 <li>be dismissible and keyboard-accessible;</li>
 <li>avoid collecting screenshots, raw session data, transcripts, secrets, or</li>
 <p>large private payloads by default;</p>

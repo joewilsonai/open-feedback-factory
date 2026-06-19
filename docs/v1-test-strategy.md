@@ -40,8 +40,9 @@ capture, release proof, and agent assumptions.
   bodies, agent prompts, user-facing status, or logs intended for GitHub.
 - The web SDK exposes a floating suggestion launcher that opens feedback UI,
   submits through the SDK, supports preset suggestions without auto-submitting
-  them, and does not collect screenshots, raw transcripts, secrets, or large
-  private payloads by default.
+  them, automatically tracks the submitted request status without a manual
+  refresh button, and does not collect screenshots, raw transcripts, secrets,
+  or large private payloads by default.
 - Workspace/tenant-scoped users, API keys, workers, and admins cannot read or
   mutate another workspace's feedback, work items, agent runs, costs, GitHub
   artifacts, release events, notifications, feature usage, policy config, or
