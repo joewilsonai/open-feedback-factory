@@ -8,23 +8,23 @@ const hostedControlCenterUrl = "https://app.openfeedbackfactory.com/ops/";
 const lifecycle = [
   {
     step: "01",
-    title: "Connect a real repo",
-    body: "Start with a clean app repo, then let OFF create the SDK-install PR instead of pretending the integration already exists.",
+    title: "Install the feedback button",
+    body: "Connect a real repo and let OFF add the in-app suggestion surface through a normal PR.",
   },
   {
     step: "02",
-    title: "Sanitize and dedupe",
-    body: "Strip sensitive payloads, cluster repeat asks, and keep the original user intent attached to the work item.",
+    title: "Capture real user demand",
+    body: "Sanitize feedback, cluster repeat asks, and keep the original user intent attached to the work item.",
   },
   {
     step: "03",
     title: "Route through policy",
-    body: "Estimate risk, cost, provider, and approval lane before an agent touches your repo.",
+    body: "Estimate risk, cost, provider, and approval lane before a worker touches the repo.",
   },
   {
     step: "04",
-    title: "Create a PR with evidence",
-    body: "Agents open GitHub work with logs, assumptions, checks, cost records, and user follow-up ready to review.",
+    title: "Ship with evidence",
+    body: "Track assumptions, checks, PRs, release proof, cost records, and user follow-up in one lifecycle.",
   },
 ];
 
@@ -89,7 +89,7 @@ export function App() {
           </div>
           <div className="hero-proof" aria-label="Live product proof">
             <span className="signal live">live hosted control center</span>
-            <span>clean LaunchBrief repo, SDK install is the next real PR</span>
+            <span>LaunchBrief feedback launcher was installed by a real PR</span>
           </div>
         </div>
       </section>
@@ -99,8 +99,8 @@ export function App() {
           <p className="eyebrow">Feedback-to-feature lifecycle</p>
           <h2 id="lifecycle-title">Every request gets a truthful state.</h2>
           <p>
-            Open Feedback Factory owns the messy middle between a user asking for
-            something and a code change landing with proof.
+            Open Feedback Factory owns the messy middle between a beta user asking
+            for something and a code change landing with proof.
           </p>
         </div>
         <div className="timeline">
@@ -142,8 +142,8 @@ export function App() {
           <p className="eyebrow">Guardrails and cost controls</p>
           <h2 id="guardrail-title">Auto-ship small work without handing over the keys.</h2>
           <p>
-            The agent is not the product. The control plane decides whether work
-            is safe, affordable, observable, and ready for follow-up.
+            The coding agent is not the product. The control plane decides whether
+            work is safe, affordable, observable, and ready for follow-up.
           </p>
         </div>
         <div className="guardrail-grid">
@@ -161,8 +161,9 @@ export function App() {
           <p className="eyebrow">Live control center</p>
           <h2 id="control-title">See the lifecycle before you trust the automation.</h2>
           <p>
-            Watch claims, sanitization, assumptions, retries, PR status, cost
-            estimates, actual spend, and user follow-up in one operator view.
+            Watch sanitization, demand clusters, queue state, worker runs, PR
+            status, cost estimates, release proof, and user follow-up in one
+            operator view.
           </p>
           <div className="control-links">
             <a href={hostedControlCenterUrl}>Private hosted control center</a>
@@ -201,7 +202,7 @@ export function App() {
           <h2 id="sdk-title">A tiny button with enough context to matter.</h2>
           <p>
             The demo app starts without this button. The product moment is
-            connecting the repo and letting OFF open the PR that installs it.
+            connecting the repo and seeing OFF install it through a real PR.
           </p>
         </div>
         <div className="sdk-card" aria-label="SDK event preview">
@@ -216,7 +217,7 @@ export function App() {
         <p>
           Open Feedback Factory gives small teams a real feedback-to-feature loop:
           open source, provider-flexible, guardrailed, and honest about what is
-          shipped, blocked, or waiting on credentials.
+          queued, blocked, shipped, or waiting on credentials.
         </p>
         <div className="hero-actions" aria-label="Final calls to action">
           <a className="button primary" href={betaMailto}>
