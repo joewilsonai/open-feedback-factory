@@ -621,6 +621,7 @@ function userStatusLabel(status: string): string {
   if (status === "planned") return "Queued";
   if (status === "grouped") return "Grouped with another request";
   if (status === "in_progress") return "Agent working";
+  if (status === "implemented") return "Implemented, awaiting review";
   if (status === "shipped") return "Shipped";
   if (status === "blocked") return "Blocked";
   if (status === "not_planned") return "Not planned";

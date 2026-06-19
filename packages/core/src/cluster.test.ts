@@ -28,6 +28,13 @@ test("clusterKeyForFeedback keeps theme color choices distinct from dark mode", 
     clusterKeyForFeedback({ sanitizedMessage: "add different theme colors to the UI so user can select" }),
     "feature.theme.color-options",
   );
+  assert.equal(
+    clusterKeyForFeedback({
+      sanitizedMessage:
+        "create multiple themes with different colors the user can pick from, they should work in both light and dark mode.",
+    }),
+    "feature.theme.color-options",
+  );
 });
 
 test("clusterKeyForFeedback keeps unrelated copy requests separate", () => {

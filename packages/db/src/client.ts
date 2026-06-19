@@ -718,7 +718,7 @@ function completionStateForRun(status: RunnerJobCompletionInput["status"]): {
   if (status === "succeeded") {
     return {
       message: "An agent implemented this and it is waiting for review or release.",
-      userStatus: "in_progress",
+      userStatus: "implemented",
       workItemStatus: "implemented",
     };
   }
@@ -740,7 +740,7 @@ function followUpForExistingWorkItem(status: string): { message: string; status:
   if (status === "implemented") {
     return {
       message: "An agent implemented a matching request and it is waiting for review or release.",
-      status: "in_progress",
+      status: "implemented",
     };
   }
   if (status === "in_progress") {

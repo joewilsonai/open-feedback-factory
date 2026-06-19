@@ -2,7 +2,7 @@ import type { SanitizedFeedback } from "./types.js";
 
 const SYNONYMS: Array<[RegExp, string]> = [
   [/\b(night mode|dark theme|dark color|dark colours?|dark colors?)\b/g, "dark mode"],
-  [/\b(colou?r themes?|change app colou?r|theme picker|appearance)\b/g, "theme"],
+  [/\b(colou?r themes?|change app colou?r|theme picker|appearance)\b/g, "theme color"],
   [/\b(settings screen|preferences|account screen)\b/g, "settings"],
   [/\b(copy|wording|label|text)\b/g, "copy"],
   [/\b(crash|crashes|crashed|freezes|hangs)\b/g, "crash"],
@@ -35,12 +35,12 @@ export function clusterKeyForFeedback(input: Pick<SanitizedFeedback, "sanitizedM
     normalized = normalized.replace(pattern, replacement);
   }
 
-  if (/\bdark mode\b/.test(normalized)) {
-    return "feature.theme.dark-mode";
+  if (hasThemeColorIntent(normalized)) {
+    return "feature.theme.color-options";
   }
 
-  if (/\btheme\b/.test(normalized)) {
-    return "feature.theme.color-options";
+  if (/\bdark mode\b/.test(normalized)) {
+    return "feature.theme.dark-mode";
   }
 
   if (/\bcopy\b/.test(normalized)) {
@@ -60,6 +60,13 @@ export function clusterKeyForFeedback(input: Pick<SanitizedFeedback, "sanitizedM
   const words = wordsForCluster(normalized).slice(0, 8);
 
   return words.length ? `feedback.${words.join("-")}` : "feedback.uncategorized";
+}
+
+function hasThemeColorIntent(value: string): boolean {
+  return (
+    /\bthemes?\b/.test(value) &&
+    /\b(colou?rs?|palette|picker|pick|select|choose|multiple|different|options?)\b/.test(value)
+  );
 }
 
 function wordsForCluster(value: string): string[] {

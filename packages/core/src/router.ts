@@ -153,9 +153,9 @@ function titleForDaybookFeature(message: string): string {
 }
 
 function titleForThemeFeature(message: string, clusterKey: string): string {
-  if (clusterKey === "feature.theme.dark-mode" || /dark mode|dark theme/.test(message)) return "Add a dark mode option";
   if (/color|colour|theme picker|appearance/.test(message) || clusterKey === "feature.theme.color-options") {
     return "Add theme color choices";
   }
+  if (clusterKey === "feature.theme.dark-mode" || /dark mode|dark theme/.test(message)) return "Add a dark mode option";
   return "Improve theme settings";
 }

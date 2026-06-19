@@ -120,7 +120,7 @@ class MemoryStore implements AppStore {
     const item = this.workItems.find((workItem) => workItem.id === input.workItemId);
     if (item) {
       item.status = input.status === "succeeded" ? "implemented" : input.status;
-      item.userStatus = input.status === "succeeded" ? "in_progress" : "blocked";
+      item.userStatus = input.status === "succeeded" ? "implemented" : "blocked";
     }
     return "run_1";
   }
@@ -501,7 +501,7 @@ test("GitHub webhook verifies signature and records PR artifact", async () => {
     summary: "Please improve the save label",
     title: "Improve product copy",
     updatedAt: new Date().toISOString(),
-    userStatus: "in_progress",
+    userStatus: "implemented",
   });
 
   const app = await buildApp({ config, store });

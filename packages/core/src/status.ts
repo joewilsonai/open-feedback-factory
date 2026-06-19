@@ -4,6 +4,7 @@ const LABELS: Record<UserFeedbackState, string> = {
   already_available: "Already available",
   blocked: "Blocked",
   grouped: "Grouped with similar feedback",
+  implemented: "Implemented, awaiting review",
   in_progress: "In progress",
   needs_more_signal: "Needs more signal",
   not_planned: "Not planned",

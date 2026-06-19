@@ -23,6 +23,7 @@ export type UserFeedbackState =
   | "already_available"
   | "blocked"
   | "grouped"
+  | "implemented"
   | "in_progress"
   | "needs_more_signal"
   | "not_planned"

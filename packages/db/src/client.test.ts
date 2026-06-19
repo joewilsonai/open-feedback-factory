@@ -70,11 +70,11 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(completed?.githubPrUrl, "https://github.com/joewilsonai/open-feedback-factory/pull/123");
 
     const progressedStatus = await store.getUserFeedbackStatus(intake.feedbackId);
-    assert.equal(progressedStatus?.state, "in_progress");
+    assert.equal(progressedStatus?.state, "implemented");
 
     const duplicateAfterRun = await store.createFeedbackIntake({ decision, feedback, sanitized });
     assert.equal(duplicateAfterRun.workItemId, intake.workItemId);
-    assert.equal(duplicateAfterRun.status.state, "in_progress");
+    assert.equal(duplicateAfterRun.status.state, "implemented");
     assert.match(duplicateAfterRun.status.message, /waiting for review or release/);
   } finally {
     await store.close();

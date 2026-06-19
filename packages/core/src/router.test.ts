@@ -20,7 +20,7 @@ test("routeFeedback sends dark mode through the safe implementation lane", () =>
 
 test("routeFeedback names theme color requests distinctly from dark mode", () => {
   const sanitized = sanitizeFeedback({
-    message: "add different theme colors to the UI so user can select",
+    message: "create multiple themes with different colors the user can pick from, they should work in both light and dark mode.",
     source: "daybook_demo_app",
   });
 
