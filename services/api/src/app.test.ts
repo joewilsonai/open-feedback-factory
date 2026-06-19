@@ -5,6 +5,7 @@ import type { UserFeedbackStatus } from "@open-feedback-factory/core";
 import type { ControlRoomSnapshot, WorkItemRow } from "@open-feedback-factory/db";
 import { buildApp, type AppStore } from "./app.js";
 import type { ApiConfig } from "./config.js";
+import { buildGithubAppEnvSnippet } from "./routes/github.js";
 import { buildSanitizedGithubIssueInput } from "./routes/sdk.js";
 
 const config: ApiConfig = {
@@ -12,6 +13,7 @@ const config: ApiConfig = {
   apiPort: 4100,
   autoMergeEnabled: false,
   codexRunnerMode: "demo",
+  controlCenterUrl: "http://control.test",
   databaseUrl: "postgres://example",
   githubMode: "disabled",
   githubOwner: "joewilsonai",
@@ -169,6 +171,17 @@ test("API records feature usage and exposes control room counts", async () => {
   await app.close();
 });
 
+test("doctor exposes setup wizard links", async () => {
+  const app = await buildApp({ config, store: new MemoryStore() });
+  const response = await app.inject({ method: "GET", url: "/doctor" });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().controlCenterUrl, "http://control.test");
+  assert.equal(response.json().githubAppSetupUrl, "http://api.test/github/app/setup");
+
+  await app.close();
+});
+
 test("API exposes GitHub App manifest seam", async () => {
   const app = await buildApp({ config, store: new MemoryStore() });
   const response = await app.inject({ method: "GET", url: "/github/app/manifest" });
@@ -177,6 +190,7 @@ test("API exposes GitHub App manifest seam", async () => {
   assert.equal(response.json().default_permissions.pull_requests, "write");
   assert.deepEqual(response.json().callback_urls, ["http://api.test/github/app/installed"]);
   assert.equal(response.json().hook_attributes.url, "http://api.test/github/webhook");
+  assert.equal(response.json().setup_url, "http://control.test");
   assert.equal(response.json().url, "https://github.com/joewilsonai/open-feedback-factory");
 
   await app.close();
@@ -193,6 +207,53 @@ test("API exposes GitHub App setup form for manifest registration", async () => 
   assert.match(response.body, /Open Feedback Factory/);
 
   await app.close();
+});
+
+test("GitHub App installed callback returns a human setup page by default", async () => {
+  const app = await buildApp({ config, store: new MemoryStore() });
+  const response = await app.inject({
+    method: "GET",
+    url: "/github/app/installed?code=temp-code&installation_id=123&setup_action=install&state=open-feedback-factory",
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(response.headers["content-type"] as string, /text\/html/);
+  assert.match(response.body, /GitHub App Returned/);
+  assert.match(response.body, /Generate env values/);
+  assert.match(response.body, /temp-code/);
+  assert.match(response.body, /curl -s -X POST http:\/\/api\.test\/github\/app\/manifest\/conversions/);
+  assert.match(response.body, /http:\/\/control\.test/);
+
+  await app.close();
+});
+
+test("GitHub App installed callback keeps JSON mode for automation", async () => {
+  const app = await buildApp({ config, store: new MemoryStore() });
+  const response = await app.inject({
+    headers: { accept: "application/json" },
+    method: "GET",
+    url: "/github/app/installed?code=temp-code&installation_id=123&setup_action=install&state=open-feedback-factory",
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().code, "temp-code");
+  assert.equal(response.json().installationId, "123");
+  assert.equal(response.json().setupAction, "install");
+
+  await app.close();
+});
+
+test("GitHub App conversion env snippet is Docker-ready", () => {
+  const snippet = buildGithubAppEnvSnippet({
+    id: 12345,
+    pem: "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----",
+    webhook_secret: "secret-value",
+  });
+
+  assert.match(snippet, /GITHUB_MODE=app/);
+  assert.match(snippet, /GITHUB_APP_ID=12345/);
+  assert.match(snippet, /GITHUB_APP_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----/);
+  assert.match(snippet, /GITHUB_WEBHOOK_SECRET=secret-value/);
 });
 
 test("sanitized GitHub issue body excludes raw feedback", () => {

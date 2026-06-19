@@ -46,6 +46,7 @@ services:
       CODEX_MODEL: ${CODEX_MODEL:-gpt-5.5}
       CODEX_RUNNER_MODE: ${CODEX_RUNNER_MODE:-demo}
       CODEX_TIMEOUT_MS: ${CODEX_TIMEOUT_MS:-300000}
+      CONTROL_CENTER_URL: ${CONTROL_CENTER_URL:-http://localhost:5173}
       DOCKER_DATABASE_URL: ${DOCKER_DATABASE_URL:-postgres://off:off@postgres:5432/open_feedback_factory}
       GITHUB_MODE: ${GITHUB_MODE:-disabled}
       GITHUB_APP_ID: ${GITHUB_APP_ID:-}

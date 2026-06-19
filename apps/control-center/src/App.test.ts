@@ -6,6 +6,8 @@ describe("control center UI contract", () => {
 
   it("shows the required operator surfaces", () => {
     expect(source).toContain("Control Center");
+    expect(source).toContain("Install wizard");
+    expect(source).toContain("Create GitHub App");
     expect(source).toContain("Work items");
     expect(source).toContain("Agent runs");
     expect(source).toContain("Feature usage");
@@ -16,6 +18,8 @@ describe("control center UI contract", () => {
 
   it("can trigger run, auto-merge, and release actions", () => {
     expect(source).toContain("/doctor");
+    expect(source).toContain("/github/app/setup");
+    expect(source).toContain("/github/app/manifest");
     expect(source).toContain("/run");
     expect(source).toContain("/automerge");
     expect(source).toContain("/release");

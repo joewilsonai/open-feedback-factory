@@ -106,10 +106,15 @@ the client can resolve it from the configured owner/repo. In App mode, sanitized
 issues, PR creation, PR comments, branch cleanup, and guarded merges use
 installation tokens instead of a personal GitHub CLI session.
 
-The API exposes `/github/app/manifest`, `/github/app/installed`, and
-`/github/webhook` for the App installation and webhook flow. Open
-`http://localhost:4100/github/app/setup` to start GitHub's manifest-based App
-registration flow from the local V1 stack.
+The control center shows a GitHub App install wizard at
+`http://localhost:5173`. Use **Create GitHub App** to start GitHub's
+manifest-based App registration flow. GitHub still requires a confirmation
+screen, then it returns to the local callback page where you can generate and
+copy the `GITHUB_MODE=app` env values for Docker.
+
+The API also exposes `/github/app/manifest`, `/github/app/setup`,
+`/github/app/installed`, and `/github/webhook` for the App installation and
+webhook flow.
 
 ## CI And Safe Merge
 

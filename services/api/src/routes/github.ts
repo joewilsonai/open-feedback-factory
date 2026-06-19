@@ -35,13 +35,95 @@ export async function registerGithubRoutes(app: FastifyInstance, deps: AppDeps):
 </html>`);
   });
 
-  app.get("/github/app/installed", async (request) => ({
-    code: queryString(request.query, "code"),
-    installationId: queryString(request.query, "installation_id"),
-    ok: true,
-    setupAction: queryString(request.query, "setup_action"),
-    state: queryString(request.query, "state"),
-  }));
+  app.get("/github/app/installed", async (request, reply) => {
+    const code = queryString(request.query, "code");
+    const installationId = queryString(request.query, "installation_id");
+    const setupAction = queryString(request.query, "setup_action");
+    const state = queryString(request.query, "state");
+    const wantsJson = String(request.headers.accept ?? "").includes("application/json");
+    const payload = { code, installationId, ok: true, setupAction, state };
+    if (wantsJson) return payload;
+
+    return reply.type("text/html").send(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Open Feedback Factory GitHub App Installed</title>
+    <style>
+      body { margin: 0; color: #161a1f; background: #edeff0; font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 900px; margin: 0 auto; padding: clamp(24px, 5vw, 56px); }
+      h1 { margin: 0 0 12px; font-size: clamp(40px, 8vw, 76px); line-height: .92; letter-spacing: 0; }
+      p { max-width: 70ch; margin: 0 0 18px; color: #52605a; }
+      .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin: 24px 0; background: rgba(22,26,31,.16); border: 1px solid rgba(22,26,31,.16); }
+      .cell { min-height: 96px; padding: 16px; background: rgba(255,255,255,.86); }
+      dt { color: #65706c; font-size: 12px; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+      dd { margin: 6px 0 0; font-weight: 750; overflow-wrap: anywhere; }
+      pre { overflow: auto; padding: 16px; background: #161a1f; color: #f4f6f8; border-radius: 7px; }
+      .actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 0 0 18px; }
+      .primary { border-color: #255bc7; color: #fff; background: #255bc7; }
+      .output { min-height: 132px; white-space: pre-wrap; }
+      a, button { color: #255bc7; font-weight: 800; }
+      button { min-height: 42px; border: 1px solid rgba(22,26,31,.22); border-radius: 7px; padding: 0 14px; background: white; cursor: pointer; }
+      button.primary { color: #fff; }
+      @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>GitHub App Returned</h1>
+      <p>GitHub created the temporary manifest code. Convert it locally, add the generated values to <code>.env</code>, then restart the stack.</p>
+      <dl class="grid">
+        <div class="cell"><dt>Temporary code</dt><dd>${escapeHtml(code ?? "missing")}</dd></div>
+        <div class="cell"><dt>Installation</dt><dd>${escapeHtml(installationId ?? "created after repo install")}</dd></div>
+        <div class="cell"><dt>Setup action</dt><dd>${escapeHtml(setupAction ?? "none")}</dd></div>
+        <div class="cell"><dt>State</dt><dd>${escapeHtml(state ?? "none")}</dd></div>
+      </dl>
+      ${
+        code
+          ? `<p>Generate the local Docker values from this temporary code, then paste them into <code>.env</code> and restart Docker.</p>
+      <div class="actions">
+        <button class="primary" id="convert" type="button">Generate env values</button>
+        <button id="copy" type="button">Copy env values</button>
+      </div>
+      <pre class="output" id="env-output">Waiting to convert the GitHub manifest code.</pre>
+      <p>Fallback command:</p>
+      <pre>curl -s -X POST ${escapeHtml(deps.config.publicBaseUrl)}/github/app/manifest/conversions \\
+  -H 'content-type: application/json' \\
+  -d '{"code":"${escapeHtml(code)}"}'</pre>`
+          : "<p>No temporary code was present in the callback. Start again from the setup wizard.</p>"
+      }
+      <p><a href="${escapeHtml(deps.config.controlCenterUrl)}">Return to the control center</a></p>
+    </main>
+    ${
+      code
+        ? `<script>
+      const manifestCode = ${jsonForScript(code)};
+      const output = document.getElementById("env-output");
+      document.getElementById("convert")?.addEventListener("click", async () => {
+        output.textContent = "Converting manifest code...";
+        try {
+          const response = await fetch("/github/app/manifest/conversions", {
+            body: JSON.stringify({ code: manifestCode }),
+            headers: { "content-type": "application/json" },
+            method: "POST"
+          });
+          const body = await response.json();
+          if (!response.ok) throw new Error(body.error || "GitHub conversion failed");
+          output.textContent = body.envSnippet;
+        } catch (error) {
+          output.textContent = error instanceof Error ? error.message : "GitHub conversion failed";
+        }
+      });
+      document.getElementById("copy")?.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(output.textContent || "");
+      });
+    </script>`
+        : ""
+    }
+  </body>
+</html>`);
+  });
 
   app.post<{ Body: { code?: string } }>("/github/app/manifest/conversions", async (request, reply) => {
     if (!request.body.code) return reply.code(400).send({ error: "code is required" });
@@ -49,6 +131,7 @@ export async function registerGithubRoutes(app: FastifyInstance, deps: AppDeps):
     return {
       appId: converted.id,
       clientId: converted.client_id,
+      envSnippet: buildGithubAppEnvSnippet(converted),
       pem: converted.pem,
       webhookSecret: converted.webhook_secret,
     };
@@ -92,7 +175,7 @@ export function buildGithubAppManifest(deps: AppDeps): Record<string, unknown> {
     name: "Open Feedback Factory",
     public: false,
     redirect_url: `${deps.config.publicBaseUrl}/github/app/installed`,
-    setup_url: `${deps.config.publicBaseUrl}/admin/control-room`,
+    setup_url: deps.config.controlCenterUrl,
     url: `https://github.com/${deps.config.githubOwner}/${deps.config.githubRepo}`,
   };
 }
@@ -206,4 +289,20 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function jsonForScript(value: string): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
+export function buildGithubAppEnvSnippet(converted: Record<string, unknown>): string {
+  const appId = String(converted.id ?? "");
+  const pem = String(converted.pem ?? "").replace(/\n/g, "\\n");
+  const webhookSecret = String(converted.webhook_secret ?? "");
+  return [
+    "GITHUB_MODE=app",
+    `GITHUB_APP_ID=${appId}`,
+    `GITHUB_APP_PRIVATE_KEY=${pem}`,
+    `GITHUB_WEBHOOK_SECRET=${webhookSecret}`,
+  ].join("\n");
 }

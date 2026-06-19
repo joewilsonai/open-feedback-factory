@@ -28,6 +28,30 @@ button:hover {
   border-color: #255bc7;
 }
 
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  border: 1px solid rgba(22, 26, 31, 0.22);
+  border-radius: 7px;
+  padding: 0.65rem 0.85rem;
+  color: #161a1f;
+  background: #ffffff;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.button-link:hover {
+  border-color: #255bc7;
+}
+
+.button-link.primary {
+  border-color: #255bc7;
+  color: #ffffff;
+  background: #255bc7;
+}
+
 .console-shell {
   min-height: 100vh;
   padding: clamp(1rem, 3vw, 2rem);
@@ -119,6 +143,67 @@ small {
 
 .panel-heading {
   margin-bottom: 1rem;
+}
+
+.setup-wizard {
+  min-height: 22rem;
+}
+
+.wizard-rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(22, 26, 31, 0.13);
+  background: rgba(22, 26, 31, 0.13);
+}
+
+.wizard-step {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  min-height: 8.5rem;
+  padding: 0.9rem;
+  background: #ffffff;
+}
+
+.wizard-step strong {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  color: #0f6b4f;
+  background: rgba(15, 107, 79, 0.11);
+  font-size: 0.72rem;
+  letter-spacing: 0;
+}
+
+.wizard-step span {
+  font-weight: 850;
+}
+
+.wizard-step small {
+  line-height: 1.4;
+}
+
+.wizard-actions {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.wizard-note {
+  margin-top: 0.9rem;
+  border-left: 3px solid #255bc7;
+  padding: 0.75rem 0.85rem;
+  color: #52605a;
+  background: rgba(37, 91, 199, 0.08);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.wizard-note.ready {
+  border-color: #0f6b4f;
+  background: rgba(15, 107, 79, 0.1);
 }
 
 .work-stack {
@@ -241,6 +326,10 @@ code {
   }
 
   .setup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wizard-rail {
     grid-template-columns: 1fr;
   }
 }

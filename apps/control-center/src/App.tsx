@@ -38,8 +38,10 @@ interface Doctor {
   api: string;
   autoMergeEnabled: boolean;
   codexRunnerMode: string;
+  controlCenterUrl: string;
   databaseConfigured: boolean;
   githubAppConfigured: boolean;
+  githubAppSetupUrl: string;
   githubMode: string;
   maxFeatureCostUsd: number;
   publicBaseUrl: string;
@@ -207,12 +209,68 @@ export function App() {
           )}
         </div>
 
+        <SetupWizard doctor={doctor} />
         <ActivityPanel title="Recent feedback" rows={snapshot.recentFeedback} />
         <SetupPanel doctor={doctor} />
         <ActivityPanel title="Agent runs" rows={snapshot.recentAgentRuns} />
         <ActivityPanel title="Feature usage" rows={snapshot.recentUsage} />
       </section>
     </main>
+  );
+}
+
+function SetupWizard(props: { doctor: Doctor | null }) {
+  const doctor = props.doctor;
+  const appReady = Boolean(doctor?.githubAppConfigured && doctor.githubMode === "app");
+  const setupUrl = doctor?.githubAppSetupUrl ?? `${apiBaseUrl}/github/app/setup`;
+
+  return (
+    <div className="panel setup-wizard">
+      <div className="panel-heading">
+        <p className="eyebrow">Install wizard</p>
+        <h2>GitHub App</h2>
+      </div>
+      <div className="wizard-rail">
+        <WizardStep
+          detail={doctor?.api === "ok" ? "API reachable" : "Waiting for API"}
+          label="Local stack"
+          state={doctor?.api === "ok" ? "Ready" : "Waiting"}
+        />
+        <WizardStep
+          detail={doctor?.githubAppConfigured ? "Credentials present" : "Create app, then add generated env values"}
+          label="GitHub App"
+          state={doctor?.githubAppConfigured ? "Configured" : "Needed"}
+        />
+        <WizardStep
+          detail={doctor?.githubMode === "app" ? "App mode enabled" : "Set GITHUB_MODE=app after credentials are saved"}
+          label="Mutation mode"
+          state={doctor?.githubMode === "app" ? "Enabled" : "Disabled"}
+        />
+      </div>
+      <div className="wizard-actions">
+        <a className="button-link primary" href={setupUrl}>
+          Create GitHub App
+        </a>
+        <a className="button-link" href={`${apiBaseUrl}/github/app/manifest`}>
+          View manifest
+        </a>
+      </div>
+      <div className={appReady ? "wizard-note ready" : "wizard-note"}>
+        {appReady
+          ? "GitHub App mode is ready for sanitized issue and PR work."
+          : "After GitHub returns, convert the temporary code, add the generated values to .env, and restart Docker."}
+      </div>
+    </div>
+  );
+}
+
+function WizardStep(props: { detail: string; label: string; state: string }) {
+  return (
+    <div className="wizard-step">
+      <strong>{props.state}</strong>
+      <span>{props.label}</span>
+      <small>{props.detail}</small>
+    </div>
   );
 }
 
