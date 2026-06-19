@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the first internal dogfood version of Open Feedback Factory: a Docker Compose TypeScript monorepo with API/Postgres, web SDK, toy app, control center, Codex CLI runner seam, GitHub App integration seam, safe auto-merge policy, user follow-up statuses, feature usage attribution, tests, and local run commands.
+**Goal:** Build the first internal dogfood version of Open Feedback Factory: a Docker Compose TypeScript monorepo with API/Postgres, web SDK, Daybook demo app, control center, Codex CLI runner seam, GitHub App integration seam, safe auto-merge policy, user follow-up statuses, feature usage attribution, tests, and local run commands.
 
-**Architecture:** Use a pnpm workspace with focused packages for core policy, database access, SDK, runner, API service, control center, and demo app. Keep raw feedback private in Postgres, send only sanitized summaries to GitHub/runner surfaces, and make the toy app exercise the same SDK/API path a real app would use. V1 runs locally through Docker Compose with implementation disabled by default or through the local Codex CLI monthly-subscription path when explicitly enabled.
+**Architecture:** Use a pnpm workspace with focused packages for core policy, database access, SDK, runner, API service, control center, and demo app. Keep raw feedback private in Postgres, send only sanitized summaries to GitHub/runner surfaces, and make the Daybook notepad/todo app exercise the same SDK/API path a real app would use. V1 runs locally through Docker Compose with implementation disabled by default or through the local Codex CLI monthly-subscription path when explicitly enabled.
 
 **Tech Stack:** TypeScript, pnpm workspaces, Fastify, Postgres, node-postgres, Vite React, Node test runner, Docker Compose, GitHub CLI/API seam, Codex CLI seam.
 
@@ -30,11 +30,11 @@
 - `docker-compose.yml`: Postgres, API, worker, control center, and demo app services.
 - `packages/core`: pure policy/domain logic: types, sanitizer, clustering, work router, cost model, statuses, auto-merge gates.
 - `packages/db`: Postgres migration SQL and data access helpers.
-- `packages/sdk`: browser SDK consumed by the toy app.
+- `packages/sdk`: browser SDK consumed by the demo app.
 - `packages/runner`: Codex CLI runner implementation and GitHub client.
 - `services/api`: Fastify API for SDK, admin console, GitHub webhooks, runner jobs, release markers, health, and doctor data.
 - `apps/control-center`: Vite React operator console.
-- `apps/demo-app`: Vite React toy app that submits feedback, reads status, and records feature usage.
+- `apps/demo-app`: Vite React Daybook notepad/todo app that submits feedback, reads status, and records feature usage.
 - `scripts/doctor.mjs`: local environment and safety checker.
 - `scripts/render-prd-html.mjs`: existing PRD renderer.
 
@@ -208,7 +208,7 @@
 - Produces the positive demo feedback path and negative demo feedback path.
 - Produces feature usage event for the shipped demo feature.
 
-- [ ] Build a real first-screen toy app, not a landing page.
+- [ ] Build a real first-screen notepad/todo app, not a landing page.
 - [ ] Add feedback form with suggested positive and negative prompts.
 - [ ] Add status panel that polls feedback status.
 - [ ] Add feature usage trigger for the demo feature.

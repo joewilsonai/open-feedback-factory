@@ -36,7 +36,10 @@ interface WorkItem {
 
 interface Doctor {
   api: string;
+  approvalMode: string;
   autoMergeEnabled: boolean;
+  codexApiKeyConfigured: boolean;
+  codexAuthMode: string;
   codexRunnerMode: string;
   controlCenterUrl: string;
   databaseConfigured: boolean;
@@ -71,7 +74,9 @@ export function App() {
     () => snapshot.workItems.find((item) => item.id === selectedId) ?? snapshot.workItems[0] ?? null,
     [selectedId, snapshot.workItems],
   );
-  const runnerLabel = doctor ? runnerModeLabel(doctor.codexRunnerMode) : "Checking";
+  const executionLabel = doctor ? approvalModeLabel(doctor.approvalMode) : "Checking";
+  const runnerLabel = doctor ? runnerModeLabel(doctor) : "Checking";
+  const credentialLabel = doctor ? credentialModeLabel(doctor) : "Checking";
 
   async function refresh() {
     setStatus("Refreshing");
@@ -149,7 +154,9 @@ export function App() {
         <Metric label="Open work" value={snapshot.counts.openWorkItems} />
         <Metric label="Agent runs" value={snapshot.counts.agentRuns} />
         <Metric label="Usage events" value={snapshot.counts.featureUsageEvents} />
+        <Metric label="Mode" value={executionLabel} />
         <Metric label="Runner" value={runnerLabel} />
+        <Metric label="Credentials" value={credentialLabel} />
       </section>
 
       <section className="console-grid">
@@ -201,10 +208,10 @@ export function App() {
               <div className="action-row">
                 <button
                   type="button"
-                  disabled={doctor?.codexRunnerMode !== "codex"}
+                  disabled={!canRunSelectedItem(doctor)}
                   onClick={() => runWorkItem(selected.id)}
                 >
-                  {doctor?.codexRunnerMode === "codex" ? "Run Codex worker" : "Runner disabled"}
+                  {runButtonLabel(doctor)}
                 </button>
                 <button type="button" onClick={() => attemptAutoMerge(selected.id)}>
                   Check auto-merge
@@ -219,6 +226,7 @@ export function App() {
           )}
         </div>
 
+        <ExecutionPanel doctor={doctor} />
         <SetupWizard doctor={doctor} />
         <ActivityPanel title="Recent feedback" rows={snapshot.recentFeedback} />
         <SetupPanel doctor={doctor} />
@@ -252,6 +260,11 @@ function SetupWizard(props: { doctor: Doctor | null }) {
           state={doctor?.githubAppConfigured ? "Configured" : "Needed"}
         />
         <WizardStep
+          detail={credentialDetail(doctor)}
+          label="Agent credentials"
+          state={doctor ? credentialModeLabel(doctor) : "Checking"}
+        />
+        <WizardStep
           detail={doctor?.githubMode === "app" ? "App mode enabled" : "Set GITHUB_MODE=app after credentials are saved"}
           label="Mutation mode"
           state={doctor?.githubMode === "app" ? "Enabled" : "Disabled"}
@@ -283,6 +296,54 @@ function SetupWizard(props: { doctor: Doctor | null }) {
   );
 }
 
+function ExecutionPanel(props: { doctor: Doctor | null }) {
+  const doctor = props.doctor;
+  const manualActive = doctor?.approvalMode !== "auto";
+  const autoActive = doctor?.approvalMode === "auto";
+  const autoReady = Boolean(autoActive && doctor?.codexRunnerMode === "codex" && doctor.codexAuthMode === "cli");
+
+  return (
+    <div className="panel execution-panel">
+      <div className="panel-heading">
+        <p className="eyebrow">Execution</p>
+        <h2>Approval mode</h2>
+      </div>
+      <div className="mode-grid">
+        <ModeCard
+          active={manualActive}
+          detail="Feedback queues until an operator runs a selected work item."
+          label="Manual approval required"
+          state={manualActive ? "Active" : "Available"}
+        />
+        <ModeCard
+          active={autoActive}
+          detail={
+            autoReady
+              ? "Safe queued work can be claimed by a live Codex worker."
+              : "Needs auto mode plus a live Codex CLI worker before it can claim work."
+          }
+          label="Auto approval"
+          state={autoActive ? (autoReady ? "Ready" : "Configured") : "Available"}
+        />
+      </div>
+      <p className="mode-note">
+        Configure this with <code>APPROVAL_MODE=manual</code> or <code>APPROVAL_MODE=auto</code>. Auto approval still uses
+        real runners, real PRs, and real guardrails.
+      </p>
+    </div>
+  );
+}
+
+function ModeCard(props: { active: boolean; detail: string; label: string; state: string }) {
+  return (
+    <article className={props.active ? "mode-card active" : "mode-card"}>
+      <strong>{props.state}</strong>
+      <h3>{props.label}</h3>
+      <p>{props.detail}</p>
+    </article>
+  );
+}
+
 function WizardStep(props: { detail: string; label: string; state: string }) {
   return (
     <div className="wizard-step">
@@ -305,7 +366,9 @@ function SetupPanel(props: { doctor: Doctor | null }) {
         <dl className="setup-grid">
           <Detail label="API" value={doctor.api} />
           <Detail label="Database" value={doctor.databaseConfigured ? "Configured" : "Missing"} />
-          <Detail label="Runner" value={runnerModeLabel(doctor.codexRunnerMode)} />
+          <Detail label="Approval" value={approvalModeLabel(doctor.approvalMode)} />
+          <Detail label="Runner" value={runnerModeLabel(doctor)} />
+          <Detail label="Credentials" value={credentialModeLabel(doctor)} />
           <Detail label="GitHub" value={doctor.githubMode} />
           <Detail label="GitHub App" value={doctor.githubAppConfigured ? "Configured" : "Not configured"} />
           <Detail label="Webhooks" value={doctor.githubWebhooksEnabled ? "Enabled" : "Local off"} />
@@ -339,10 +402,41 @@ function Detail(props: { label: string; value: string }) {
   );
 }
 
-function runnerModeLabel(mode: string): string {
-  if (mode === "codex") return "Codex CLI";
-  if (mode === "disabled") return "Disabled";
-  return mode;
+function approvalModeLabel(mode: string): string {
+  if (mode === "auto") return "Auto approval";
+  return "Manual approval";
+}
+
+function runnerModeLabel(doctor: Doctor): string {
+  if (doctor.codexRunnerMode === "codex" && doctor.codexAuthMode === "cli") return "Codex CLI";
+  if (doctor.codexRunnerMode === "codex" && doctor.codexAuthMode === "api_key") return "API runner unavailable";
+  return "Paused";
+}
+
+function credentialModeLabel(doctor: Doctor): string {
+  if (doctor.codexAuthMode === "api_key") return doctor.codexApiKeyConfigured ? "API key" : "API key missing";
+  return "Codex CLI";
+}
+
+function credentialDetail(doctor: Doctor | null): string {
+  if (!doctor) return "Waiting for setup health";
+  if (doctor.codexAuthMode === "api_key") {
+    return doctor.codexApiKeyConfigured
+      ? "API key is present, but the API-backed runner is not implemented yet"
+      : "Add OPENAI_API_KEY after the API-backed runner is implemented";
+  }
+  return "Uses the signed-in local Codex CLI subscription path";
+}
+
+function canRunSelectedItem(doctor: Doctor | null): boolean {
+  return Boolean(doctor?.codexRunnerMode === "codex" && doctor.codexAuthMode === "cli");
+}
+
+function runButtonLabel(doctor: Doctor | null): string {
+  if (!doctor) return "Checking runner";
+  if (doctor.codexRunnerMode !== "codex") return "Attach Codex worker";
+  if (doctor.codexAuthMode !== "cli") return "API runner unavailable";
+  return "Run selected item";
 }
 
 function ActivityPanel(props: { rows: Array<Record<string, unknown>>; title: string }) {

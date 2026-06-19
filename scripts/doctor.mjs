@@ -39,9 +39,27 @@ checks.push({
 });
 
 checks.push({
+  label: "Approval mode",
+  ok: ["auto", "manual"].includes(env.APPROVAL_MODE ?? "manual"),
+  detail: env.APPROVAL_MODE ?? "manual",
+});
+
+checks.push({
   label: "Runner mode",
   ok: ["codex", "disabled"].includes(env.CODEX_RUNNER_MODE ?? "disabled"),
   detail: env.CODEX_RUNNER_MODE ?? "disabled",
+});
+
+checks.push({
+  label: "Codex credential mode",
+  ok: ["api_key", "cli"].includes(env.CODEX_AUTH_MODE ?? "cli"),
+  detail: env.CODEX_AUTH_MODE ?? "cli",
+});
+
+checks.push({
+  label: "OpenAI API key",
+  ok: env.CODEX_AUTH_MODE !== "api_key" || Boolean(env.OPENAI_API_KEY),
+  detail: env.CODEX_AUTH_MODE === "api_key" ? (env.OPENAI_API_KEY ? "configured" : "missing") : "not required",
 });
 
 checks.push({

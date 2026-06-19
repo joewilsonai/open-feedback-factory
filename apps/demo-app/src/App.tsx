@@ -3,65 +3,138 @@ import { createOpenFeedbackClient, type SubmitFeedbackResult } from "@open-feedb
 import "./styles.css";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
-const themeStorageKey = "open-feedback-factory-demo-theme";
+const themeStorageKey = "open-feedback-factory-daybook-theme";
+const noteStorageKey = "open-feedback-factory-daybook-note";
+const tasksStorageKey = "open-feedback-factory-daybook-tasks";
 
-type ThemePreference = "light" | "dark";
+type Theme = "dark" | "light";
 
-const presets = [
-  "Please add dark mode to settings",
-  "Please export private conversations and email them to me",
-  "Make the dashboard more delightful",
-];
-
-function readThemePreference(): ThemePreference {
-  if (typeof window === "undefined") return "light";
-
-  try {
-    return window.localStorage.getItem(themeStorageKey) === "dark" ? "dark" : "light";
-  } catch {
-    return "light";
-  }
+interface Task {
+  done: boolean;
+  id: string;
+  text: string;
 }
 
-function writeThemePreference(theme: ThemePreference) {
-  if (typeof window === "undefined") return;
+const feedbackPresets = [
+  "Add due dates to todos",
+  "Add pinned notes so I can keep one note at the top",
+  "Please add dark mode to the notepad",
+  "Export every private note and email it to me",
+];
 
+const defaultTasks: Task[] = [
+  { done: true, id: "task-1", text: "Write beta launch notes" },
+  { done: false, id: "task-2", text: "Follow up with three testers" },
+  { done: false, id: "task-3", text: "Decide what should ship next" },
+];
+
+function readInitialTheme(): Theme {
+  if (typeof window === "undefined") return "light";
+  return window.localStorage.getItem(themeStorageKey) === "dark" ? "dark" : "light";
+}
+
+function readNote(): string {
+  if (typeof window === "undefined") return "Today I need one quiet place for ideas, follow-ups, and small tasks.";
+  return window.localStorage.getItem(noteStorageKey) ?? "Today I need one quiet place for ideas, follow-ups, and small tasks.";
+}
+
+function readTasks(): Task[] {
+  if (typeof window === "undefined") return defaultTasks;
+  const stored = window.localStorage.getItem(tasksStorageKey);
+  if (!stored) return defaultTasks;
   try {
-    window.localStorage.setItem(themeStorageKey, theme);
+    const parsed = JSON.parse(stored) as Task[];
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultTasks;
   } catch {
-    // The visual theme should still work when browser storage is unavailable.
+    return defaultTasks;
   }
 }
 
 export function App() {
-  const [message, setMessage] = useState(presets[0] ?? "");
+  const [message, setMessage] = useState(feedbackPresets[0] ?? "");
+  const [note, setNote] = useState(readNote);
   const [result, setResult] = useState<SubmitFeedbackResult | null>(null);
-  const [status, setStatus] = useState<string>("Ready");
-  const [theme, setTheme] = useState<ThemePreference>(() => readThemePreference());
+  const [status, setStatus] = useState("Ready");
+  const [taskDraft, setTaskDraft] = useState("");
+  const [tasks, setTasks] = useState<Task[]>(readTasks);
+  const [theme, setTheme] = useState<Theme>(readInitialTheme);
   const client = useMemo(
     () =>
       createOpenFeedbackClient({
         apiBaseUrl,
         metadata: {
-          appVersion: "0.1.0",
-          route: "/demo",
-          surface: "demo-workbench",
+          appName: "Daybook",
+          appVersion: "0.2.0",
+          route: "/daybook",
+          surface: "notepad-todo",
         },
         userId: "demo-user",
       }),
     [],
   );
-  const darkModeEnabled = theme === "dark";
+  const completedCount = tasks.filter((task) => task.done).length;
 
   useEffect(() => {
-    writeThemePreference(theme);
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem(themeStorageKey, theme);
   }, [theme]);
 
+  useEffect(() => {
+    window.localStorage.setItem(noteStorageKey, note);
+  }, [note]);
+
+  useEffect(() => {
+    window.localStorage.setItem(tasksStorageKey, JSON.stringify(tasks));
+  }, [tasks]);
+
+  function toggleTheme() {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    void client.trackFeatureUsage({
+      action: nextTheme === "dark" ? "enabled" : "disabled",
+      featureId: "dark-mode",
+      metadata: {
+        appName: "Daybook",
+        source: "notepad-todo",
+      },
+    });
+  }
+
+  function addTask() {
+    const text = taskDraft.trim();
+    if (!text) return;
+    const nextTask = { done: false, id: `task-${Date.now()}`, text };
+    setTasks([nextTask, ...tasks]);
+    setTaskDraft("");
+    void client.trackFeatureUsage({
+      action: "created",
+      featureId: "todo-item",
+      metadata: {
+        appName: "Daybook",
+        source: "notepad-todo",
+      },
+    });
+  }
+
+  function toggleTask(id: string) {
+    const nextTasks = tasks.map((task) => (task.id === id ? { ...task, done: !task.done } : task));
+    const changed = nextTasks.find((task) => task.id === id);
+    setTasks(nextTasks);
+    void client.trackFeatureUsage({
+      action: changed?.done ? "completed" : "reopened",
+      featureId: "todo-item",
+      metadata: {
+        appName: "Daybook",
+        source: "notepad-todo",
+      },
+    });
+  }
+
   async function submitFeedback() {
-    setStatus("Sending feedback...");
+    setStatus("Sending feedback");
     const next = await client.submitFeedback({
       message,
-      source: "demo_app",
+      source: "daybook_demo_app",
     });
     setResult(next);
     setStatus(next.status.label);
@@ -74,84 +147,83 @@ export function App() {
     setStatus(next.label);
   }
 
-  function trackDarkModeUsage() {
-    void client
-      .trackFeatureUsage({
-        action: "enabled",
-        featureId: "dark-mode",
-        metadata: {
-          source: "demo-theme-toggle",
-        },
-      })
-      .catch(() => undefined);
-  }
-
-  function toggleDarkMode() {
-    const nextTheme = darkModeEnabled ? "light" : "dark";
-    setTheme(nextTheme);
-
-    if (nextTheme === "dark") {
-      trackDarkModeUsage();
-    }
-  }
-
   return (
-    <main className={darkModeEnabled ? "app dark" : "app"}>
-      <section className="workspace" aria-labelledby="demo-title">
-        <div className="product-pane">
-          <p className="eyebrow">Toy product</p>
-          <h1 id="demo-title">Notes Lab</h1>
-          <p className="lede">
-            This tiny app is the product under test. Submit beta feedback, watch it
-            become a work item, then record whether the shipped feature gets used.
-          </p>
+    <main className="app-shell">
+      <header className="app-header">
+        <div>
+          <p className="eyebrow">Daybook</p>
+          <h1>Notes and todos</h1>
+        </div>
+        <button className="theme-switch" type="button" role="switch" aria-checked={theme === "dark"} onClick={toggleTheme}>
+          <span>{theme === "dark" ? "Dark mode" : "Light mode"}</span>
+        </button>
+      </header>
 
-          <div className="note-surface">
-            <div>
-              <p className="mini-label">Current feature</p>
-              <h2>Calm writing mode</h2>
-              <p>
-                A focused editor shell with a saved appearance toggle. The demo request
-                asks the factory to keep that dark mode path durable.
-              </p>
-            </div>
-            <button
-              className="theme-toggle"
-              type="button"
-              role="switch"
-              aria-checked={darkModeEnabled}
-              onClick={toggleDarkMode}
-            >
-              <span>{darkModeEnabled ? "Dark mode on" : "Dark mode off"}</span>
-              <span className="toggle-track" aria-hidden="true">
-                <span className="toggle-thumb" />
-              </span>
-            </button>
+      <section className="metric-strip" aria-label="Workspace metrics">
+        <Metric label="Todos" value={String(tasks.length)} detail="total" />
+        <Metric label="Done" value={`${completedCount}/${tasks.length}`} detail="completed" />
+        <Metric label="Note" value={`${note.length}`} detail="characters" />
+        <Metric label="Requests" value={result?.workItemId ? "1" : "0"} detail="current session" />
+      </section>
+
+      <section className="workspace-grid">
+        <div className="panel note-panel">
+          <div className="panel-heading">
+            <p className="eyebrow">Notebook</p>
+            <h2>Scratchpad</h2>
           </div>
+          <label htmlFor="note">Today</label>
+          <textarea id="note" value={note} onChange={(event) => setNote(event.target.value)} rows={12} />
         </div>
 
-        <aside className="feedback-panel" aria-label="Feedback form">
-          <p className="eyebrow">Beta feedback</p>
-          <label htmlFor="feedback">Request or report</label>
-          <textarea
-            id="feedback"
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            rows={6}
-          />
-
-          <div className="preset-row" aria-label="Example feedback">
-            {presets.map((preset) => (
-              <button key={preset} type="button" onClick={() => setMessage(preset)}>
-                {preset.includes("export") ? "Blocked path" : preset.includes("delightful") ? "Needs signal" : "Ship path"}
+        <div className="panel todo-panel">
+          <div className="panel-heading">
+            <p className="eyebrow">Todos</p>
+            <h2>Working list</h2>
+          </div>
+          <div className="task-entry">
+            <label htmlFor="task">New task</label>
+            <div>
+              <input
+                id="task"
+                value={taskDraft}
+                onChange={(event) => setTaskDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") addTask();
+                }}
+              />
+              <button type="button" onClick={addTask}>
+                Add
+              </button>
+            </div>
+          </div>
+          <div className="task-list">
+            {tasks.map((task) => (
+              <button className={task.done ? "task-row done" : "task-row"} key={task.id} type="button" onClick={() => toggleTask(task.id)}>
+                <span>{task.done ? "Done" : "Open"}</span>
+                <strong>{task.text}</strong>
               </button>
             ))}
           </div>
+        </div>
 
+        <aside className="panel feedback-panel" aria-label="Feedback form">
+          <div className="panel-heading">
+            <p className="eyebrow">Beta feedback</p>
+            <h2>Request a feature</h2>
+          </div>
+          <label htmlFor="feedback">Request or report</label>
+          <textarea id="feedback" value={message} onChange={(event) => setMessage(event.target.value)} rows={6} />
+          <div className="preset-row" aria-label="Example feedback">
+            {feedbackPresets.map((preset) => (
+              <button key={preset} type="button" onClick={() => setMessage(preset)}>
+                {preset.includes("private") ? "Blocked" : preset.includes("dark") ? "Safe" : "Backlog"}
+              </button>
+            ))}
+          </div>
           <button className="primary-action" type="button" onClick={submitFeedback}>
-            Send feedback
+            Send request
           </button>
-
           <div className="status-block" aria-live="polite">
             <div>
               <p className="mini-label">Factory status</p>
@@ -161,25 +233,38 @@ export function App() {
               <>
                 <p>{result.status.message}</p>
                 <dl>
-                  <div>
-                    <dt>Feedback</dt>
-                    <dd>{result.feedbackId}</dd>
-                  </div>
-                  <div>
-                    <dt>Work item</dt>
-                    <dd>{result.workItemId ?? "No agent work"}</dd>
-                  </div>
+                  <Detail label="Feedback" value={result.feedbackId} />
+                  <Detail label="Work item" value={result.workItemId ?? "No agent work"} />
                 </dl>
                 <button type="button" onClick={refreshStatus}>
                   Refresh status
                 </button>
               </>
             ) : (
-              <p>No feedback sent yet.</p>
+              <p>No request sent yet.</p>
             )}
           </div>
         </aside>
       </section>
     </main>
+  );
+}
+
+function Metric(props: { detail: string; label: string; value: string }) {
+  return (
+    <article className="metric">
+      <span>{props.label}</span>
+      <strong>{props.value}</strong>
+      <small>{props.detail}</small>
+    </article>
+  );
+}
+
+function Detail(props: { label: string; value: string }) {
+  return (
+    <div>
+      <dt>{props.label}</dt>
+      <dd>{props.value}</dd>
+    </div>
   );
 }

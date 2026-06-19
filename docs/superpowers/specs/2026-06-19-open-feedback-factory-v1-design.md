@@ -36,7 +36,7 @@ Included:
 - user-facing status and notification, including negative outcomes;
 - feature usage attribution;
 - Docker Compose local install;
-- toy app demo with positive and negative paths;
+- Daybook notepad/todo demo with positive and negative paths;
 - doctor command for setup and safety checks.
 
 Excluded from V1:
@@ -82,7 +82,7 @@ V1 has six primary components.
 
 ### Web SDK
 
-Embeds in the customer app or toy demo app.
+Embeds in the customer app or Daybook demo app.
 
 Responsibilities:
 
@@ -246,7 +246,7 @@ The repo should ship:
 - worker/runner container;
 - Postgres container;
 - control center web container;
-- toy demo app container;
+- Daybook demo app container;
 - migration command;
 - seed command;
 - doctor command.
@@ -263,8 +263,8 @@ Setup flow:
 8. Enable real PR creation.
 9. Optionally enable safe auto-merge.
 
-The demo should work against a toy GitHub repo or toy app first. Users should
-see the loop before trusting the product with a production repo.
+The demo should work against a small real-feeling notepad/todo app first. Users
+should see the loop before trusting the product with a production repo.
 
 ## Data Model
 

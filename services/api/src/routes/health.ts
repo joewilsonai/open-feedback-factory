@@ -10,7 +10,10 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
 
   app.get("/doctor", async () => ({
     api: "ok",
+    approvalMode: deps.config.approvalMode,
     autoMergeEnabled: deps.config.autoMergeEnabled,
+    codexApiKeyConfigured: deps.config.codexApiKeyConfigured,
+    codexAuthMode: deps.config.codexAuthMode,
     codexRunnerMode: deps.config.codexRunnerMode,
     controlCenterUrl: deps.config.controlCenterUrl,
     databaseConfigured: Boolean(deps.config.databaseUrl),

@@ -47,6 +47,8 @@ export async function completeJob(
 
 export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike = fetch): Promise<boolean> {
   if (config.runnerMode !== "codex") return false;
+  if (config.codexAuthMode !== "cli") return false;
+  if (config.approvalMode === "manual" && !config.workItemId) return false;
 
   const job = await claimJob(config, fetchImpl);
   if (!job) return false;
@@ -79,7 +81,7 @@ export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike =
 
 export async function startWorkerLoop(config = readWorkerConfig(), fetchImpl: FetchLike = fetch): Promise<void> {
   console.log(
-    `Open Feedback Factory worker started in ${config.runnerMode} mode against ${config.apiBaseUrl} as ${config.workerName}.`,
+    `Open Feedback Factory worker started in ${config.runnerMode}/${config.approvalMode}/${config.codexAuthMode} mode against ${config.apiBaseUrl} as ${config.workerName}.`,
   );
 
   do {

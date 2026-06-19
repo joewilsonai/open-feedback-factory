@@ -86,6 +86,13 @@ tunnel URL, restart Docker, then start the wizard.
 `CODEX_RUNNER_MODE=disabled` is the safe default. It can intake and queue
 feedback, but it must not claim work or report implementation.
 
+`APPROVAL_MODE=manual` is the safe default. In manual mode, a Codex worker may
+only run when `WORKER_WORK_ITEM_ID` targets a selected item. `APPROVAL_MODE=auto`
+allows an attached live worker to claim queued work automatically.
+
+`CODEX_AUTH_MODE=cli` is the implemented path. `CODEX_AUTH_MODE=api_key` must
+not claim work until a real API-backed runner exists.
+
 For a real local Codex subscription run, prefer running the worker on the host
 so it can use the signed-in Codex CLI:
 
@@ -106,4 +113,4 @@ smoke tests.
 - `services/api`: Fastify API, GitHub App routes, admin/runner endpoints.
 - `services/worker`: polling worker loop.
 - `apps/control-center`: operator dashboard.
-- `apps/demo-app`: sample app that submits feedback and usage events.
+- `apps/demo-app`: Daybook notepad/todo demo product that submits feedback and usage events.

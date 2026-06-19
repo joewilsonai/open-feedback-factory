@@ -23,6 +23,13 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
         status: "blocked",
       });
     }
+    if (deps.config.codexAuthMode !== "cli") {
+      return reply.code(409).send({
+        error: "codex api key runner not implemented",
+        mode: deps.config.codexAuthMode,
+        status: "blocked",
+      });
+    }
 
     const runner = new CodexCliRunner({
       cwd: deps.config.runnerWorkspace,

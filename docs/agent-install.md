@@ -35,6 +35,10 @@ codex --version
 `gh` is only needed for GitHub CLI mutation mode. `codex` is only needed for
 real Codex runner mode; disabled runner mode does not need it.
 
+Setup should ask whether the install uses the local Codex CLI subscription path
+or a server-side API key. The CLI path is implemented in V1. The API-key path
+must stay blocked until a real API-backed runner is added.
+
 ## Fresh Clone Install
 
 ```bash
@@ -163,6 +167,8 @@ After installation, report:
 - the control center and demo app URLs;
 - which verification commands passed;
 - whether GitHub App mode is configured;
+- whether approval mode is `manual` or `auto`;
+- whether Codex auth mode is `cli` or `api_key`;
 - whether runner mode is `disabled` or `codex`;
 - any required human action, especially GitHub confirmation screens.
 

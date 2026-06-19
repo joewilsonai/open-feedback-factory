@@ -2,6 +2,8 @@ import type { CodexPricing } from "@open-feedback-factory/runner";
 
 export interface WorkerConfig {
   apiBaseUrl: string;
+  approvalMode: "auto" | "manual";
+  codexAuthMode: "api_key" | "cli";
   codexCli: string;
   codexEffort: string;
   codexManageGit: boolean;
@@ -30,6 +32,8 @@ export function readWorkerConfig(env = process.env): WorkerConfig {
     apiBaseUrl: trimTrailingSlash(
       env.WORKER_API_BASE_URL ?? env.API_BASE_URL ?? env.VITE_API_BASE_URL ?? "http://localhost:4100",
     ),
+    approvalMode: env.APPROVAL_MODE === "auto" ? "auto" : "manual",
+    codexAuthMode: env.CODEX_AUTH_MODE === "api_key" ? "api_key" : "cli",
     codexCli: env.CODEX_CLI ?? "codex",
     codexEffort: env.CODEX_EFFORT ?? "extra-high",
     codexManageGit: env.CODEX_MANAGE_GIT === "true",

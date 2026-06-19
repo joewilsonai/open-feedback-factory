@@ -60,16 +60,30 @@ pnpm demo:seed
 ```
 
 The Docker stack starts Postgres, the API, the worker, the control center, and
-the toy app. The worker polls `/runner/jobs/claim`, runs the configured runner,
+the Daybook notepad/todo demo app. The worker polls `/runner/jobs/claim`, runs the configured runner,
 and posts results back to `/runner/jobs/:id/complete`.
 
 Safety defaults:
 
 - real auto-merge is disabled by default;
 - GitHub mutations are disabled by default;
+- approval mode defaults to manual, so live workers only run targeted items;
 - runner mode defaults to disabled, so feedback is queued until a real runner is attached;
 - Codex CLI mode uses the local Codex subscription/auth path instead of an
   OpenAI API key.
+
+## Approval And Credential Modes
+
+`APPROVAL_MODE=manual` requires an operator to run a selected work item. It is
+the default for local demos and beta installs.
+
+`APPROVAL_MODE=auto` lets a live Codex worker claim safe queued work without
+selecting a specific work item. It still uses real runners, real PRs, and real
+guardrails.
+
+`CODEX_AUTH_MODE=cli` uses the signed-in local Codex CLI subscription path.
+`CODEX_AUTH_MODE=api_key` is reserved for a server-side API-key runner and is
+shown in setup as unavailable until that runner exists.
 
 ## Runner Modes
 

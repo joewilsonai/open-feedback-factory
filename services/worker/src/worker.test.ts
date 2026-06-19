@@ -60,6 +60,38 @@ test("runWorkerOnce leaves work queued when runner is disabled", async () => {
   assert.equal(calls.length, 0);
 });
 
+test("runWorkerOnce requires a targeted item in manual approval mode", async () => {
+  const calls: Array<{ body: unknown; url: string }> = [];
+  const config = readWorkerConfig({ API_BASE_URL: "http://api.test", CODEX_RUNNER_MODE: "codex" });
+  const fetchImpl: FetchLike = async (url, init) => {
+    calls.push({ body: init?.body ? JSON.parse(String(init.body)) : null, url });
+    return jsonResponse({ job });
+  };
+
+  assert.equal(config.approvalMode, "manual");
+  assert.equal(config.runnerMode, "codex");
+  assert.equal(await runWorkerOnce(config, fetchImpl), false);
+  assert.equal(calls.length, 0);
+});
+
+test("runWorkerOnce does not claim jobs for api key mode until that runner exists", async () => {
+  const calls: Array<{ body: unknown; url: string }> = [];
+  const config = readWorkerConfig({
+    API_BASE_URL: "http://api.test",
+    CODEX_AUTH_MODE: "api_key",
+    CODEX_RUNNER_MODE: "codex",
+    WORKER_WORK_ITEM_ID: "work_test",
+  });
+  const fetchImpl: FetchLike = async (url, init) => {
+    calls.push({ body: init?.body ? JSON.parse(String(init.body)) : null, url });
+    return jsonResponse({ job });
+  };
+
+  assert.equal(config.codexAuthMode, "api_key");
+  assert.equal(await runWorkerOnce(config, fetchImpl), false);
+  assert.equal(calls.length, 0);
+});
+
 function jsonResponse(value: unknown): Response {
   return new Response(JSON.stringify(value), {
     headers: { "content-type": "application/json" },

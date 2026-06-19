@@ -11,7 +11,10 @@ import { buildSanitizedGithubIssueInput } from "./routes/sdk.js";
 const config: ApiConfig = {
   apiHost: "127.0.0.1",
   apiPort: 4100,
+  approvalMode: "manual",
   autoMergeEnabled: false,
+  codexApiKeyConfigured: false,
+  codexAuthMode: "cli",
   codexRunnerMode: "disabled",
   controlCenterUrl: "http://control.test",
   databaseUrl: "postgres://example",
@@ -204,6 +207,9 @@ test("doctor exposes setup wizard links", async () => {
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().controlCenterUrl, "http://control.test");
+  assert.equal(response.json().approvalMode, "manual");
+  assert.equal(response.json().codexAuthMode, "cli");
+  assert.equal(response.json().codexApiKeyConfigured, false);
   assert.equal(response.json().githubAppSetupUrl, "http://api.test/github/app/setup");
   assert.equal(response.json().githubWebhookUrl, "http://api.test/github/webhook");
   assert.equal(response.json().githubWebhooksEnabled, true);
