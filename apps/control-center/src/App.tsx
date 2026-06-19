@@ -188,7 +188,7 @@ export function App() {
   async function releaseWorkItem(id: string) {
     setStatus("Marking shipped");
     await fetch(`${apiBaseUrl}/admin/work-items/${id}/release`, {
-      body: JSON.stringify({ message: "Shipped in the Open Feedback Factory demo." }),
+      body: JSON.stringify({ message: "This request has shipped." }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
@@ -263,27 +263,27 @@ export function App() {
                   onClick={() => setSelectedId(item.id)}
                 >
                   <span>{item.title}</span>
-                  <small>{item.status} / {item.riskTier}</small>
+                  <small>{workStatusLabel(item.status)} / {riskTierLabel(item.riskTier)}</small>
                 </button>
               ))}
             </div>
           ) : (
-            <p className="empty">No work items yet. Submit feedback from the demo app.</p>
+            <p className="empty">No work items yet. Submit feedback from a connected app.</p>
           )}
         </div>
 
         <div className="panel detail-panel">
           <div className="panel-heading">
-            <p className="eyebrow">Demo centerpiece</p>
+            <p className="eyebrow">Work item</p>
             <h2>{selected ? selected.title : "No selected work item"}</h2>
           </div>
           {selected ? (
             <>
               <p className="summary">{selected.summary}</p>
               <dl className="detail-grid">
-                <Detail label="State" value={selected.status} />
-                <Detail label="User status" value={selected.userStatus} />
-                <Detail label="Risk" value={selected.riskTier} />
+                <Detail label="State" value={workStatusLabel(selected.status)} />
+                <Detail label="User status" value={userStatusLabel(selected.userStatus)} />
+                <Detail label="Risk" value={riskTierLabel(selected.riskTier)} />
                 <Detail label="Auto-merge" value={selected.autoMergeEligible ? "Eligible" : "Guarded"} />
                 <Detail label="Cost" value={`$${selected.costEstimate.amountUsd.toFixed(2)} est.`} />
                 <Detail label="Model" value={selected.costEstimate.model} />
@@ -466,7 +466,7 @@ function AgentCredentialsPanel(props: {
           Stored at <code>{doctor?.codexSecretsPath ?? ".off/secrets.env"}</code>; the key is never sent back to the
           browser.
         </p>
-        <p>API-key execution is configured here, but the API-backed runner lane is not implemented yet.</p>
+        <p>API-key mode runs the Codex worker with the saved key injected server-side.</p>
       </div>
     </div>
   );
@@ -480,7 +480,7 @@ function ExecutionPanel(props: {
   const doctor = props.doctor;
   const manualActive = doctor?.approvalMode !== "auto";
   const autoActive = doctor?.approvalMode === "auto";
-  const autoReady = Boolean(autoActive && doctor?.codexRunnerMode === "codex" && doctor.codexAuthMode === "cli");
+  const autoReady = Boolean(autoActive && doctor?.codexRunnerMode === "codex" && credentialsReady(doctor));
   const controlsDisabled = props.modeUpdating || !doctor;
 
   return (
@@ -505,7 +505,7 @@ function ExecutionPanel(props: {
           detail={
             autoReady
               ? "Safe queued work can be claimed by a live Codex worker."
-              : "Needs auto mode plus a live Codex CLI worker before it can claim work."
+              : "Needs auto mode plus a live Codex worker before it can claim work."
           }
           disabled={controlsDisabled || autoActive}
           label="Auto approval"
@@ -609,6 +609,35 @@ function approvalModeLabel(mode: string): string {
   return "Manual approval";
 }
 
+function riskTierLabel(riskTier: string): string {
+  if (riskTier === "safe_auto_merge") return "Low-risk auto lane";
+  if (riskTier === "guarded_review") return "Needs review";
+  if (riskTier === "extra_review") return "Extra review";
+  if (riskTier === "plan_only") return "Plan only";
+  return titleCase(riskTier);
+}
+
+function userStatusLabel(status: string): string {
+  if (status === "planned") return "Queued";
+  if (status === "grouped") return "Grouped with another request";
+  if (status === "in_progress") return "Agent working";
+  if (status === "shipped") return "Shipped";
+  if (status === "blocked") return "Blocked";
+  if (status === "not_planned") return "Not planned";
+  return titleCase(status);
+}
+
+function workStatusLabel(status: string): string {
+  if (status === "planned") return "Queued";
+  if (status === "in_progress") return "Agent working";
+  if (status === "implemented") return "Implemented, awaiting review";
+  if (status === "shipped") return "Shipped";
+  if (status === "blocked") return "Blocked";
+  if (status === "failed") return "Needs human review";
+  if (status === "not_planned") return "Not planned";
+  return titleCase(status);
+}
+
 function codexAuthModeLabel(mode: string): string {
   if (mode === "api_key") return "API key";
   return "Codex CLI";
@@ -616,7 +645,9 @@ function codexAuthModeLabel(mode: string): string {
 
 function runnerModeLabel(doctor: Doctor): string {
   if (doctor.codexRunnerMode === "codex" && doctor.codexAuthMode === "cli") return "Codex CLI";
-  if (doctor.codexRunnerMode === "codex" && doctor.codexAuthMode === "api_key") return "API runner unavailable";
+  if (doctor.codexRunnerMode === "codex" && doctor.codexAuthMode === "api_key") {
+    return doctor.codexApiKeyConfigured ? "Codex API key" : "API key missing";
+  }
   return "Paused";
 }
 
@@ -629,7 +660,7 @@ function credentialDetail(doctor: Doctor | null): string {
   if (!doctor) return "Waiting for setup health";
   if (doctor.codexAuthMode === "api_key") {
     return doctor.codexApiKeyConfigured
-      ? "API key is saved, but the API-backed runner is not implemented yet"
+      ? "API key is saved for a server-side Codex worker"
       : "Save a server-side API key in the Agent credentials panel";
   }
   return "Uses the signed-in local Codex CLI subscription path";
@@ -642,14 +673,26 @@ function credentialSourceLabel(source: string | undefined): string {
 }
 
 function canRunSelectedItem(doctor: Doctor | null): boolean {
-  return Boolean(doctor?.codexRunnerMode === "codex" && doctor.codexAuthMode === "cli");
+  return Boolean(doctor?.codexRunnerMode === "codex" && credentialsReady(doctor));
 }
 
 function runButtonLabel(doctor: Doctor | null): string {
   if (!doctor) return "Checking runner";
   if (doctor.codexRunnerMode !== "codex") return "Attach Codex worker";
-  if (doctor.codexAuthMode !== "cli") return "API runner unavailable";
+  if (!credentialsReady(doctor)) return "API key missing";
   return "Run selected item";
+}
+
+function credentialsReady(doctor: Doctor): boolean {
+  return doctor.codexAuthMode === "cli" || (doctor.codexAuthMode === "api_key" && doctor.codexApiKeyConfigured);
+}
+
+function titleCase(value: string): string {
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`)
+    .join(" ");
 }
 
 function ActivityPanel(props: { rows: Array<Record<string, unknown>>; title: string }) {

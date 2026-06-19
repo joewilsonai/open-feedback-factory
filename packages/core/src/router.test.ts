@@ -18,6 +18,21 @@ test("routeFeedback sends dark mode through the safe implementation lane", () =>
   assert.equal(decision.clusterKey, "feature.theme.dark-mode");
 });
 
+test("routeFeedback names theme color requests distinctly from dark mode", () => {
+  const sanitized = sanitizeFeedback({
+    message: "add different theme colors to the UI so user can select",
+    source: "daybook_demo_app",
+  });
+
+  const decision = routeFeedback({ sanitized });
+
+  assert.equal(decision.action, "create_work_item");
+  assert.equal(decision.shouldCreateIssue, true);
+  assert.equal(decision.riskTier, "safe_auto_merge");
+  assert.equal(decision.title, "Add theme color choices");
+  assert.equal(decision.clusterKey, "feature.theme.color-options");
+});
+
 test("routeFeedback blocks private or protected work from GitHub and agents", () => {
   const sanitized = sanitizeFeedback({
     message: "Please export private conversations and email them to me",

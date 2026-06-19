@@ -90,19 +90,29 @@ feedback, but it must not claim work or report implementation.
 only run when `WORKER_WORK_ITEM_ID` targets a selected item. `APPROVAL_MODE=auto`
 allows an attached live worker to claim queued work automatically.
 
-`CODEX_AUTH_MODE=cli` is the implemented path. `CODEX_AUTH_MODE=api_key` must
-not claim work until a real API-backed runner exists.
+`CODEX_AUTH_MODE=cli` uses the signed-in Codex CLI subscription path.
+`CODEX_AUTH_MODE=api_key` uses the same `codex exec --json` runner with the
+saved `OPENAI_API_KEY` injected only into the worker process. The key lives in
+`CODEX_SECRETS_PATH`, defaults to `.off/secrets.env`, and must never be logged,
+committed, echoed to the browser, or placed in GitHub artifacts.
+
+Auto approval does not start a worker by itself. A live worker still has to run
+with `CODEX_RUNNER_MODE=codex`. See
+[docs/agent-runner-setup.md](docs/agent-runner-setup.md).
 
 For a real local Codex subscription run, prefer running the worker on the host
 so it can use the signed-in Codex CLI:
 
 ```bash
 docker compose stop worker
-CODEX_RUNNER_MODE=codex pnpm --filter @open-feedback-factory/worker dev
+CODEX_RUNNER_MODE=codex CODEX_AUTH_MODE=cli pnpm --filter @open-feedback-factory/worker dev
 ```
 
 Use `WORKER_WORK_ITEM_ID=work_...` and `WORKER_RUN_ONCE=true` for targeted
 smoke tests.
+
+Control-center UI should use human-readable labels. Do not show raw internal
+enum names such as `safe_auto_merge` or `planned` as primary visible labels.
 
 ## Codebase Map
 

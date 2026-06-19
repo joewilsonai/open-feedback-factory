@@ -35,8 +35,12 @@ export function clusterKeyForFeedback(input: Pick<SanitizedFeedback, "sanitizedM
     normalized = normalized.replace(pattern, replacement);
   }
 
-  if (/\bdark mode\b/.test(normalized) || /\btheme\b/.test(normalized)) {
+  if (/\bdark mode\b/.test(normalized)) {
     return "feature.theme.dark-mode";
+  }
+
+  if (/\btheme\b/.test(normalized)) {
+    return "feature.theme.color-options";
   }
 
   if (/\bcopy\b/.test(normalized)) {

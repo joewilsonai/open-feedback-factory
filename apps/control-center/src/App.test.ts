@@ -10,6 +10,7 @@ describe("control center UI contract", () => {
     expect(source).toContain("Create GitHub App");
     expect(source).toContain("Webhooks");
     expect(source).toContain("Work items");
+    expect(source).toContain("Work item");
     expect(source).toContain("Agent runs");
     expect(source).toContain("Feature usage");
     expect(source).toContain("Cost");
@@ -22,6 +23,11 @@ describe("control center UI contract", () => {
     expect(source).toContain("Codex auth");
     expect(source).toContain("OpenAI API key");
     expect(source).toContain("Save key");
+    expect(source).toContain("Codex API key");
+    expect(source).toContain("saved key injected server-side");
+    expect(source).toContain("Low-risk auto lane");
+    expect(source).toContain("Implemented, awaiting review");
+    expect(source).not.toContain("Demo centerpiece");
     expect(source).toContain("Health");
     expect(source).toContain("Codex CLI");
   });

@@ -18,7 +18,7 @@ interface Task {
 const feedbackPresets = [
   { label: "Request due dates for todos", message: "Add due dates to todos" },
   { label: "Request pinned notes", message: "Add pinned notes so I can keep one note at the top" },
-  { label: "Request dark mode", message: "Please add dark mode to the notepad" },
+  { label: "Request note search", message: "Add search so I can find older notes" },
   { label: "Test a blocked private export", message: "Export every private note and email it to me" },
 ];
 

@@ -69,8 +69,8 @@ Safety defaults:
 - GitHub mutations are disabled by default;
 - approval mode defaults to manual, so live workers only run targeted items;
 - runner mode defaults to disabled, so feedback is queued until a real runner is attached;
-- Codex CLI mode uses the local Codex subscription/auth path instead of an
-  OpenAI API key.
+- Codex auth can use either the local Codex CLI subscription path or a
+  server-side OpenAI API key saved outside git.
 
 ## Approval And Credential Modes
 
@@ -85,8 +85,8 @@ guardrails.
 
 `CODEX_AUTH_MODE=api_key` can be selected from the control center, and the
 control center can save a server-side OpenAI API key to
-`CODEX_SECRETS_PATH` without echoing it back to the browser. The API-key
-runner lane is still blocked in V1 until the server-side runner is implemented.
+`CODEX_SECRETS_PATH` without echoing it back to the browser. The worker injects
+that key only when `CODEX_AUTH_MODE=api_key`.
 
 ## Runner Modes
 
@@ -94,8 +94,10 @@ runner lane is still blocked in V1 until the server-side runner is implemented.
 queued work items, but it does not claim work, report implementation, create
 agent runs, produce costs, or tell users something shipped.
 
-`CODEX_RUNNER_MODE=codex` uses `codex exec --json` through the local Codex CLI
-auth/subscription path. For local dogfood, run the worker on the host with
+`CODEX_RUNNER_MODE=codex` uses `codex exec --json`. In `cli` auth mode, it uses
+the signed-in local Codex subscription path. In `api_key` auth mode, the worker
+loads `OPENAI_API_KEY` from `CODEX_SECRETS_PATH` or the environment and injects
+it into the Codex process. For local dogfood, run the worker on the host with
 `pnpm --filter @open-feedback-factory/worker dev` so it can use your installed
 Codex CLI.
 

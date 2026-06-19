@@ -47,7 +47,7 @@ export async function completeJob(
 
 export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike = fetch): Promise<boolean> {
   if (config.runnerMode !== "codex") return false;
-  if (config.codexAuthMode !== "cli") return false;
+  if (config.codexAuthMode === "api_key" && !config.openAiApiKey) return false;
 
   const job = await claimJob(config, fetchImpl);
   if (!job) return false;
@@ -56,6 +56,7 @@ export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike =
   const runner = new CodexCliRunner({
     cli: config.codexCli,
     cwd: config.runnerWorkspace,
+    env: config.codexAuthMode === "api_key" ? { OPENAI_API_KEY: config.openAiApiKey } : undefined,
     effort: config.codexEffort,
     manageGit: config.codexManageGit,
     model: config.codexModel,

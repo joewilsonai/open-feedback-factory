@@ -3,7 +3,7 @@ import { CodexCliRunner } from "@open-feedback-factory/runner";
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
 import { buildGithubClient } from "../githubClient.js";
-import { getCodexApiKeyStatus, removeCodexApiKey, saveCodexApiKey } from "../secrets.js";
+import { getCodexApiKeyStatus, readCodexApiKey, removeCodexApiKey, saveCodexApiKey } from "../secrets.js";
 
 export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   app.get("/admin/control-room", async () => deps.store.getControlRoomSnapshot());
@@ -66,11 +66,12 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
       });
     }
     const codexAuthMode = await deps.store.getCodexAuthMode(deps.config.codexAuthMode);
-    if (codexAuthMode !== "cli") {
-      const codexApiKey = await getCodexApiKeyStatus(deps.config);
+    const codexApiKey = await getCodexApiKeyStatus(deps.config);
+    const openAiApiKey = codexAuthMode === "api_key" ? await readCodexApiKey(deps.config) : undefined;
+    if (codexAuthMode === "api_key" && !codexApiKey.configured) {
       return reply.code(409).send({
-        codexApiKeyConfigured: codexApiKey.configured,
-        error: "codex api key runner not implemented",
+        codexApiKeyConfigured: false,
+        error: "codex api key missing",
         mode: codexAuthMode,
         status: "blocked",
       });
@@ -78,6 +79,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
 
     const runner = new CodexCliRunner({
       cwd: deps.config.runnerWorkspace,
+      env: codexAuthMode === "api_key" ? { OPENAI_API_KEY: openAiApiKey } : undefined,
       effort: process.env.CODEX_EFFORT ?? "extra-high",
       model: process.env.CODEX_MODEL ?? workItem.costEstimate.model,
     });

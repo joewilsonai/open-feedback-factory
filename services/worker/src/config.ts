@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import type { CodexPricing } from "@open-feedback-factory/runner";
 
 export interface WorkerConfig {
@@ -9,6 +11,7 @@ export interface WorkerConfig {
   codexManageGit: boolean;
   codexModel: string;
   codexPricing?: CodexPricing;
+  codexSecretsPath: string;
   codexTimeoutMs: number;
   githubMode: "app" | "disabled" | "gh";
   githubAppId?: string;
@@ -25,6 +28,7 @@ export interface WorkerConfig {
   runnerWorkspace: string;
   workerName: string;
   workItemId?: string;
+  openAiApiKey?: string;
 }
 
 export function readWorkerConfig(env = process.env): WorkerConfig {
@@ -39,6 +43,7 @@ export function readWorkerConfig(env = process.env): WorkerConfig {
     codexManageGit: env.CODEX_MANAGE_GIT === "true",
     codexModel: env.CODEX_MODEL ?? "gpt-5.5",
     codexPricing: readCodexPricing(env),
+    codexSecretsPath: env.CODEX_SECRETS_PATH ?? ".off/secrets.env",
     codexTimeoutMs: Number(env.CODEX_TIMEOUT_MS ?? 5 * 60_000),
     githubMode: githubModeFromEnv(env.GITHUB_MODE),
     githubAppId: env.GITHUB_APP_ID || undefined,
@@ -55,6 +60,7 @@ export function readWorkerConfig(env = process.env): WorkerConfig {
     runnerWorkspace: env.RUNNER_WORKSPACE ?? process.cwd(),
     workerName: env.WORKER_NAME ?? "open-feedback-worker",
     workItemId: env.WORKER_WORK_ITEM_ID || undefined,
+    openAiApiKey: readOpenAiApiKey(env.OPENAI_API_KEY, env.CODEX_SECRETS_PATH ?? ".off/secrets.env"),
   };
 }
 
@@ -94,4 +100,55 @@ function numberFromEnv(value: string | undefined): number | undefined {
   if (value === undefined || value === "") return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function readOpenAiApiKey(envValue: string | undefined, secretsPath: string): string | undefined {
+  if (isUsableApiKey(envValue)) return envValue.trim();
+  try {
+    const contents = readFileSync(path.resolve(secretsPath), "utf8");
+    const value = parseEnvValue(contents, "OPENAI_API_KEY");
+    return isUsableApiKey(value) ? value.trim() : undefined;
+  } catch (error) {
+    if (isMissingFileError(error)) return undefined;
+    throw error;
+  }
+}
+
+function parseEnvValue(contents: string, key: string): string | undefined {
+  for (const line of contents.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const separatorIndex = trimmed.indexOf("=");
+    if (separatorIndex === -1) continue;
+    if (trimmed.slice(0, separatorIndex).trim() !== key) continue;
+    return unquoteEnvValue(trimmed.slice(separatorIndex + 1).trim());
+  }
+  return undefined;
+}
+
+function unquoteEnvValue(value: string): string {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value.slice(1, -1);
+    }
+  }
+  return value;
+}
+
+function isUsableApiKey(value: string | undefined): value is string {
+  return typeof value === "string" && value.trim().length >= 20;
+}
+
+function isMissingFileError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "ENOENT"
+  );
 }

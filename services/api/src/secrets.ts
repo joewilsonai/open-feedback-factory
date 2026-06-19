@@ -11,25 +11,13 @@ export interface CodexApiKeyStatus {
 }
 
 export async function getCodexApiKeyStatus(config: ApiConfig): Promise<CodexApiKeyStatus> {
-  const envKey = process.env.OPENAI_API_KEY;
-  if (isUsableApiKey(envKey)) {
+  const apiKey = await readCodexApiKey(config);
+  if (isUsableApiKey(apiKey)) {
     return {
       configured: true,
-      fingerprint: fingerprintApiKey(envKey),
+      fingerprint: fingerprintApiKey(apiKey),
       path: config.codexSecretsPath,
-      source: "env",
-      writable: true,
-    };
-  }
-
-  const localKey = await readLocalApiKey(config.codexSecretsPath);
-  if (isUsableApiKey(localKey)) {
-    process.env.OPENAI_API_KEY = localKey;
-    return {
-      configured: true,
-      fingerprint: fingerprintApiKey(localKey),
-      path: config.codexSecretsPath,
-      source: "local_file",
+      source: isUsableApiKey(process.env.OPENAI_API_KEY) ? "env" : "local_file",
       writable: true,
     };
   }
@@ -52,7 +40,6 @@ export async function saveCodexApiKey(config: ApiConfig, apiKey: string): Promis
   const secretsPath = path.resolve(config.codexSecretsPath);
   await mkdir(path.dirname(secretsPath), { recursive: true, mode: 0o700 });
   await writeFile(secretsPath, `OPENAI_API_KEY=${quoteEnvValue(normalized)}\n`, { mode: 0o600 });
-  process.env.OPENAI_API_KEY = normalized;
 
   return {
     configured: true,
@@ -65,8 +52,13 @@ export async function saveCodexApiKey(config: ApiConfig, apiKey: string): Promis
 
 export async function removeCodexApiKey(config: ApiConfig): Promise<CodexApiKeyStatus> {
   await rm(path.resolve(config.codexSecretsPath), { force: true });
-  if (process.env.OPENAI_API_KEY) delete process.env.OPENAI_API_KEY;
   return getCodexApiKeyStatus(config);
+}
+
+export async function readCodexApiKey(config: ApiConfig): Promise<string | undefined> {
+  if (isUsableApiKey(process.env.OPENAI_API_KEY)) return process.env.OPENAI_API_KEY.trim();
+  const localKey = await readLocalApiKey(config.codexSecretsPath);
+  return isUsableApiKey(localKey) ? localKey.trim() : undefined;
 }
 
 function isUsableApiKey(value: string | undefined): value is string {

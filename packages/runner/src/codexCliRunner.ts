@@ -9,6 +9,7 @@ export interface CodexCliRunnerOptions {
   branchPrefix?: string;
   cli?: string;
   cwd: string;
+  env?: NodeJS.ProcessEnv;
   effort?: string;
   manageGit?: boolean;
   model?: string;
@@ -36,7 +37,10 @@ export class CodexCliRunner implements WorkRunner {
     });
 
     const prompt = buildCodexPrompt(workItem);
-    const output = await runProcess(this.options.cli ?? "codex", args, prompt, this.options.timeoutMs ?? 20 * 60_000);
+    const output = await runProcess(this.options.cli ?? "codex", args, prompt, this.options.timeoutMs ?? 20 * 60_000, {
+      ...process.env,
+      ...this.options.env,
+    });
     const parsed = parseCodexJsonlOutput(output);
     const structured = parsed.result ?? {
       changedFiles: [],
@@ -345,9 +349,16 @@ async function writeOutputSchema(): Promise<string> {
   return schemaPath;
 }
 
-function runProcess(command: string, args: string[], stdin: string, timeoutMs: number): Promise<string> {
+function runProcess(
+  command: string,
+  args: string[],
+  stdin: string,
+  timeoutMs: number,
+  env: NodeJS.ProcessEnv,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
+      env,
       stdio: ["pipe", "pipe", "pipe"],
     });
     let stdout = "";

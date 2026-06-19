@@ -36,8 +36,9 @@ codex --version
 real Codex runner mode; disabled runner mode does not need it.
 
 Setup should ask whether the install uses the local Codex CLI subscription path
-or a server-side API key. The CLI path is implemented in V1. The API-key path
-must stay blocked until a real API-backed runner is added.
+or a server-side API key. Both paths use the Codex CLI runner in V1: `cli`
+uses the local signed-in subscription, while `api_key` injects the saved
+`OPENAI_API_KEY` into the Codex process.
 
 ## Fresh Clone Install
 
@@ -161,9 +162,9 @@ local dogfood with the GitHub CLI.
 
 The control center can also save a server-side OpenAI API key to
 `CODEX_SECRETS_PATH` and switch `CODEX_AUTH_MODE` between `cli` and `api_key`.
-The key is masked in the UI and is never returned to the browser. In V1, the
-API-key execution lane remains blocked until the API-backed runner is
-implemented; the live runner path is the local Codex CLI.
+The key is masked in the UI and is never returned to the browser. See
+[`docs/agent-runner-setup.md`](./agent-runner-setup.md) for the exact manual
+and auto worker commands.
 
 ## What To Report Back
 

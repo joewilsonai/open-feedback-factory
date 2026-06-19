@@ -333,6 +333,9 @@ As of the June 2026 research pass, useful Codex surfaces include:
 - Codex Cloud environments for disposable containerized work;
 - noninteractive `codex exec --json` for local/self-hosted runners, lifecycle
   events, usage capture, and actual cost accounting;
+- `codex exec --json` should support both local CLI subscription auth and a
+  server-side API-key mode where the saved OpenAI API key is injected only into
+  the worker process;
 - `--output-schema` for stable final run summaries such as outcome, PR URL,
   shipped status, cost summary, and user-safe follow-up copy;
 - Codex SDK as the longer-term server-side control-plane integration after the
@@ -1294,7 +1297,8 @@ Provider and gateway health views should show:
 - configured direct providers;
 - configured managed gateways;
 - active base URL or endpoint region;
-- API key status;
+- API key status, masked fingerprint, storage source, and whether the key is
+  held in environment variables or local secret storage;
 - approved or allowed model list;
 - fallback and routing policy status;
 - OpenRouter Fusion availability and selected default preset when configured;
@@ -1803,6 +1807,18 @@ The admin UI should be wizard-driven, start in dry-run, and make security,
 permissions, cost caps, connected repos, agent access, blocked work, and
 maintenance health obvious.
 
+The setup UI must make worker attachment explicit. Auto approval allows a live
+worker to claim queued work, but does not itself create a worker. The UI and
+docs must show the exact command or deployment path for manual one-item workers
+and auto-polling workers, including `CODEX_RUNNER_MODE`, `CODEX_AUTH_MODE`,
+`CODEX_SECRETS_PATH`, GitHub PR settings, model, effort, timeout, and workspace.
+
+Admin and beta-user surfaces must not leak raw internal enum names. Labels such
+as `planned`, `safe_auto_merge`, `guarded_review`, and `not_planned` should be
+rendered as human-readable product states such as "Queued", "Low-risk auto
+lane", "Needs review", and "Not planned". Raw enum values can remain in APIs
+and audit logs, but not as the primary visible control-center language.
+
 The hosted version later needs multi-tenant auth, billing, hosted workers, team
 roles, managed secrets, managed backups, and webhook delivery monitoring.
 
@@ -1992,15 +2008,15 @@ The demo should use a tiny real app, not a mock dashboard.
 
 Scenario:
 
-1. A beta user says: "Please add dark mode to the settings screen."
+1. A beta user says: "Please add note search so I can find older notes."
 2. The control center receives and clusters the request.
 3. The system estimates cost and marks it safe.
 4. A sanitized GitHub issue is created.
-5. The agent opens a PR adding dark mode.
+5. The agent opens a PR adding note search.
 6. Tests pass.
 7. The PR merges.
 8. The demo app deploys.
-9. The user sees: "Shipped: dark mode is now available in settings."
+9. The user sees: "Shipped: note search is now available."
 
 The demo must also show a negative path:
 

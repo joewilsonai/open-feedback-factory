@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
 import type { WorkItemRow } from "@open-feedback-factory/db";
 import { readWorkerConfig } from "./config.js";
@@ -75,22 +78,49 @@ test("runWorkerOnce leaves work queued when API requires manual approval", async
   assert.equal(calls[0]?.url, "http://api.test/runner/jobs/claim");
 });
 
-test("runWorkerOnce does not claim jobs for api key mode until that runner exists", async () => {
+test("readWorkerConfig loads api key mode from the local secrets file", async () => {
+  const secretsDir = await mkdtemp(path.join(tmpdir(), "off-worker-key-"));
+  const secretsPath = path.join(secretsDir, "secrets.env");
+  await writeFile(secretsPath, 'OPENAI_API_KEY="sk-test_1234567890abcdef"\n');
+
+  try {
+    const config = readWorkerConfig({
+      API_BASE_URL: "http://api.test",
+      CODEX_AUTH_MODE: "api_key",
+      CODEX_RUNNER_MODE: "codex",
+      CODEX_SECRETS_PATH: secretsPath,
+    });
+
+    assert.equal(config.codexAuthMode, "api_key");
+    assert.equal(config.openAiApiKey, "sk-test_1234567890abcdef");
+  } finally {
+    await rm(secretsDir, { force: true, recursive: true });
+  }
+});
+
+test("runWorkerOnce uses api key mode instead of blocking before claim", async () => {
   const calls: Array<{ body: unknown; url: string }> = [];
   const config = readWorkerConfig({
     API_BASE_URL: "http://api.test",
     CODEX_AUTH_MODE: "api_key",
+    CODEX_CLI: "definitely-missing-codex",
     CODEX_RUNNER_MODE: "codex",
+    OPENAI_API_KEY: "sk-test_1234567890abcdef",
     WORKER_WORK_ITEM_ID: "work_test",
   });
   const fetchImpl: FetchLike = async (url, init) => {
     calls.push({ body: init?.body ? JSON.parse(String(init.body)) : null, url });
-    return jsonResponse({ job });
+    if (String(url).endsWith("/runner/jobs/claim")) return jsonResponse({ job });
+    if (String(url).endsWith(`/runner/jobs/${job.id}/complete`)) return jsonResponse({ runId: "run_test" });
+    return new Response("not found", { status: 404 });
   };
 
   assert.equal(config.codexAuthMode, "api_key");
-  assert.equal(await runWorkerOnce(config, fetchImpl), false);
-  assert.equal(calls.length, 0);
+  assert.equal(await runWorkerOnce(config, fetchImpl), true);
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0]?.url, "http://api.test/runner/jobs/claim");
+  assert.equal(calls[1]?.url, "http://api.test/runner/jobs/work_test/complete");
+  assert.equal((calls[1]?.body as { status?: string }).status, "failed");
 });
 
 function jsonResponse(value: unknown): Response {

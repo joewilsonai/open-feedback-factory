@@ -7,7 +7,6 @@ test("clusterKeyForFeedback groups dark mode phrasing variants", () => {
     "Please add dark mode",
     "Can you add a night mode?",
     "I want a dark theme in settings",
-    "Please let me change app color themes",
   ];
 
   assert.deepEqual(
@@ -16,8 +15,18 @@ test("clusterKeyForFeedback groups dark mode phrasing variants", () => {
       "feature.theme.dark-mode",
       "feature.theme.dark-mode",
       "feature.theme.dark-mode",
-      "feature.theme.dark-mode",
     ],
+  );
+});
+
+test("clusterKeyForFeedback keeps theme color choices distinct from dark mode", () => {
+  assert.equal(
+    clusterKeyForFeedback({ sanitizedMessage: "Please let me change app color themes" }),
+    "feature.theme.color-options",
+  );
+  assert.equal(
+    clusterKeyForFeedback({ sanitizedMessage: "add different theme colors to the UI so user can select" }),
+    "feature.theme.color-options",
   );
 });
 

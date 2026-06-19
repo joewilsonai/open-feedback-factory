@@ -48,7 +48,11 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
     });
   }
 
-  if (/dark mode|dark theme|theme|appearance|color/.test(message) || clusterKey === "feature.theme.dark-mode") {
+  if (
+    /dark mode|dark theme|theme|appearance|color/.test(message) ||
+    clusterKey === "feature.theme.dark-mode" ||
+    clusterKey === "feature.theme.color-options"
+  ) {
     return decision({
       action: "create_work_item",
       category: "theme",
@@ -56,7 +60,7 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
       model: input.model,
       riskTier: "safe_auto_merge",
       shouldCreateIssue: true,
-      title: "Add a dark mode option",
+      title: titleForThemeFeature(message, clusterKey),
       userMessage:
         "This looks safe and actionable. We can queue it for a small implementation PR.",
       userStatus: "planned",
@@ -146,4 +150,12 @@ function titleForDaybookFeature(message: string): string {
   if (/search.*note/.test(message)) return "Add note search";
   if (/todo|task/.test(message)) return "Improve todos";
   return "Improve Daybook";
+}
+
+function titleForThemeFeature(message: string, clusterKey: string): string {
+  if (clusterKey === "feature.theme.dark-mode" || /dark mode|dark theme/.test(message)) return "Add a dark mode option";
+  if (/color|colour|theme picker|appearance/.test(message) || clusterKey === "feature.theme.color-options") {
+    return "Add theme color choices";
+  }
+  return "Improve theme settings";
 }
