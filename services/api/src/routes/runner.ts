@@ -9,7 +9,25 @@ export async function registerRunnerRoutes(app: FastifyInstance, deps: AppDeps):
       return { approvalMode, job: null, reason: "manual_approval_required" };
     }
 
-    const job = await deps.store.claimNextWorkItem(request.body?.workerName ?? "worker", request.body?.workItemId);
+    const maxFeatureCostUsd = await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd);
+    if (request.body?.workItemId) {
+      const workItem = await deps.store.getWorkItem(request.body.workItemId);
+      if (workItem && workItem.costEstimate.amountUsd > maxFeatureCostUsd) {
+        return {
+          approvalMode,
+          costEstimateUsd: workItem.costEstimate.amountUsd,
+          job: null,
+          maxFeatureCostUsd,
+          reason: "cost_cap_exceeded",
+        };
+      }
+    }
+
+    const job = await deps.store.claimNextWorkItem(
+      request.body?.workerName ?? "worker",
+      request.body?.workItemId,
+      maxFeatureCostUsd,
+    );
     return { approvalMode, job };
   });
 

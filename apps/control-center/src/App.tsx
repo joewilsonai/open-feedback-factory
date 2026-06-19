@@ -213,6 +213,7 @@ export function App() {
   const [adminTokenInput, setAdminTokenInput] = useState(adminToken);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [adminAuthBlocked, setAdminAuthBlocked] = useState(false);
+  const [costCapInput, setCostCapInput] = useState("");
   const [credentialUpdating, setCredentialUpdating] = useState(false);
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [evidence, setEvidence] = useState<WorkItemEvidence | null>(null);
@@ -254,6 +255,7 @@ export function App() {
     const doctorResponse = await fetch(`${apiBaseUrl}/doctor`);
     const nextDoctor = (await doctorResponse.json()) as Doctor;
     setDoctor(nextDoctor);
+    setCostCapInput(String(nextDoctor.maxFeatureCostUsd));
     const snapshotResponse = await adminFetch("/admin/control-room");
     if (snapshotResponse.status === 401) {
       setAdminAuthBlocked(true);
@@ -321,6 +323,26 @@ export function App() {
       setStatus(error instanceof Error ? error.message : "Credential mode failed");
     } finally {
       setCredentialUpdating(false);
+    }
+  }
+
+  async function saveCostCap() {
+    const amount = Number(costCapInput);
+    setModeUpdating(true);
+    setStatus("Saving cost cap");
+    try {
+      const response = await adminFetch("/admin/settings/cost-cap", {
+        body: JSON.stringify({ maxFeatureCostUsd: amount }),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      });
+      const body = await response.json().catch(() => ({}));
+      await refresh();
+      setStatus(response.ok ? "Cost cap saved" : `Cost cap blocked: ${String(body.error ?? "not saved")}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Cost cap save failed");
+    } finally {
+      setModeUpdating(false);
     }
   }
 
@@ -578,6 +600,13 @@ export function App() {
         <EvidenceLedgerPanel evidence={evidence} loading={evidenceLoading} selected={selected} />
 
         <ExecutionPanel doctor={doctor} modeUpdating={modeUpdating} onSetApprovalMode={setApprovalMode} />
+        <CostControlPanel
+          costCapInput={costCapInput}
+          doctor={doctor}
+          modeUpdating={modeUpdating}
+          onCostCapInput={setCostCapInput}
+          onSaveCostCap={saveCostCap}
+        />
         <AgentCredentialsPanel
           apiKeyInput={apiKeyInput}
           credentialUpdating={credentialUpdating}
@@ -888,6 +917,43 @@ function ExecutionPanel(props: {
         Switch modes here. Auto approval lets an attached live worker claim queued work; it still uses real runners, real
         PRs, and real guardrails.
       </p>
+    </div>
+  );
+}
+
+function CostControlPanel(props: {
+  costCapInput: string;
+  doctor: Doctor | null;
+  modeUpdating: boolean;
+  onCostCapInput: (value: string) => void;
+  onSaveCostCap: () => void;
+}) {
+  const parsed = Number(props.costCapInput);
+  const invalid = !Number.isFinite(parsed) || parsed <= 0 || parsed > 10_000;
+
+  return (
+    <div className="panel cost-control-panel">
+      <div className="panel-heading">
+        <p className="eyebrow">Cost controls</p>
+        <h2>Feature cap</h2>
+      </div>
+      <p className="mode-note">
+        Workers and manual runs are blocked before model spend when the estimate exceeds this cap.
+      </p>
+      <div className="secret-row">
+        <input
+          inputMode="decimal"
+          min="0"
+          placeholder="5.00"
+          type="number"
+          value={props.costCapInput}
+          onChange={(event) => props.onCostCapInput(event.target.value)}
+        />
+        <button disabled={props.modeUpdating || !props.doctor || invalid} type="button" onClick={props.onSaveCostCap}>
+          Save cap
+        </button>
+      </div>
+      <p className="mode-note">Current cap: {props.doctor ? formatMoney(props.doctor.maxFeatureCostUsd) : "Checking"}</p>
     </div>
   );
 }

@@ -13,6 +13,7 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
   app.get("/doctor", async () => {
     const approvalMode = await deps.store.getApprovalMode(deps.config.approvalMode);
     const codexAuthMode = await deps.store.getCodexAuthMode(deps.config.codexAuthMode);
+    const maxFeatureCostUsd = await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd);
     const codexApiKeyStatus = await getCodexApiKeyStatus(deps.config);
     const accessControls = accessControlStatus(deps.config);
     return {
@@ -36,7 +37,7 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
       githubMode: deps.config.githubMode,
       githubWebhookUrl: `${deps.config.publicBaseUrl}/github/webhook`,
       githubWebhooksEnabled: githubWebhooksEnabledForBaseUrl(deps.config.publicBaseUrl),
-      maxFeatureCostUsd: deps.config.maxFeatureCostUsd,
+      maxFeatureCostUsd,
       protectedPathFragments: deps.config.protectedPathFragments,
       publicBaseUrl: deps.config.publicBaseUrl,
       runnerInstall: buildRunnerInstallPlan(codexAuthMode),

@@ -74,7 +74,7 @@ Required behavior:
 2. Core/domain:
    implement sanitization, clustering, routing, status machine, demand
    thresholds, stored signal-count promotion, cost estimates, auto-merge gates,
-   and assumption-record blocking.
+   live cost-cap enforcement, and assumption-record blocking.
 
 3. API/Postgres:
    persist feedback, clusters, work items, decisions, agent runs, assumptions,

@@ -2247,6 +2247,9 @@ production release logic.
 Cost caps must be enforced before and during work. If a feature is estimated
 above budget, it waits. If actual cost exceeds the configured limit, the system
 stops or escalates.
+The V1 control center should let an operator change the max feature cost cap
+without editing environment files, and runner/admin execution must read that
+live policy before spending model time.
 
 There needs to be an audit trail for every decision: why it was built, blocked,
 not planned, merged, reopened, or reconsidered.
