@@ -39,9 +39,10 @@ The product is not another coding agent and not another feedback board.
 
 It should also not be positioned as "a tool that turns requests into
 agent-built PRs." That is now the obvious middle of the category. Products such
-as Lightsprint can already let an internal product team create a task, run cloud
-agents, generate a preview, and open a pull request. That validates the market,
-but it also means agent-created PRs alone are not a differentiated wedge.
+as AI-native product-team workspaces can already let an internal team create a
+task, run cloud agents, generate a preview, and open a pull request. That
+validates the market, but it also means agent-created PRs alone are not a
+differentiated wedge.
 
 It is the connective tissue between:
 
@@ -91,7 +92,7 @@ The indie developer emotional frame:
 > implementation automatically while you keep the rules, budget, and release
 > gates.
 
-The competitive line after the Lightsprint audit:
+The competitive line after the category audit:
 
 > Coding-agent PR creation is the middle of the workflow. Open Feedback Factory
 > should own the beginning and end: real user demand, safe autonomous decisions,
@@ -283,10 +284,17 @@ Launcher requirements:
 - submit through the same privacy-safe SDK feedback endpoint;
 - attach safe app metadata such as route, surface, app version, and feature
   context;
+- attach a safe app context pack, including product summary, current surface,
+  route, existing feature inventory, recent shipped/rejected request summaries,
+  and product voice, so clarification agents understand the app before asking
+  users questions;
 - show the latest user-safe request status inside the launcher after submit;
 - persist only the submitted `feedbackId` locally, not raw feedback text;
 - auto-fetch status when the launcher opens and poll while it remains open so
   users never need to hit a refresh button;
+- if the request is too vague, show one to three plain-language follow-up
+  questions inside the launcher and let the user answer without seeing
+  technical terms like acceptance criteria, repro steps, scope, routing, or PR;
 - expose a submitted callback so the host app can add its own lifecycle UI;
 - be dismissible and keyboard-accessible;
 - avoid collecting screenshots, raw session data, transcripts, secrets, or
@@ -2202,6 +2210,14 @@ Potential paid features:
 The open-source product should remain credible and useful. The hosted product
 should win on setup, reliability, observability, and scale.
 
+There should also be a hosted trial/sandbox path available in parallel with the
+self-hosted install. Many indie developers will not be ready to configure
+Docker, tunnels, GitHub Apps, workers, and secrets just to understand the loop.
+The hosted version should let them connect a test repo or starter repo, install
+the SDK snippet, submit real feedback, watch the lifecycle, and see a guarded
+PR path without pretending work shipped. This is both an onboarding path and a
+demo surface.
+
 ## 19. MVP Requirements
 
 ### Must Have
@@ -2234,7 +2250,8 @@ should win on setup, reliability, observability, and scale.
 - Minimal release marker so merged work is not called shipped until release is
   explicitly proven.
 - User-safe status endpoint for shipped, planned, already available, not
-  planned, blocked, unsafe, needs more signal, and waiting-for-release states.
+  planned, blocked, unsafe, needs clarification, needs more signal, and
+  waiting-for-release states.
 - Feature usage tracking and feedback-impact attribution.
 - Real Daybook demo app and seed scenario with no fake PRs, fake costs, fake
   releases, or fake shipped states.
@@ -2242,12 +2259,16 @@ should win on setup, reliability, observability, and scale.
   integration-test rows from polluting the control center.
 - Maintenance/doctor command.
 - Versioned config and migration path.
+- Hosted trial/sandbox path for developers who want to test the loop before
+  installing the full self-hosted stack.
 
 ### Should Have
 
 - iOS SDK/example.
 - Error capture.
 - Deployment-provider tracking beyond the V1 release marker.
+- Requester-first rollout mode with feature-flag exposure, requester follow-up,
+  and fallback to the operator's original rollout policy.
 - Advanced feature exposure/usage/outcome reporting.
 - Data retention controls.
 - Rollback/revert workflow.
@@ -2298,6 +2319,11 @@ on it, what PR exists, what it cost, and whether it shipped.
 Every request needs a status. The important thing is that nothing disappears. A
 request can be shipped, already available, planned, waiting for more signal,
 blocked, out of scope, not reproducible, or not planned.
+
+Some requests need a quick follow-up before they become backlog items or agent
+work. The system should use the app context pack to ask a few end-user-safe
+questions in the product's voice. The questions should sound like they came
+from the app team, not from an issue tracker or engineering workflow.
 
 The system must be able to say no. A good product system does not build
 everything users ask for. It should store the reason and tell the user in a
@@ -2386,6 +2412,13 @@ and requesting users or segments.
 
 For staged rollouts, the system should know who was exposed before judging
 feature usage or notifying users that something reached them.
+
+V2 should support requester-first rollout. When a shipped feature came from one
+or more identifiable requesters, operators can choose to expose it first to
+those users or that cohort behind a feature flag, ask for lightweight feedback,
+watch health and usage, and then continue with the original rollout policy.
+This must be optional; teams should still be able to roll out by their normal
+staged, percentage, beta, or all-users policy.
 
 Finally, the system updates the original user-facing status: shipped, already
 available, not planned, blocked, needs more signal, or another safe outcome.
@@ -2633,10 +2666,10 @@ user-follow-up systems.
 
 ### AI-native product-team platforms
 
-Lightsprint and similar platforms are close enough to treat as category
-validation and competitive pressure. A Lightsprint-style workflow lets an
-internal team member connect a repository, create a product task, run cloud
-agents, produce a preview deployment, and open a pull request for review.
+AI-native product-team platforms are close enough to treat as category
+validation and competitive pressure. A typical workflow lets an internal team
+member connect a repository, create a product task, run cloud agents, produce a
+preview deployment, and open a pull request for review.
 
 That overlaps with the middle of this product's loop: task -> agent -> branch
 -> PR -> preview. Open Feedback Factory should not compete primarily on that

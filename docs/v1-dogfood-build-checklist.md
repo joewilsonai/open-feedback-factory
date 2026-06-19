@@ -84,7 +84,9 @@ Required behavior:
 4. SDK/Daybook:
    ship a real notepad/todo-style demo app with the SDK floating suggestion
    launcher, feedback submission, automatic in-widget status tracking, and
-   feature usage events.
+   feature usage events. Vague requests should trigger plain-language
+   clarification questions informed by safe app context, not engineering
+   ticketing language.
 
 5. Control center:
    show setup health, queues, demand memory, a realtime feature lifecycle view,

@@ -1513,6 +1513,7 @@ function userStatusLabel(status: string): string {
   if (status === "implemented") return "Implemented, awaiting review";
   if (status === "shipped") return "Shipped";
   if (status === "blocked") return "Blocked";
+  if (status === "needs_clarification") return "Needs user detail";
   if (status === "not_planned") return "Not planned";
   return titleCase(status);
 }
@@ -1523,6 +1524,7 @@ function workStatusLabel(status: string): string {
   if (status === "implemented") return "Implemented, awaiting review";
   if (status === "shipped") return "Shipped";
   if (status === "blocked") return "Blocked";
+  if (status === "needs_clarification") return "Needs user detail";
   if (status === "failed") return "Needs human review";
   if (status === "not_planned") return "Not planned";
   return titleCase(status);

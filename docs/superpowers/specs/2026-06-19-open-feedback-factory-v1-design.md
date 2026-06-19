@@ -19,8 +19,9 @@ infrastructure, dating-app language, or HeyTelli release paths.
 
 ## V1 Scope
 
-V1 is a demo-first internal dogfood build. It proves the complete loop in a
-bounded toy web app before becoming a public open-source launch.
+V1 is a private internal dogfood build. It proves the real loop in an
+SDK-connected app before becoming a public open-source launch. Auto-merge
+exists only as a guarded routine-shipping lane, not as a demo shortcut.
 
 Included:
 
@@ -66,7 +67,7 @@ The product is not another coding agent and not another feedback board. It is
 the control plane between user feedback, product judgment, GitHub, agent work,
 review, merge, release, follow-up, and usage attribution.
 
-V1 should prove two demo paths:
+V1 should prove two dogfood paths:
 
 1. Positive path: user requests a safe improvement, a sanitized issue is
    created, Codex implements it, a PR opens, gates pass, the PR auto-merges,
@@ -179,11 +180,11 @@ Core screens:
 - user follow-up status;
 - feature usage impact.
 
-The work item detail screen is the demo centerpiece.
+The work item detail screen is the operational centerpiece.
 
 ## Core Flow
 
-1. User submits feedback in the toy web app through the SDK.
+1. User submits feedback in the SDK-connected app.
 2. API stores raw feedback privately.
 3. Sanitizer creates a safe summary and redacts secrets or private data.
 4. Work router dedupes or clusters the request.
@@ -207,7 +208,7 @@ context only.
 
 ## Guardrails And Auto-Merge
 
-V1 includes auto-merge because the product demo needs to show feedback shipping
+V1 includes auto-merge because the product promise is guarded feedback shipping
 itself. Auto-merge is narrow, explicit, and policy-gated.
 
 A PR can auto-merge only when all are true:
@@ -455,7 +456,7 @@ README, security model, install guide, and launch roadmap.
 - V1 is standalone and not HeyTelli-specific.
 - V1 is internal dogfood before public release.
 - Product name is Open Feedback Factory.
-- Demo path is feedback to real PR to safe auto-merge to user follow-up.
+- Dogfood path is feedback to real PR to safe auto-merge to user follow-up.
 - Docker Compose is the primary install.
 - GitHub App is required.
 - Codex is the only built-in runner.

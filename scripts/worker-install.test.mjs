@@ -7,6 +7,7 @@ import {
   renderLaunchAgent,
   renderSystemdUnit,
 } from "./worker-install.mjs";
+import { allowedHosts } from "./vite-dev-config.mjs";
 
 test("host worker command sources env and applies worker defaults", () => {
   const command = buildHostWorkerCommand({
@@ -70,4 +71,12 @@ test("service detection maps the supported host platforms", () => {
   assert.equal(detectService("darwin"), "launchagent");
   assert.equal(detectService("linux"), "systemd");
   assert.equal(detectService("win32"), "print");
+});
+
+test("Vite dev hosts allow local and Tailscale dogfood URLs", () => {
+  const hosts = allowedHosts();
+
+  assert.equal(hosts.includes("localhost"), true);
+  assert.equal(hosts.includes("127.0.0.1"), true);
+  assert.equal(hosts.includes(".ts.net"), true);
 });

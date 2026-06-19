@@ -769,7 +769,7 @@
 <p>V1 is for private internal use and testing. The repo and product should be built as if they will become open source, but publishing the repo, package, hosted service, or launch materials is a later explicit decision after the dogfood loop works with real GitHub, real Codex runs, real costs, and real follow-up.</p>
 <h2 id="2-positioning"><a class="heading-anchor" href="#2-positioning" aria-label="Link to 2. Positioning">#</a>2. Positioning</h2>
 <p>The product is not another coding agent and not another feedback board.</p>
-<p>It should also not be positioned as &quot;a tool that turns requests into agent-built PRs.&quot; That is now the obvious middle of the category. Products such as Lightsprint can already let an internal product team create a task, run cloud agents, generate a preview, and open a pull request. That validates the market, but it also means agent-created PRs alone are not a differentiated wedge.</p>
+<p>It should also not be positioned as &quot;a tool that turns requests into agent-built PRs.&quot; That is now the obvious middle of the category. Products such as AI-native product-team workspaces can already let an internal team create a task, run cloud agents, generate a preview, and open a pull request. That validates the market, but it also means agent-created PRs alone are not a differentiated wedge.</p>
 <p>It is the connective tissue between:</p>
 <ul>
 <li>customer feedback tools like Canny, Featurebase, Productboard, and Linear</li>
@@ -803,7 +803,7 @@
 <blockquote>build. Open Feedback Factory lets the safe, high-signal requests move toward</blockquote>
 <blockquote>implementation automatically while you keep the rules, budget, and release</blockquote>
 <blockquote>gates.</blockquote>
-<p>The competitive line after the Lightsprint audit:</p>
+<p>The competitive line after the category audit:</p>
 <blockquote>Coding-agent PR creation is the middle of the workflow. Open Feedback Factory</blockquote>
 <blockquote>should own the beginning and end: real user demand, safe autonomous decisions,</blockquote>
 <blockquote>cost-aware execution, release proof, usage feedback, and respectful user</blockquote>
@@ -941,10 +941,14 @@ trackFeatureOutcome({
 <li>submit through the same privacy-safe SDK feedback endpoint;</li>
 <li>attach safe app metadata such as route, surface, app version, and feature</li>
 <p>context;</p>
+<li>attach a safe app context pack, including product summary, current surface,</li>
+<p>route, existing feature inventory, recent shipped/rejected request summaries, and product voice, so clarification agents understand the app before asking users questions;</p>
 <li>show the latest user-safe request status inside the launcher after submit;</li>
 <li>persist only the submitted <code>feedbackId</code> locally, not raw feedback text;</li>
 <li>auto-fetch status when the launcher opens and poll while it remains open so</li>
 <p>users never need to hit a refresh button;</p>
+<li>if the request is too vague, show one to three plain-language follow-up</li>
+<p>questions inside the launcher and let the user answer without seeing technical terms like acceptance criteria, repro steps, scope, routing, or PR;</p>
 <li>expose a submitted callback so the host app can add its own lifecycle UI;</li>
 <li>be dismissible and keyboard-accessible;</li>
 <li>avoid collecting screenshots, raw session data, transcripts, secrets, or</li>
@@ -2404,6 +2408,7 @@ feedback-factory demo</code></pre>
 <li>priority support.</li>
 </ul>
 <p>The open-source product should remain credible and useful. The hosted product should win on setup, reliability, observability, and scale.</p>
+<p>There should also be a hosted trial/sandbox path available in parallel with the self-hosted install. Many indie developers will not be ready to configure Docker, tunnels, GitHub Apps, workers, and secrets just to understand the loop. The hosted version should let them connect a test repo or starter repo, install the SDK snippet, submit real feedback, watch the lifecycle, and see a guarded PR path without pretending work shipped. This is both an onboarding path and a demo surface.</p>
 <h2 id="19-mvp-requirements"><a class="heading-anchor" href="#19-mvp-requirements" aria-label="Link to 19. MVP Requirements">#</a>19. MVP Requirements</h2>
 <h3 id="must-have"><a class="heading-anchor" href="#must-have" aria-label="Link to Must Have">#</a>Must Have</h3>
 <ul>
@@ -2435,7 +2440,7 @@ feedback-factory demo</code></pre>
 <li>Minimal release marker so merged work is not called shipped until release is</li>
 <p>explicitly proven.</p>
 <li>User-safe status endpoint for shipped, planned, already available, not</li>
-<p>planned, blocked, unsafe, needs more signal, and waiting-for-release states.</p>
+<p>planned, blocked, unsafe, needs clarification, needs more signal, and waiting-for-release states.</p>
 <li>Feature usage tracking and feedback-impact attribution.</li>
 <li>Real Daybook demo app and seed scenario with no fake PRs, fake costs, fake</li>
 <p>releases, or fake shipped states.</p>
@@ -2443,12 +2448,16 @@ feedback-factory demo</code></pre>
 <p>integration-test rows from polluting the control center.</p>
 <li>Maintenance/doctor command.</li>
 <li>Versioned config and migration path.</li>
+<li>Hosted trial/sandbox path for developers who want to test the loop before</li>
+<p>installing the full self-hosted stack.</p>
 </ul>
 <h3 id="should-have"><a class="heading-anchor" href="#should-have" aria-label="Link to Should Have">#</a>Should Have</h3>
 <ul>
 <li>iOS SDK/example.</li>
 <li>Error capture.</li>
 <li>Deployment-provider tracking beyond the V1 release marker.</li>
+<li>Requester-first rollout mode with feature-flag exposure, requester follow-up,</li>
+<p>and fallback to the operator's original rollout policy.</p>
 <li>Advanced feature exposure/usage/outcome reporting.</li>
 <li>Data retention controls.</li>
 <li>Rollback/revert workflow.</li>
@@ -2485,6 +2494,7 @@ feedback-factory demo</code></pre>
 <p>Beta users need a simple way to submit feedback from inside the app. This could be a feedback button, bug report, feature request form, or automatic error capture. It should feel lightweight, not like filing a support ticket.</p>
 <p>Developers need a control center where they can see what users are asking for, how often it has come up, what the system decided, whether an agent is working on it, what PR exists, what it cost, and whether it shipped.</p>
 <p>Every request needs a status. The important thing is that nothing disappears. A request can be shipped, already available, planned, waiting for more signal, blocked, out of scope, not reproducible, or not planned.</p>
+<p>Some requests need a quick follow-up before they become backlog items or agent work. The system should use the app context pack to ask a few end-user-safe questions in the product's voice. The questions should sound like they came from the app team, not from an issue tracker or engineering workflow.</p>
 <p>The system must be able to say no. A good product system does not build everything users ask for. It should store the reason and tell the user in a respectful, product-safe way.</p>
 <p>Repeated similar requests should matter. If one user asks for something and it is not planned, that may be fine. If many users ask for the same thing, the system should surface it as a reconsideration candidate.</p>
 <p>Developers need configurable guardrails and cost controls. They should be able to decide which paths, categories, risk levels, models, budgets, and merge behaviors are allowed.</p>
@@ -2510,6 +2520,7 @@ feedback-factory demo</code></pre>
 <p>After merge, release tracking watches whether the change actually reached users. For web this may be deployment status; for iOS this may be TestFlight or App Store status.</p>
 <p>After release, optional SDK events track feature exposure, usage, and outcomes so the system can attribute shipped feature impact back to feedback clusters and requesting users or segments.</p>
 <p>For staged rollouts, the system should know who was exposed before judging feature usage or notifying users that something reached them.</p>
+<p>V2 should support requester-first rollout. When a shipped feature came from one or more identifiable requesters, operators can choose to expose it first to those users or that cohort behind a feature flag, ask for lightweight feedback, watch health and usage, and then continue with the original rollout policy. This must be optional; teams should still be able to roll out by their normal staged, percentage, beta, or all-users policy.</p>
 <p>Finally, the system updates the original user-facing status: shipped, already available, not planned, blocked, needs more signal, or another safe outcome.</p>
 <h3 id="20-3-technical-requirements"><a class="heading-anchor" href="#20-3-technical-requirements" aria-label="Link to 20.3 Technical Requirements">#</a>20.3 Technical Requirements</h3>
 <p>These requirements define the components needed to build the product.</p>
@@ -2613,7 +2624,7 @@ feedback-factory demo</code></pre>
 <p>GitHub Copilot coding agent, Codex, OpenHands, Devin, Factory Droid, Claude Code, and similar systems can work from tasks or issues and produce code.</p>
 <p>They are not primarily feedback intake, product-decision, cost-accounting, or user-follow-up systems.</p>
 <h3 id="ai-native-product-team-platforms"><a class="heading-anchor" href="#ai-native-product-team-platforms" aria-label="Link to AI-native product-team platforms">#</a>AI-native product-team platforms</h3>
-<p>Lightsprint and similar platforms are close enough to treat as category validation and competitive pressure. A Lightsprint-style workflow lets an internal team member connect a repository, create a product task, run cloud agents, produce a preview deployment, and open a pull request for review.</p>
+<p>AI-native product-team platforms are close enough to treat as category validation and competitive pressure. A typical workflow lets an internal team member connect a repository, create a product task, run cloud agents, produce a preview deployment, and open a pull request for review.</p>
 <p>That overlaps with the middle of this product's loop: task -&gt; agent -&gt; branch -&gt; PR -&gt; preview. Open Feedback Factory should not compete primarily on that middle step. The differentiated surface is what happens before and after the agent run:</p>
 <ul>
 <li>real in-app user feedback as the source of demand;</li>

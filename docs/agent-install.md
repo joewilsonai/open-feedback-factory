@@ -123,16 +123,18 @@ tunnel first.
    the Tailscale demo/control/API tunnel: `pnpm run tunnel:tailscale`.
 2. Get the HTTPS URL from the printed `tailscale funnel status` output.
 3. Put the printed HTTPS URL in `.env` as `PUBLIC_BASE_URL`.
-4. If Tailscale Funnel is not enabled, use `cloudflared tunnel --url http://localhost:4100` for the API-only wizard path,
+4. Tailscale `.ts.net` hosts are allowed by the local Vite dev config. For
+   other tunnel hosts, add them to `VITE_ALLOWED_HOSTS` in `.env`.
+5. If Tailscale Funnel is not enabled, use `cloudflared tunnel --url http://localhost:4100` for the API-only wizard path,
    but still set `ADMIN_TOKEN` and `RUNNER_TOKEN` before exposing admin or
    runner routes.
-5. Restart Docker: `docker compose up -d --build`.
-6. Open `http://localhost:5173` locally or `/ops` on the public Funnel URL.
-7. In **Install wizard**, click **Create GitHub App**.
-8. GitHub opens a required confirmation screen.
-9. After confirmation, GitHub returns to `/github/app/installed`.
-10. Click **Generate env values**.
-11. Copy the generated values into `.env`.
+6. Restart Docker: `docker compose up -d --build`.
+7. Open `http://localhost:5173` locally or `/ops` on the public Funnel URL.
+8. In **Install wizard**, click **Create GitHub App**.
+9. GitHub opens a required confirmation screen.
+10. After confirmation, GitHub returns to `/github/app/installed`.
+11. Click **Generate env values**.
+12. Copy the generated values into `.env`.
 12. Restart:
 
 ```bash

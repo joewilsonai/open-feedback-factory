@@ -6,6 +6,7 @@ const LABELS: Record<UserFeedbackState, string> = {
   grouped: "Grouped with similar feedback",
   implemented: "Implemented, awaiting review",
   in_progress: "In progress",
+  needs_clarification: "Needs a little more detail",
   needs_more_signal: "Needs more signal",
   not_planned: "Not planned",
   planned: "Planned",
@@ -15,6 +16,7 @@ const LABELS: Record<UserFeedbackState, string> = {
 
 export function buildUserStatus(input: {
   createdAt?: string;
+  clarificationQuestions?: UserFeedbackStatus["clarificationQuestions"];
   feedbackId: string;
   message: string;
   state: UserFeedbackState;
@@ -34,6 +36,7 @@ export function buildUserStatus(input: {
         ];
 
   return {
+    clarificationQuestions: input.clarificationQuestions ?? [],
     feedbackId: input.feedbackId,
     label: LABELS[input.state],
     message: input.message,

@@ -65,6 +65,7 @@ class MemoryStore implements AppStore {
     const feedbackId = `feedback_${this.feedbackStatuses.size + 1}`;
     const workItemId = input.decision.shouldCreateIssue ? `work_${this.workItems.length + 1}` : null;
     const status: UserFeedbackStatus = {
+      clarificationQuestions: input.decision.clarificationQuestions,
       feedbackId,
       label: input.decision.userStatus,
       message: input.decision.userMessage,
@@ -122,6 +123,7 @@ class MemoryStore implements AppStore {
     });
 
     this.userNotifications.unshift({
+      clarificationQuestions: input.decision.clarificationQuestions,
       createdAt: new Date().toISOString(),
       feedbackId,
       id: `note_${this.userNotifications.length + 1}`,
@@ -313,6 +315,7 @@ class MemoryStore implements AppStore {
     });
     for (const [feedbackId] of this.feedbackStatuses) {
       this.feedbackStatuses.set(feedbackId, {
+        clarificationQuestions: [],
         feedbackId,
         label: "Shipped",
         message,
@@ -320,6 +323,7 @@ class MemoryStore implements AppStore {
         timeline: [],
       });
       this.userNotifications.unshift({
+        clarificationQuestions: [],
         createdAt: new Date().toISOString(),
         feedbackId,
         id: `note_${this.userNotifications.length + 1}`,
@@ -347,11 +351,13 @@ class MemoryStore implements AppStore {
     for (const [feedbackId, current] of this.feedbackStatuses) {
       this.feedbackStatuses.set(feedbackId, {
         ...current,
+        clarificationQuestions: [],
         label: input.status === "not_planned" ? "Not planned" : "Blocked",
         message: input.message,
         state: input.status,
       });
       this.userNotifications.unshift({
+        clarificationQuestions: [],
         createdAt: new Date().toISOString(),
         feedbackId,
         id: `note_${this.userNotifications.length + 1}`,
@@ -570,7 +576,7 @@ test("API rate limits repeated SDK feedback intake by actor", async () => {
     const response = await app.inject({
       method: "POST",
       payload: {
-        message: `Please add note search ${index}`,
+        message: `Please add note search for saved notes ${index}`,
         source: "demo",
         userId: "user-rate-test",
       },
@@ -582,7 +588,7 @@ test("API rate limits repeated SDK feedback intake by actor", async () => {
   const limited = await app.inject({
     method: "POST",
     payload: {
-      message: "Please add note search again",
+      message: "Please add note search for saved notes again",
       source: "demo",
       userId: "user-rate-test",
     },
@@ -663,7 +669,7 @@ test("API promotes repeated below-threshold feedback from demand memory", async 
   const first = await app.inject({
     method: "POST",
     payload: {
-      message: "Make the dashboard more delightful",
+      message: "Add dashboard focus meter",
       source: "demo",
       userId: "user-demand-1",
     },
@@ -677,7 +683,7 @@ test("API promotes repeated below-threshold feedback from demand memory", async 
   const second = await app.inject({
     method: "POST",
     payload: {
-      message: "Make the dashboard more delightful",
+      message: "Add dashboard focus meter",
       source: "demo",
       userId: "user-demand-2",
     },
@@ -693,11 +699,42 @@ test("API promotes repeated below-threshold feedback from demand memory", async 
   const cluster = controlRoom
     .json()
     .feedbackClusters.find(
-      (row: { clusterKey: string }) => row.clusterKey === "feedback.make-the-dashboard-more-delightful",
+      (row: { clusterKey: string }) => row.clusterKey === "feedback.add-dashboard-focus-meter",
     );
   assert.equal(cluster.signalCount, 2);
   assert.equal(cluster.activeWorkItemId, second.json().workItemId);
   assert.equal(cluster.latestStatus, "planned");
+
+  await app.close();
+});
+
+test("API returns friendly clarification questions for vague feedback", async () => {
+  const app = await buildApp({ config, store: new MemoryStore() });
+
+  const response = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Make this better",
+      metadata: {
+        appName: "Daybook",
+        productSummary: "Daybook is a notes and todos app.",
+        surface: "notepad-todo",
+      },
+      source: "demo",
+      userId: "user-clarify-1",
+    },
+    url: "/sdk/feedback",
+  });
+
+  assert.equal(response.statusCode, 201);
+  assert.equal(response.json().workItemId, null);
+  assert.equal(response.json().status.state, "needs_clarification");
+  assert.equal(response.json().status.clarificationQuestions.length, 2);
+  assert.match(response.json().status.clarificationQuestions[0].question, /Daybook/);
+  assert.doesNotMatch(JSON.stringify(response.json().status.clarificationQuestions), /acceptance criteria|repro steps|scope/i);
+
+  const status = await app.inject({ method: "GET", url: `/sdk/feedback/${response.json().feedbackId}/status` });
+  assert.equal(status.json().clarificationQuestions.length, 2);
 
   await app.close();
 });

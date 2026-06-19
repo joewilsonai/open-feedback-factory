@@ -27,13 +27,21 @@ test("sanitizeFeedback keeps simple product feedback low risk", () => {
   const result = sanitizeFeedback({
     message: "Please add dark mode to settings",
     metadata: {
+      appName: "Daybook",
       route: "/settings",
+      existingFeatures: ["notes", "todos"],
       surface: "settings",
     },
     source: "demo",
   });
 
   assert.equal(result.sanitizedMessage, "Please add dark mode to settings");
+  assert.deepEqual(result.safeMetadata, {
+    appName: "Daybook",
+    existingFeatures: ["notes", "todos"],
+    route: "/settings",
+    surface: "settings",
+  });
   assert.equal(result.privacyRisk, "low");
   assert.deepEqual(result.redactions, []);
 });

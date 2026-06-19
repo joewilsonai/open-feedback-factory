@@ -6,6 +6,7 @@ import {
   type FeatureCostEstimate,
   type FeedbackInput,
   type SanitizedFeedback,
+  type UserClarificationQuestion,
   type UserFeedbackState,
   type UserFeedbackStatus,
   type WorkRoutingDecision,
@@ -107,6 +108,7 @@ export interface ReleaseLedgerRow {
 }
 
 export interface NotificationLedgerRow {
+  clarificationQuestions: UserClarificationQuestion[];
   createdAt: string;
   feedbackId: string | null;
   id: string;
@@ -341,6 +343,7 @@ export class OpenFeedbackStore {
          values ($1, $2, $3, $4, $5)`,
         [`note_${randomUUID()}`, feedbackId, workItemId, userStatus, userMessage],
       );
+      await setLatestNotificationQuestions(client, feedbackId, workItemId, input.decision.clarificationQuestions);
 
       await client.query(
         `insert into audit_events (id, actor, event, target_type, target_id, metadata)
@@ -367,6 +370,7 @@ export class OpenFeedbackStore {
     return {
       feedbackId,
       status: buildUserStatus({
+        clarificationQuestions: input.decision.clarificationQuestions,
         feedbackId,
         message: userMessage,
         state: userStatus,
@@ -377,11 +381,12 @@ export class OpenFeedbackStore {
 
   async getUserFeedbackStatus(feedbackId: string): Promise<UserFeedbackStatus | null> {
     const result = await this.pool.query<{
+      clarification_questions: unknown;
       created_at: Date;
       message: string;
       status: UserFeedbackStatus["state"];
     }>(
-      `select status, message, created_at
+      `select status, message, clarification_questions, created_at
        from user_notifications
        where feedback_id = $1
        order by created_at desc
@@ -393,6 +398,7 @@ export class OpenFeedbackStore {
     if (!row) return null;
 
     return buildUserStatus({
+      clarificationQuestions: clarificationQuestionsFromRow(row.clarification_questions),
       createdAt: row.created_at.toISOString(),
       feedbackId,
       message: row.message,
@@ -607,7 +613,7 @@ export class OpenFeedbackStore {
           [id],
         ),
         this.pool.query(
-          `select id, feedback_id, work_item_id, status, message, created_at
+          `select id, feedback_id, work_item_id, status, message, clarification_questions, created_at
            from user_notifications
            where work_item_id = $1
            order by created_at desc
@@ -1555,6 +1561,7 @@ function releaseLedgerFromRow(row: Record<string, unknown>): ReleaseLedgerRow {
 
 function notificationLedgerFromRow(row: Record<string, unknown>): NotificationLedgerRow {
   return {
+    clarificationQuestions: clarificationQuestionsFromRow(row.clarification_questions),
     createdAt: dateString(row.created_at),
     feedbackId: stringOrNull(row.feedback_id),
     id: String(row.id),
@@ -1562,6 +1569,25 @@ function notificationLedgerFromRow(row: Record<string, unknown>): NotificationLe
     status: String(row.status),
     workItemId: stringOrNull(row.work_item_id),
   };
+}
+
+function clarificationQuestionsFromRow(value: unknown): UserClarificationQuestion[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const record = item as Record<string, unknown>;
+      const id = typeof record.id === "string" ? record.id.trim() : "";
+      const question = typeof record.question === "string" ? record.question.trim() : "";
+      const placeholder = typeof record.placeholder === "string" ? record.placeholder.trim() : "";
+      if (!id || !question) return null;
+      return {
+        id,
+        ...(placeholder ? { placeholder } : {}),
+        question,
+      };
+    })
+    .filter((item): item is UserClarificationQuestion => item !== null);
 }
 
 function usageAttributionFromRow(row: Record<string, unknown>): UsageAttributionRow {
@@ -1673,6 +1699,27 @@ async function insertAssumptionRecords(
 function assumptionRecordsFromRow(value: unknown): AgentAssumptionRecord[] {
   if (!Array.isArray(value)) return [];
   return value.map((item) => buildAssumptionRecord(item as Partial<AgentAssumptionRecord>));
+}
+
+async function setLatestNotificationQuestions(
+  client: pg.PoolClient,
+  feedbackId: string,
+  workItemId: string | null,
+  questions: UserClarificationQuestion[],
+): Promise<void> {
+  if (questions.length === 0) return;
+  await client.query(
+    `update user_notifications
+     set clarification_questions = $3
+     where id = (
+       select id
+       from user_notifications
+       where feedback_id = $1 and work_item_id is not distinct from $2
+       order by created_at desc
+       limit 1
+     )`,
+    [feedbackId, workItemId, JSON.stringify(questions)],
+  );
 }
 
 async function upsertClusterUserMessage(

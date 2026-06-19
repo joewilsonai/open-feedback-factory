@@ -1,5 +1,6 @@
 export * from "./automerge.js";
 export * from "./assumptions.js";
+export * from "./clarification.js";
 export * from "./cluster.js";
 export * from "./cost.js";
 export * from "./router.js";

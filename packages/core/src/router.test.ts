@@ -48,7 +48,7 @@ test("routeFeedback blocks private or protected work from GitHub and agents", ()
 
 test("routeFeedback keeps one-off unclear requests in needs-more-signal", () => {
   const sanitized = sanitizeFeedback({
-    message: "Make the dashboard more delightful",
+    message: "Add dashboard focus meter",
     source: "demo",
   });
 
@@ -61,7 +61,7 @@ test("routeFeedback keeps one-off unclear requests in needs-more-signal", () => 
 
 test("routeFeedback promotes repeated unclear requests into guarded work", () => {
   const sanitized = sanitizeFeedback({
-    message: "Make the dashboard more delightful",
+    message: "Add dashboard focus meter",
     source: "demo",
   });
 
@@ -72,6 +72,27 @@ test("routeFeedback promotes repeated unclear requests into guarded work", () =>
   assert.equal(decision.riskTier, "guarded_review");
   assert.equal(decision.userStatus, "planned");
   assert.equal(decision.title, "Review repeated feature request");
+});
+
+test("routeFeedback asks plain-language follow-up questions for vague requests", () => {
+  const sanitized = sanitizeFeedback({
+    message: "Make this better",
+    metadata: {
+      appName: "Daybook",
+      productSummary: "Daybook is a notes and todos app.",
+      surface: "notepad-todo",
+    },
+    source: "demo",
+  });
+
+  const decision = routeFeedback({ sanitized, signalCount: 1 });
+
+  assert.equal(decision.action, "needs_clarification");
+  assert.equal(decision.shouldCreateIssue, false);
+  assert.equal(decision.userStatus, "needs_clarification");
+  assert.equal(decision.clarificationQuestions.length, 2);
+  assert.match(decision.clarificationQuestions[0]?.question ?? "", /Daybook/);
+  assert.doesNotMatch(JSON.stringify(decision.clarificationQuestions), /acceptance criteria|repro steps|scope/i);
 });
 
 test("routeFeedback queues safe Daybook todo features", () => {

@@ -117,6 +117,7 @@ create table if not exists user_notifications (
   work_item_id text references work_items(id),
   status text not null,
   message text not null,
+  clarification_questions jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
 
@@ -178,6 +179,7 @@ alter table cost_records add column if not exists workspace_id text not null def
 alter table github_artifacts add column if not exists workspace_id text not null default 'default';
 alter table release_events add column if not exists workspace_id text not null default 'default';
 alter table user_notifications add column if not exists workspace_id text not null default 'default';
+alter table user_notifications add column if not exists clarification_questions jsonb not null default '[]'::jsonb;
 alter table feature_usage_events add column if not exists workspace_id text not null default 'default';
 alter table policy_configs add column if not exists workspace_id text not null default 'default';
 alter table audit_events add column if not exists workspace_id text not null default 'default';

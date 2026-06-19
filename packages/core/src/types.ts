@@ -24,6 +24,7 @@ export type WorkDecisionAction =
   | "already_available"
   | "blocked"
   | "create_work_item"
+  | "needs_clarification"
   | "needs_more_signal"
   | "not_planned";
 
@@ -33,6 +34,7 @@ export type UserFeedbackState =
   | "grouped"
   | "implemented"
   | "in_progress"
+  | "needs_clarification"
   | "needs_more_signal"
   | "not_planned"
   | "planned"
@@ -62,9 +64,24 @@ export interface FeatureCostEstimate {
   reason: string;
 }
 
+export interface ClarificationContext {
+  appName?: string;
+  existingFeatures?: string[];
+  productSummary?: string;
+  route?: string;
+  surface?: string;
+}
+
+export interface UserClarificationQuestion {
+  id: string;
+  placeholder?: string;
+  question: string;
+}
+
 export interface WorkRoutingDecision {
   action: WorkDecisionAction;
   category: FeedbackCategory;
+  clarificationQuestions: UserClarificationQuestion[];
   clusterKey: string;
   costEstimate: FeatureCostEstimate;
   riskTier: WorkRiskTier;
@@ -106,6 +123,7 @@ export interface FeedbackTimelineEvent {
 
 export interface UserFeedbackStatus {
   feedbackId: string;
+  clarificationQuestions: UserClarificationQuestion[];
   state: UserFeedbackState;
   label: string;
   message: string;

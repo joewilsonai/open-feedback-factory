@@ -1,5 +1,7 @@
 import type { SubmitFeedbackInput, SubmitFeedbackResult, OpenFeedbackClient } from "./client.js";
 
+type ClarificationQuestion = SubmitFeedbackResult["status"]["clarificationQuestions"][number];
+
 export interface FeedbackSuggestion {
   label: string;
   message: string;
@@ -74,6 +76,8 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
             <strong class="off-launcher-tracker-label">Checking status...</strong>
           </div>
           <p class="off-launcher-tracker-message"></p>
+          <div class="off-launcher-questions" hidden></div>
+          <button class="off-launcher-answer" type="button" hidden>Add more detail</button>
           <p class="off-launcher-tracker-id"></p>
         </div>
       </div>
@@ -94,11 +98,15 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
   const tracker = requireElement<HTMLDivElement>(root, ".off-launcher-tracker");
   const trackerLabel = requireElement<HTMLElement>(root, ".off-launcher-tracker-label");
   const trackerMessage = requireElement<HTMLParagraphElement>(root, ".off-launcher-tracker-message");
+  const questions = requireElement<HTMLDivElement>(root, ".off-launcher-questions");
+  const answerButton = requireElement<HTMLButtonElement>(root, ".off-launcher-answer");
   const trackerId = requireElement<HTMLParagraphElement>(root, ".off-launcher-tracker-id");
   const trackStatus = options.trackStatus ?? true;
   const statusStorageKey = options.statusStorageKey ?? `off:last-feedback:${options.source ?? "web_sdk_launcher"}`;
   const statusPollIntervalMs = options.statusPollIntervalMs ?? 15_000;
   let trackedFeedbackId = trackStatus ? readTrackedFeedbackId(statusStorageKey) : null;
+  let pendingFollowUpForFeedbackId: string | null = null;
+  let latestQuestions: ClarificationQuestion[] = [];
   let pollTimer: number | null = null;
 
   for (const suggestion of options.suggestions ?? []) {
@@ -142,6 +150,13 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
   root.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !panel.hidden) close();
   });
+  answerButton.addEventListener("click", () => {
+    if (!trackedFeedbackId || latestQuestions.length === 0) return;
+    pendingFollowUpForFeedbackId = trackedFeedbackId;
+    message.value = latestQuestions.map((question) => `${question.question}\nMy answer: `).join("\n\n");
+    message.focus();
+    status.textContent = "Add a little more detail, then send.";
+  });
 
   if (trackedFeedbackId) {
     showTracker({
@@ -162,7 +177,10 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
     status.textContent = "Sending suggestion...";
     const input: SubmitFeedbackInput = {
       message: text,
-      metadata: options.metadata,
+      metadata: {
+        ...(options.metadata ?? {}),
+        ...(pendingFollowUpForFeedbackId ? { followUpForFeedbackId: pendingFollowUpForFeedbackId } : {}),
+      },
       source: options.source ?? "web_sdk_launcher",
     };
 
@@ -173,11 +191,13 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
         trackedFeedbackId = result.feedbackId;
         if (trackStatus) writeTrackedFeedbackId(statusStorageKey, result.feedbackId);
         showTracker({
+          clarificationQuestions: result.status.clarificationQuestions,
           feedbackId: result.feedbackId,
           label: result.status.label,
           message: result.status.message,
         });
         startStatusPolling();
+        pendingFollowUpForFeedbackId = null;
         message.value = "";
         options.onSubmitted?.(result);
       })
@@ -208,6 +228,7 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
     try {
       const next = await options.client.getFeedbackStatus(trackedFeedbackId);
       showTracker({
+        clarificationQuestions: next.clarificationQuestions,
         feedbackId: trackedFeedbackId,
         label: next.label,
         message: next.message,
@@ -221,12 +242,32 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
     }
   }
 
-  function showTracker(input: { feedbackId: string; label: string; message: string }) {
+  function showTracker(input: {
+    clarificationQuestions?: ClarificationQuestion[];
+    feedbackId: string;
+    label: string;
+    message: string;
+  }) {
     if (!trackStatus) return;
     tracker.hidden = false;
     trackerLabel.textContent = input.label;
     trackerMessage.textContent = input.message;
     trackerId.textContent = `Request ${input.feedbackId}`;
+    latestQuestions = input.clarificationQuestions ?? [];
+    questions.replaceChildren();
+    questions.hidden = latestQuestions.length === 0;
+    answerButton.hidden = latestQuestions.length === 0;
+    for (const item of latestQuestions) {
+      const question = document.createElement("p");
+      question.className = "off-launcher-question";
+      question.textContent = item.question;
+      questions.appendChild(question);
+      if (item.placeholder) {
+        const example = document.createElement("small");
+        example.textContent = item.placeholder;
+        questions.appendChild(example);
+      }
+    }
   }
 
   function startStatusPolling() {
@@ -342,6 +383,24 @@ function ensureLauncherStyles() {
       color: #59645f;
       font-size: 0.9rem;
     }
+    .off-launcher-questions {
+      display: grid;
+      gap: 0.25rem;
+      margin: 0.15rem 0;
+    }
+    .off-launcher-questions[hidden] {
+      display: none;
+    }
+    .off-launcher-question {
+      margin: 0.4rem 0 0;
+      color: #17201d;
+      font-size: 0.92rem;
+      font-weight: 800;
+    }
+    .off-launcher-questions small {
+      color: #59645f;
+      font-size: 0.82rem;
+    }
     .off-launcher-tracker-id {
       font-size: 0.78rem;
       word-break: break-word;
@@ -372,7 +431,7 @@ function ensureLauncherStyles() {
       min-height: 2.75rem;
       font: inherit;
     }
-    .off-launcher-close, .off-launcher-suggestion {
+    .off-launcher-close, .off-launcher-suggestion, .off-launcher-answer {
       border: 1px solid rgba(24, 32, 29, 0.16);
       border-radius: 999px;
       color: inherit;

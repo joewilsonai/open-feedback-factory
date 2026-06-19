@@ -8,9 +8,13 @@ const GENERIC_SECRET_RE =
 const PRIVATE_KEY_RE = /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g;
 
 const SAFE_METADATA_KEYS = new Set([
+  "appName",
   "appVersion",
   "build",
+  "existingFeatures",
   "featureId",
+  "productSummary",
+  "productVoice",
   "route",
   "segment",
   "surface",
@@ -48,15 +52,20 @@ export function sanitizeFeedback(input: FeedbackInput): SanitizedFeedback {
 
   const safeMetadata: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input.metadata ?? {})) {
-    if (SAFE_METADATA_KEYS.has(key) && typeof value !== "object") {
+    if (SAFE_METADATA_KEYS.has(key) && isSafeMetadataValue(value)) {
       safeMetadata[key] = value;
       continue;
     }
 
     if (/screenshot|transcript|conversation|raw|secret|token|password/i.test(key)) {
       redactions.add(key.toLowerCase());
-    }
   }
+}
+
+function isSafeMetadataValue(value: unknown): value is boolean | number | string | string[] {
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return true;
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
 
   const privacyRisk = privacyRiskFor([...redactions], sanitizedMessage);
 

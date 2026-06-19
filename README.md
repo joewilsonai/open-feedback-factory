@@ -30,6 +30,7 @@ for the exact private dogfood completion gate.
 ## V1 Direction
 
 - Docker Compose local install.
+- Hosted trial/sandbox path for developers who want to test before installing.
 - Web SDK first, including a floating suggestion launcher with automatic
   in-widget request status tracking.
 - Postgres database.
@@ -42,6 +43,14 @@ for the exact private dogfood completion gate.
 - Focused operator control center with a realtime feature lifecycle view.
 - Recursive learning events that make routing, cost estimates, guardrails, and
   agent/provider selection smarter without weakening safety gates.
+
+Hosted trial/sandbox should let a developer connect a test or starter repo,
+install the SDK snippet, submit real feedback, watch the lifecycle, and see a
+guarded PR path without pretending that anything shipped.
+
+Future/V2: requester-first rollout can expose a shipped feature first to the
+users or cohort who asked for it, collect lightweight feedback, watch health
+and usage, then fall back to the operator's normal rollout policy.
 
 ## Local Development
 
@@ -111,6 +120,10 @@ using Tailscale Funnel, Cloudflare Tunnel, or any shared network URL, set both
 values in `.env` and restart the stack.
 `pnpm run tunnel:tailscale` refuses to expose the local stack until both tokens
 are present.
+
+Local Vite dev servers automatically allow localhost and Tailscale `.ts.net`
+hosts. For other tunnel domains, add a comma-separated list to
+`VITE_ALLOWED_HOSTS` in `.env`, then restart `pnpm dev`.
 
 `ADMIN_TOKEN` protects `/admin/*` routes and the control center queue/settings
 actions. The control center reads `/doctor`, asks for the token when required,

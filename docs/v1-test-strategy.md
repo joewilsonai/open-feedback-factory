@@ -43,6 +43,9 @@ capture, release proof, and agent assumptions.
   them, automatically tracks the submitted request status without a manual
   refresh button, and does not collect screenshots, raw transcripts, secrets,
   or large private payloads by default.
+- Vague feedback can return context-aware, end-user-safe clarification
+  questions in the SDK UI, without exposing technical workflow terms such as
+  acceptance criteria, repro steps, scope, routing, or PR.
 - Workspace/tenant-scoped users, API keys, workers, and admins cannot read or
   mutate another workspace's feedback, work items, agent runs, costs, GitHub
   artifacts, release events, notifications, feature usage, policy config, or

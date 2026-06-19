@@ -79,6 +79,8 @@ export function App() {
       description: "Request a feature or report a rough edge. Daybook will show you what happens next.",
       metadata: {
         appName: "Daybook",
+        existingFeatures: "scratchpad,todos,theme toggle,feature feedback",
+        productSummary: "Daybook is a small notes and todos app for beta dogfood testing.",
         surface: "floating-suggestion-launcher",
       },
       onSubmitted(next) {
@@ -106,6 +108,22 @@ export function App() {
   useEffect(() => {
     window.localStorage.setItem(tasksStorageKey, JSON.stringify(tasks));
   }, [tasks]);
+
+  useEffect(() => {
+    if (!result) return;
+    const timer = window.setInterval(() => {
+      void client
+        .getFeedbackStatus(result.feedbackId)
+        .then((next) => {
+          setResult((current) => (current ? { ...current, status: next } : current));
+          setStatus(next.label);
+        })
+        .catch(() => {
+          setStatus("Status unavailable");
+        });
+    }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [client, result?.feedbackId]);
 
   function toggleTheme() {
     const nextTheme = theme === "dark" ? "light" : "dark";
@@ -148,13 +166,6 @@ export function App() {
         source: "notepad-todo",
       },
     });
-  }
-
-  async function refreshStatus() {
-    if (!result) return;
-    const next = await client.getFeedbackStatus(result.feedbackId);
-    setResult({ ...result, status: next });
-    setStatus(next.label);
   }
 
   return (
@@ -236,9 +247,6 @@ export function App() {
                   <Detail label="Feedback" value={result.feedbackId} />
                   <Detail label="Work item" value={result.workItemId ?? "No agent work"} />
                 </dl>
-                <button type="button" onClick={refreshStatus}>
-                  Refresh status
-                </button>
               </>
             ) : (
               <p>No request sent yet.</p>

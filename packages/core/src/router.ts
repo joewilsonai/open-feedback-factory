@@ -1,4 +1,5 @@
 import { clusterKeyForFeedback } from "./cluster.js";
+import { buildEndUserClarificationQuestions } from "./clarification.js";
 import { estimateFeatureCost } from "./cost.js";
 import type {
   FeedbackCategory,
@@ -17,6 +18,7 @@ export interface RouteFeedbackInput {
 export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
   const clusterKey = clusterKeyForFeedback(input.sanitized);
   const message = input.sanitized.sanitizedMessage.toLowerCase();
+  const clarificationQuestions = buildEndUserClarificationQuestions(input.sanitized);
 
   if (input.sanitized.privacyRisk === "blocked") {
     return decision({
@@ -45,6 +47,22 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
       userMessage:
         "We received this, but it touches a protected area and needs human product review before any agent work.",
       userStatus: "blocked",
+    });
+  }
+
+  if (clarificationQuestions.length > 0) {
+    return decision({
+      action: "needs_clarification",
+      category: categoryFor(message, "feature_request"),
+      clarificationQuestions,
+      clusterKey,
+      model: input.model,
+      riskTier: "plan_only",
+      shouldCreateIssue: false,
+      title: "Needs user clarification",
+      userMessage:
+        "Thanks, we got this. Could you answer a couple quick questions so we understand what would help?",
+      userStatus: "needs_clarification",
     });
   }
 
@@ -126,9 +144,13 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
   });
 }
 
-function decision(input: Omit<WorkRoutingDecision, "costEstimate"> & { model?: string }): WorkRoutingDecision {
+function decision(
+  input: Omit<WorkRoutingDecision, "clarificationQuestions" | "costEstimate"> &
+    { clarificationQuestions?: WorkRoutingDecision["clarificationQuestions"]; model?: string },
+): WorkRoutingDecision {
   return {
     ...input,
+    clarificationQuestions: input.clarificationQuestions ?? [],
     costEstimate: estimateFeatureCost({
       model: input.model,
       riskTier: input.riskTier,
