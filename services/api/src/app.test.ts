@@ -594,6 +594,48 @@ test("API rate limits repeated SDK feedback intake by actor", async () => {
   await app.close();
 });
 
+test("API rate limits privileged admin runner and GitHub route groups", async () => {
+  const store = new MemoryStore();
+  store.approvalMode = "auto";
+  const app = await buildApp({
+    config: {
+      ...config,
+      adminRateLimitMax: 1,
+      githubRateLimitMax: 1,
+      rateLimitWindowMs: 60_000,
+      runnerRateLimitMax: 1,
+    },
+    store,
+  });
+
+  const adminAllowed = await app.inject({ method: "GET", url: "/admin/control-room" });
+  assert.equal(adminAllowed.statusCode, 200);
+  const adminLimited = await app.inject({ method: "GET", url: "/admin/control-room" });
+  assert.equal(adminLimited.statusCode, 429);
+  assert.equal(adminLimited.json().error, "rate_limited");
+  assert.equal(adminLimited.headers["retry-after"], "60");
+
+  const runnerAllowed = await app.inject({
+    method: "POST",
+    payload: { workerName: "worker-rate-test" },
+    url: "/runner/jobs/claim",
+  });
+  assert.equal(runnerAllowed.statusCode, 200);
+  const runnerLimited = await app.inject({
+    method: "POST",
+    payload: { workerName: "worker-rate-test" },
+    url: "/runner/jobs/claim",
+  });
+  assert.equal(runnerLimited.statusCode, 429);
+
+  const githubAllowed = await app.inject({ method: "GET", url: "/github/app/manifest" });
+  assert.equal(githubAllowed.statusCode, 200);
+  const githubLimited = await app.inject({ method: "GET", url: "/github/app/manifest" });
+  assert.equal(githubLimited.statusCode, 429);
+
+  await app.close();
+});
+
 test("API records feature usage and exposes control room counts", async () => {
   const store = new MemoryStore();
   const app = await buildApp({ config, store });
