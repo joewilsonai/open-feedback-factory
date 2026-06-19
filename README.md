@@ -85,6 +85,10 @@ Set the optional `CODEX_*_USD_PER_1M` rate variables to convert captured Codex
 JSON usage totals into actual dollar cost records. Without rates, V1 records
 actual tokens and keeps the configured estimate as the dollar amount.
 
+Set `WORKER_WORK_ITEM_ID=work_...` with `WORKER_RUN_ONCE=true` to run one
+specific queued item. This is useful for demos, retries, and Codex PR smoke
+tests where another worker should not claim the oldest queue item.
+
 ## GitHub Modes
 
 `GITHUB_MODE=disabled` is the default.

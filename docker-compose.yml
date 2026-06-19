@@ -88,6 +88,7 @@ services:
       RUNNER_WORKSPACE: ${RUNNER_WORKSPACE:-/workspace}
       WORKER_NAME: ${WORKER_NAME:-docker-worker}
       WORKER_POLL_INTERVAL_MS: ${WORKER_POLL_INTERVAL_MS:-5000}
+      WORKER_WORK_ITEM_ID: ${WORKER_WORK_ITEM_ID:-}
     volumes:
       - .:/workspace
       - worker-node-modules:/workspace/node_modules

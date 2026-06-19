@@ -2,8 +2,8 @@ import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
 
 export async function registerRunnerRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
-  app.post<{ Body: { workerName?: string } }>("/runner/jobs/claim", async (request) => {
-    const job = await deps.store.claimNextWorkItem(request.body?.workerName ?? "worker");
+  app.post<{ Body: { workItemId?: string; workerName?: string } }>("/runner/jobs/claim", async (request) => {
+    const job = await deps.store.claimNextWorkItem(request.body?.workerName ?? "worker", request.body?.workItemId);
     return { job };
   });
 

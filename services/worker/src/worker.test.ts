@@ -28,11 +28,17 @@ const job: WorkItemRow = {
   userStatus: "planned",
 };
 
-test("claimJob posts worker identity and returns no-op when queue is empty", async () => {
-  const config = readWorkerConfig({ API_BASE_URL: "http://api.test", WORKER_NAME: "worker-a" });
+test("claimJob posts worker identity and optional target work item", async () => {
+  const config = readWorkerConfig({
+    API_BASE_URL: "http://api.test",
+    WORKER_NAME: "worker-a",
+    WORKER_WORK_ITEM_ID: "work_target",
+  });
   const fetchImpl: FetchLike = async (url, init) => {
     assert.equal(url, "http://api.test/runner/jobs/claim");
-    assert.equal(JSON.parse(String(init?.body)).workerName, "worker-a");
+    const body = JSON.parse(String(init?.body));
+    assert.equal(body.workerName, "worker-a");
+    assert.equal(body.workItemId, "work_target");
     return jsonResponse({ job: null });
   };
 

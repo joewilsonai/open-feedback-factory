@@ -7,7 +7,7 @@ export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 
 export async function claimJob(config: WorkerConfig, fetchImpl: FetchLike = fetch): Promise<WorkItemRow | null> {
   const response = await fetchImpl(`${config.apiBaseUrl}/runner/jobs/claim`, {
-    body: JSON.stringify({ workerName: config.workerName }),
+    body: JSON.stringify({ workItemId: config.workItemId, workerName: config.workerName }),
     headers: { "content-type": "application/json" },
     method: "POST",
   });

@@ -15,6 +15,7 @@ export interface WorkerConfig {
   runnerMode: "codex" | "demo";
   runnerWorkspace: string;
   workerName: string;
+  workItemId?: string;
 }
 
 export function readWorkerConfig(env = process.env): WorkerConfig {
@@ -35,6 +36,7 @@ export function readWorkerConfig(env = process.env): WorkerConfig {
     runnerMode: env.CODEX_RUNNER_MODE === "codex" ? "codex" : "demo",
     runnerWorkspace: env.RUNNER_WORKSPACE ?? process.cwd(),
     workerName: env.WORKER_NAME ?? "open-feedback-worker",
+    workItemId: env.WORKER_WORK_ITEM_ID || undefined,
   };
 }
 

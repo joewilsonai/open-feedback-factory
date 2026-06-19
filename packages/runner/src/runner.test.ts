@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildCodexCostActual,
   buildCodexBranchName,
+  buildCodexCommitMessage,
   buildCodexExecArgs,
   buildCodexPrompt,
   costFromUsage,
@@ -78,6 +79,10 @@ test("normalizeCodexEffort maps product language to CLI enum", () => {
 test("buildCodexBranchName creates safe branch names", () => {
   assert.equal(buildCodexBranchName("work_1"), "off/codex/work_1");
   assert.equal(buildCodexBranchName("work:unsafe id", "agent"), "agent/work-unsafe-id");
+});
+
+test("buildCodexCommitMessage ties commits to work item ids", () => {
+  assert.equal(buildCodexCommitMessage(workItem), "feat: Add a dark mode option (work_1)");
 });
 
 test("buildCodexPrompt contains sanitized work item context only", () => {

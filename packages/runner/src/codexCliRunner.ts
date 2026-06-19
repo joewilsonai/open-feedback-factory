@@ -46,6 +46,24 @@ export class CodexCliRunner implements WorkRunner {
     const status = statusFromOutcome(structured.outcome);
     const gitChangedFiles = this.options.manageGit ? await listGitChangedFiles(this.options.cwd) : [];
     const changedFiles = uniqueFiles([...structured.changedFiles, ...gitChangedFiles]);
+    let finalStatus = status;
+    let finalSummary = structured.summary;
+
+    if (this.options.manageGit && finalStatus === "succeeded") {
+      if (changedFiles.length === 0) {
+        finalStatus = "failed";
+        finalSummary = "Codex reported an implementation, but no changed files were found.";
+      } else {
+        await runGit(this.options.cwd, ["add", "--all", "--", ...changedFiles]);
+        if (await hasStagedChanges(this.options.cwd)) {
+          await runGit(this.options.cwd, ["commit", "-m", buildCodexCommitMessage(workItem)]);
+        } else {
+          finalStatus = "failed";
+          finalSummary = "Codex reported an implementation, but no committable changes were found.";
+        }
+      }
+    }
+
     const costActual = buildCodexCostActual({
       estimateAmountUsd: workItem.costEstimate.amountUsd,
       model,
@@ -58,8 +76,8 @@ export class CodexCliRunner implements WorkRunner {
       changedFiles,
       costActual,
       output,
-      status,
-      summary: structured.summary,
+      status: finalStatus,
+      summary: finalSummary,
     };
   }
 }
@@ -89,6 +107,11 @@ export function buildCodexExecArgs(input: {
 
 export function buildCodexBranchName(workItemId: string, prefix = "off/codex"): string {
   return `${prefix}/${workItemId}`.replace(/[^a-zA-Z0-9/_-]/g, "-");
+}
+
+export function buildCodexCommitMessage(workItem: Pick<WorkItemRow, "id" | "title">): string {
+  const title = workItem.title.trim().replace(/\s+/g, " ");
+  return `feat: ${title} (${workItem.id})`;
 }
 
 export function buildCodexPrompt(workItem: WorkItemRow): string {
@@ -230,6 +253,31 @@ async function listGitChangedFiles(cwd: string): Promise<string[]> {
     runGit(cwd, ["diff", "--cached", "--name-only"]),
   ]);
   return uniqueFiles([...unstaged.split(/\r?\n/), ...staged.split(/\r?\n/)]);
+}
+
+function hasStagedChanges(cwd: string): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("git", ["diff", "--cached", "--quiet"], {
+      cwd,
+      stdio: ["ignore", "ignore", "pipe"],
+    });
+    let stderr = "";
+    child.stderr.on("data", (chunk) => {
+      stderr += String(chunk);
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve(false);
+        return;
+      }
+      if (code === 1) {
+        resolve(true);
+        return;
+      }
+      reject(new Error(`git diff --cached --quiet exited ${code}: ${stderr}`));
+    });
+  });
 }
 
 function runGit(cwd: string, args: string[]): Promise<string> {

@@ -78,8 +78,10 @@ class MemoryStore implements AppStore {
     };
   }
 
-  async claimNextWorkItem() {
-    const item = this.workItems.find((workItem) => workItem.status === "planned");
+  async claimNextWorkItem(_workerName?: string, workItemId?: string) {
+    const item = this.workItems.find(
+      (workItem) => workItem.status === "planned" && (!workItemId || workItem.id === workItemId),
+    );
     if (!item) return null;
     item.status = "in_progress";
     item.userStatus = "in_progress";
