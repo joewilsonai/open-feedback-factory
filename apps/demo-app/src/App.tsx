@@ -62,7 +62,7 @@ export function App() {
       <section className="workspace" aria-labelledby="demo-title">
         <div className="product-pane">
           <p className="eyebrow">Toy product</p>
-          <h1 id="demo-title">Notes Lab</h1>
+          <h1 id="demo-title">Feedback Lab</h1>
           <p className="lede">
             This tiny app is the product under test. Submit beta feedback, watch it
             become a work item, then record whether the shipped feature gets used.
