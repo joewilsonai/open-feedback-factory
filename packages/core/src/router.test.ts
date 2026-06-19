@@ -59,6 +59,21 @@ test("routeFeedback keeps one-off unclear requests in needs-more-signal", () => 
   assert.equal(decision.userStatus, "needs_more_signal");
 });
 
+test("routeFeedback promotes repeated unclear requests into guarded work", () => {
+  const sanitized = sanitizeFeedback({
+    message: "Make the dashboard more delightful",
+    source: "demo",
+  });
+
+  const decision = routeFeedback({ sanitized, signalCount: 2 });
+
+  assert.equal(decision.action, "create_work_item");
+  assert.equal(decision.shouldCreateIssue, true);
+  assert.equal(decision.riskTier, "guarded_review");
+  assert.equal(decision.userStatus, "planned");
+  assert.equal(decision.title, "Review repeated feature request");
+});
+
 test("routeFeedback queues safe Daybook todo features", () => {
   const sanitized = sanitizeFeedback({
     message: "Add due dates to todos",

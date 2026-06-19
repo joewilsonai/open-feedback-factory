@@ -17,6 +17,10 @@ describe("control center UI contract", () => {
     expect(source).toContain("Webhooks");
     expect(source).toContain("Work items");
     expect(source).toContain("Work item");
+    expect(source).toContain("Demand memory");
+    expect(source).toContain("Backlog signals");
+    expect(source).toContain("Promoted to work");
+    expect(source).toContain("Needs ");
     expect(source).toContain("Agent runs");
     expect(source).toContain("Agent assumptions");
     expect(source).toContain("Unresolved assumptions");
@@ -60,6 +64,7 @@ describe("control center UI contract", () => {
 
   it("can trigger run, auto-merge, and release actions", () => {
     expect(source).toContain("/doctor");
+    expect(source).toContain("feedbackClusters");
     expect(source).toContain("/admin/settings/approval-mode");
     expect(source).toContain("/admin/settings/codex-auth-mode");
     expect(source).toContain("/admin/settings/codex-api-key");

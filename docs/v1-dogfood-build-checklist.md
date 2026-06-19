@@ -73,7 +73,8 @@ Required behavior:
 
 2. Core/domain:
    implement sanitization, clustering, routing, status machine, demand
-   thresholds, cost estimates, auto-merge gates, and assumption-record blocking.
+   thresholds, stored signal-count promotion, cost estimates, auto-merge gates,
+   and assumption-record blocking.
 
 3. API/Postgres:
    persist feedback, clusters, work items, decisions, agent runs, assumptions,
@@ -85,11 +86,12 @@ Required behavior:
    polling, and feature usage events.
 
 5. Control center:
-   show setup health, queues, work item detail, assumptions, agent runs, PRs,
-   release state, cost estimate vs actual, user follow-up, feature usage, and
-   policy blockers using human-readable labels. Each work item should expose an
-   evidence ledger for agent runs, cost records, assumptions, GitHub artifacts,
-   release proof, user notifications, and audit events.
+   show setup health, queues, demand memory, work item detail, assumptions,
+   agent runs, PRs, release state, cost estimate vs actual, user follow-up,
+   feature usage, and policy blockers using human-readable labels. Each work
+   item should expose an evidence ledger for agent runs, cost records,
+   assumptions, GitHub artifacts, release proof, user notifications, and audit
+   events.
 
 6. GitHub:
    support GitHub App manifest/install/webhook flow, sanitized issue creation,

@@ -2154,6 +2154,9 @@ queues, manual approval queues, and per-category cadence rules.
 
 The promotion system should support user-base-size presets and custom
 thresholds for backlog, planning, and implementation eligibility.
+V1 should at minimum use stored cluster signal counts during routing so a
+below-threshold request can become a guarded work item when another matching
+request arrives. This demand memory should also show in the control center.
 
 The GitHub integration should create issues, apply labels, comment status, open
 PRs, read checks, close resolved issues, and clean up generated branches.

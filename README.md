@@ -22,6 +22,7 @@ for the exact private dogfood completion gate.
 - Codex-only built-in runner.
 - Policy-gated safe auto-merge.
 - User-facing shipped, blocked, not-planned, and needs-more-signal statuses.
+- Demand memory for below-threshold and blocked feedback clusters.
 - Feature usage attribution.
 - Focused operator control center.
 
@@ -183,6 +184,12 @@ runs, estimate and actual cost records, all recorded assumptions, GitHub
 artifacts, release markers, user-facing follow-up notifications, and audit
 events. This is the operator proof trail for "what happened, what did it cost,
 what assumptions were made, what PR exists, and has it actually shipped?"
+
+Below-threshold feedback is not thrown away. The API stores it in feedback
+clusters, increments the cluster signal count on later matching requests, and
+routes repeated unclear requests into a guarded work item once the V1 threshold
+is reached. The control center's demand-memory panel shows these clusters,
+their latest safe decision, and whether they have promoted into work.
 
 ## Rate Limits
 

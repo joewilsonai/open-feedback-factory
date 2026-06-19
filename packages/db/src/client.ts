@@ -42,6 +42,19 @@ export interface WorkItemRow {
   updatedAt: string;
 }
 
+export interface FeedbackClusterRow {
+  activeWorkItemId: string | null;
+  activeWorkItemStatus: string | null;
+  category: string;
+  clusterKey: string;
+  latestSignalAt: string;
+  latestStatus: string | null;
+  latestUserMessage: string | null;
+  signalCount: number;
+  title: string;
+  updatedAt: string;
+}
+
 export interface AgentRunLedgerRow {
   agentName: string;
   completedAt: string | null;
@@ -157,6 +170,7 @@ export interface ControlRoomSnapshot {
     featureUsageEvents: number;
     openWorkItems: number;
   };
+  feedbackClusters: FeedbackClusterRow[];
   recentAgentRuns: Array<Record<string, unknown>>;
   recentAssumptions: Array<Record<string, unknown>>;
   recentFeedback: Array<Record<string, unknown>>;
@@ -341,6 +355,46 @@ export class OpenFeedbackStore {
       message: row.message,
       state: row.status,
     });
+  }
+
+  async getFeedbackClusterSignalCount(clusterKey: string): Promise<number> {
+    const result = await this.pool.query<{ signal_count: number | string }>(
+      `select signal_count
+       from feedback_clusters
+       where cluster_key = $1
+       limit 1`,
+      [clusterKey],
+    );
+    return Number(result.rows[0]?.signal_count ?? 0);
+  }
+
+  async listFeedbackClusters(): Promise<FeedbackClusterRow[]> {
+    const result = await this.pool.query(
+      `select fc.cluster_key, fc.title, fc.category, fc.signal_count, fc.latest_signal_at, fc.updated_at,
+              latest.status as latest_status,
+              latest.user_message as latest_user_message,
+              active.id as active_work_item_id,
+              active.status as active_work_item_status
+       from feedback_clusters fc
+       left join lateral (
+         select fs.status, fs.user_message
+         from feedback_signals fs
+         where fs.cluster_key = fc.cluster_key
+         order by fs.created_at desc
+         limit 1
+       ) latest on true
+       left join lateral (
+         select wi.id, wi.status
+         from work_items wi
+         where wi.cluster_key = fc.cluster_key
+           and wi.status not in ('shipped', 'closed', 'not_planned', 'blocked', 'failed')
+         order by wi.created_at asc
+         limit 1
+       ) active on true
+       order by fc.latest_signal_at desc
+       limit 50`,
+    );
+    return result.rows.map(feedbackClusterFromRow);
   }
 
   async listWorkItems(): Promise<WorkItemRow[]> {
@@ -982,7 +1036,8 @@ export class OpenFeedbackStore {
   }
 
   async getControlRoomSnapshot(): Promise<ControlRoomSnapshot> {
-    const [counts, workItems, recentFeedback, recentAgentRuns, recentAssumptions, recentUsage] = await Promise.all([
+    const [counts, feedbackClusters, workItems, recentFeedback, recentAgentRuns, recentAssumptions, recentUsage] =
+      await Promise.all([
       this.pool.query<{
         agent_runs: string;
         feedback_signals: string;
@@ -995,6 +1050,7 @@ export class OpenFeedbackStore {
           (select count(*) from agent_runs)::text as agent_runs,
           (select count(*) from feature_usage_events)::text as feature_usage_events`,
       ),
+      this.listFeedbackClusters(),
       this.listWorkItems(),
       this.pool.query(
         `select id, source, sanitized_summary, cluster_key, status, user_message, created_at
@@ -1023,6 +1079,7 @@ export class OpenFeedbackStore {
         featureUsageEvents: Number(countRow?.feature_usage_events ?? 0),
         openWorkItems: Number(countRow?.open_work_items ?? 0),
       },
+      feedbackClusters,
       recentAgentRuns: recentAgentRuns.rows,
       recentAssumptions: recentAssumptions.rows,
       recentFeedback: recentFeedback.rows,
@@ -1053,6 +1110,21 @@ function workItemFromRow(row: Record<string, unknown>): WorkItemRow {
     unresolvedAssumptions: assumptionRecordsFromRow(row.unresolved_assumptions),
     updatedAt: (row.updated_at as Date).toISOString(),
     userStatus: String(row.user_status),
+  };
+}
+
+function feedbackClusterFromRow(row: Record<string, unknown>): FeedbackClusterRow {
+  return {
+    activeWorkItemId: stringOrNull(row.active_work_item_id),
+    activeWorkItemStatus: stringOrNull(row.active_work_item_status),
+    category: String(row.category),
+    clusterKey: String(row.cluster_key),
+    latestSignalAt: dateString(row.latest_signal_at),
+    latestStatus: stringOrNull(row.latest_status),
+    latestUserMessage: stringOrNull(row.latest_user_message),
+    signalCount: Number(row.signal_count ?? 0),
+    title: String(row.title),
+    updatedAt: dateString(row.updated_at),
   };
 }
 

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import type { AgentAssumptionRecord, UserFeedbackStatus } from "@open-feedback-factory/core";
-import type { ControlRoomSnapshot, WorkItemDetail, WorkItemRow } from "@open-feedback-factory/db";
+import type { ControlRoomSnapshot, FeedbackClusterRow, WorkItemDetail, WorkItemRow } from "@open-feedback-factory/db";
 import { buildApp, type AppStore } from "./app.js";
 import type { ApiConfig } from "./config.js";
 import { buildGithubAppEnvSnippet, githubWebhooksEnabledForBaseUrl } from "./routes/github.js";
@@ -40,6 +40,7 @@ class MemoryStore implements AppStore {
   codexAuthMode: ApiConfig["codexAuthMode"] | null = null;
   costRecords: WorkItemDetail["costRecords"] = [];
   deliveries = new Set<string>();
+  feedbackClusters = new Map<string, FeedbackClusterRow>();
   feedbackStatuses = new Map<string, UserFeedbackStatus>();
   githubArtifacts = new Map<string, string>();
   githubArtifactRows: WorkItemDetail["githubArtifacts"] = [];
@@ -95,6 +96,20 @@ class MemoryStore implements AppStore {
       });
     }
 
+    const existingCluster = this.feedbackClusters.get(input.decision.clusterKey);
+    this.feedbackClusters.set(input.decision.clusterKey, {
+      activeWorkItemId: workItemId ?? existingCluster?.activeWorkItemId ?? null,
+      activeWorkItemStatus: workItemId ? "planned" : (existingCluster?.activeWorkItemStatus ?? null),
+      category: input.decision.category,
+      clusterKey: input.decision.clusterKey,
+      latestSignalAt: new Date().toISOString(),
+      latestStatus: status.state,
+      latestUserMessage: status.message,
+      signalCount: (existingCluster?.signalCount ?? 0) + 1,
+      title: input.decision.title,
+      updatedAt: new Date().toISOString(),
+    });
+
     this.userNotifications.unshift({
       createdAt: new Date().toISOString(),
       feedbackId,
@@ -124,6 +139,7 @@ class MemoryStore implements AppStore {
         featureUsageEvents: this.usageCount,
         openWorkItems: this.workItems.length,
       },
+      feedbackClusters: Array.from(this.feedbackClusters.values()),
       recentAgentRuns: [],
       recentAssumptions: this.recentAssumptions.map((assumption) => ({ ...assumption })),
       recentFeedback: [],
@@ -146,6 +162,10 @@ class MemoryStore implements AppStore {
 
   async setCodexAuthMode(mode: ApiConfig["codexAuthMode"]) {
     this.codexAuthMode = mode;
+  }
+
+  async getFeedbackClusterSignalCount(clusterKey: string) {
+    return this.feedbackClusters.get(clusterKey)?.signalCount ?? 0;
   }
 
   async claimNextWorkItem(_workerName?: string, workItemId?: string) {
@@ -427,6 +447,52 @@ test("API records feature usage and exposes control room counts", async () => {
   const controlRoom = await app.inject({ method: "GET", url: "/admin/control-room" });
   assert.equal(controlRoom.statusCode, 200);
   assert.equal(controlRoom.json().counts.featureUsageEvents, 1);
+
+  await app.close();
+});
+
+test("API promotes repeated below-threshold feedback from demand memory", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  const first = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Make the dashboard more delightful",
+      source: "demo",
+      userId: "user-demand-1",
+    },
+    url: "/sdk/feedback",
+  });
+
+  assert.equal(first.statusCode, 201);
+  assert.equal(first.json().workItemId, null);
+  assert.equal(first.json().status.state, "needs_more_signal");
+
+  const second = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Make the dashboard more delightful",
+      source: "demo",
+      userId: "user-demand-2",
+    },
+    url: "/sdk/feedback",
+  });
+
+  assert.equal(second.statusCode, 201);
+  assert.match(second.json().workItemId, /^work_/);
+  assert.equal(second.json().status.state, "planned");
+  assert.equal(store.workItems[0]?.riskTier, "guarded_review");
+
+  const controlRoom = await app.inject({ method: "GET", url: "/admin/control-room" });
+  const cluster = controlRoom
+    .json()
+    .feedbackClusters.find(
+      (row: { clusterKey: string }) => row.clusterKey === "feedback.make-the-dashboard-more-delightful",
+    );
+  assert.equal(cluster.signalCount, 2);
+  assert.equal(cluster.activeWorkItemId, second.json().workItemId);
+  assert.equal(cluster.latestStatus, "planned");
 
   await app.close();
 });
