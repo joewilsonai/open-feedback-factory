@@ -67,14 +67,15 @@ Safety defaults:
 
 - real auto-merge is disabled by default;
 - GitHub mutations are disabled by default;
-- runner mode defaults to deterministic demo mode;
+- runner mode defaults to disabled, so feedback is queued until a real runner is attached;
 - Codex CLI mode uses the local Codex subscription/auth path instead of an
   OpenAI API key.
 
 ## Runner Modes
 
-`CODEX_RUNNER_MODE=demo` is the default. It produces deterministic agent runs,
-actual-cost records, and user follow-up statuses without changing GitHub.
+`CODEX_RUNNER_MODE=disabled` is the default. It accepts feedback and creates
+queued work items, but it does not claim work, report implementation, create
+agent runs, produce costs, or tell users something shipped.
 
 `CODEX_RUNNER_MODE=codex` uses `codex exec --json` through the local Codex CLI
 auth/subscription path. For local dogfood, run the worker on the host with
@@ -92,6 +93,10 @@ actual tokens and keeps the configured estimate as the dollar amount.
 Set `WORKER_WORK_ITEM_ID=work_...` with `WORKER_RUN_ONCE=true` to run one
 specific queued item. This is useful for demos, retries, and Codex PR smoke
 tests where another worker should not claim the oldest queue item.
+
+Live demos must be real. If Codex, GitHub, or release proof is not configured,
+the product should show queued/blocked states and the exact missing requirement,
+not simulated implementation.
 
 ## GitHub Modes
 

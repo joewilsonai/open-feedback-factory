@@ -19,7 +19,7 @@ export interface WorkerConfig {
   pullRequestBase: string;
   pullRequestEnabled: boolean;
   runOnce: boolean;
-  runnerMode: "codex" | "demo";
+  runnerMode: "codex" | "disabled";
   runnerWorkspace: string;
   workerName: string;
   workItemId?: string;
@@ -47,7 +47,7 @@ export function readWorkerConfig(env = process.env): WorkerConfig {
     pullRequestBase: env.GITHUB_PR_BASE ?? "main",
     pullRequestEnabled: env.GITHUB_CREATE_PR === "true",
     runOnce: env.WORKER_RUN_ONCE === "true",
-    runnerMode: env.CODEX_RUNNER_MODE === "codex" ? "codex" : "demo",
+    runnerMode: env.CODEX_RUNNER_MODE === "codex" ? "codex" : "disabled",
     runnerWorkspace: env.RUNNER_WORKSPACE ?? process.cwd(),
     workerName: env.WORKER_NAME ?? "open-feedback-worker",
     workItemId: env.WORKER_WORK_ITEM_ID || undefined,

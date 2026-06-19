@@ -11,7 +11,6 @@ import {
   normalizeCodexEffort,
   parseCodexJsonlOutput,
 } from "./codexCliRunner.js";
-import { DemoRunner } from "./demoRunner.js";
 import { createGitHubAppJwt, GitHubClient, normalizePrivateKey } from "./githubClient.js";
 import type { WorkItemRow } from "@open-feedback-factory/db";
 
@@ -38,14 +37,6 @@ const workItem: WorkItemRow = {
   updatedAt: new Date(0).toISOString(),
   userStatus: "planned",
 };
-
-test("DemoRunner returns deterministic safe result", async () => {
-  const result = await new DemoRunner().run(workItem);
-
-  assert.equal(result.status, "succeeded");
-  assert.deepEqual(result.changedFiles, ["apps/demo-app/src/styles.css"]);
-  assert.equal(result.branchName, "off/demo/work_1");
-});
 
 test("buildCodexExecArgs uses local codex exec json mode with output schema", () => {
   assert.deepEqual(

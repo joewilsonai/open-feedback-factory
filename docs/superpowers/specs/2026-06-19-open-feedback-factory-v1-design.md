@@ -259,7 +259,7 @@ Setup flow:
 4. Create or install the GitHub App.
 5. Add OpenAI/Codex credentials.
 6. Confirm repo permissions and protected paths.
-7. Run a dry-run simulation.
+7. Verify the request queues or blocks honestly until a real runner is enabled.
 8. Enable real PR creation.
 9. Optionally enable safe auto-merge.
 

@@ -2,7 +2,7 @@ export interface ApiConfig {
   apiHost: string;
   apiPort: number;
   autoMergeEnabled: boolean;
-  codexRunnerMode: "codex" | "demo";
+  codexRunnerMode: "codex" | "disabled";
   controlCenterUrl: string;
   databaseUrl: string;
   githubMode: "app" | "disabled" | "gh";
@@ -25,7 +25,7 @@ export function readConfig(env = process.env): ApiConfig {
     apiHost: env.API_HOST ?? "127.0.0.1",
     apiPort: Number(env.API_PORT ?? 4100),
     autoMergeEnabled: env.AUTO_MERGE_ENABLED === "true",
-    codexRunnerMode: env.CODEX_RUNNER_MODE === "codex" ? "codex" : "demo",
+    codexRunnerMode: env.CODEX_RUNNER_MODE === "codex" ? "codex" : "disabled",
     controlCenterUrl: stripTrailingSlash(env.CONTROL_CENTER_URL ?? `http://localhost:${env.CONTROL_CENTER_PORT ?? 5173}`),
     databaseUrl: env.DATABASE_URL ?? env.DOCKER_DATABASE_URL ?? "",
     githubMode: githubModeFromEnv(env.GITHUB_MODE),

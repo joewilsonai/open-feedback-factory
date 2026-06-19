@@ -19,6 +19,10 @@ Default local URLs:
 
 ## Safety Rules
 
+- Live demos must be real. Do not fake implementation, PRs, shipped states,
+  cost records, user notifications, or agent runs. If a real runner or
+  integration is not configured, leave the work queued/blocked and say exactly
+  what is missing.
 - Do not commit `.env`, private keys, GitHub App PEMs, access tokens, database
   dumps, raw feedback exports, or local logs that may contain secrets.
 - Keep raw user feedback private. Only sanitized summaries should reach GitHub,
@@ -79,14 +83,15 @@ tunnel URL, restart Docker, then start the wizard.
 
 ## Codex Runner Path
 
-`CODEX_RUNNER_MODE=demo` is the safe default.
+`CODEX_RUNNER_MODE=disabled` is the safe default. It can intake and queue
+feedback, but it must not claim work or report implementation.
 
 For a real local Codex subscription run, prefer running the worker on the host
 so it can use the signed-in Codex CLI:
 
 ```bash
 docker compose stop worker
-pnpm --filter @open-feedback-factory/worker dev
+CODEX_RUNNER_MODE=codex pnpm --filter @open-feedback-factory/worker dev
 ```
 
 Use `WORKER_WORK_ITEM_ID=work_...` and `WORKER_RUN_ONCE=true` for targeted
@@ -97,7 +102,7 @@ smoke tests.
 - `packages/core`: sanitization, routing, user statuses, guardrail policy.
 - `packages/db`: Postgres schema/store.
 - `packages/sdk`: app-facing web SDK.
-- `packages/runner`: demo runner, Codex CLI runner, GitHub client.
+- `packages/runner`: Codex CLI runner, GitHub client.
 - `services/api`: Fastify API, GitHub App routes, admin/runner endpoints.
 - `services/worker`: polling worker loop.
 - `apps/control-center`: operator dashboard.

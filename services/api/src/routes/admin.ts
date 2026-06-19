@@ -1,5 +1,5 @@
 import { evaluateAutoMerge, type WorkRiskTier } from "@open-feedback-factory/core";
-import { CodexCliRunner, DemoRunner } from "@open-feedback-factory/runner";
+import { CodexCliRunner } from "@open-feedback-factory/runner";
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
 import { buildGithubClient } from "../githubClient.js";
@@ -16,19 +16,23 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
   app.post<{ Params: { id: string } }>("/admin/work-items/:id/run", async (request, reply) => {
     const workItem = await deps.store.getWorkItem(request.params.id);
     if (!workItem) return reply.code(404).send({ error: "work item not found" });
+    if (deps.config.codexRunnerMode !== "codex") {
+      return reply.code(409).send({
+        error: "codex runner disabled",
+        mode: deps.config.codexRunnerMode,
+        status: "blocked",
+      });
+    }
 
-    const runner =
-      deps.config.codexRunnerMode === "codex"
-        ? new CodexCliRunner({
-            cwd: deps.config.runnerWorkspace,
-            effort: process.env.CODEX_EFFORT ?? "extra-high",
-            model: process.env.CODEX_MODEL ?? workItem.costEstimate.model,
-          })
-        : new DemoRunner();
+    const runner = new CodexCliRunner({
+      cwd: deps.config.runnerWorkspace,
+      effort: process.env.CODEX_EFFORT ?? "extra-high",
+      model: process.env.CODEX_MODEL ?? workItem.costEstimate.model,
+    });
     const result = await runner.run(workItem);
 
     const runId = await deps.store.completeWorkItemRun({
-      agentName: deps.config.codexRunnerMode === "codex" ? "codex-cli" : "demo-runner",
+      agentName: "codex-cli",
       costActual: result.costActual,
       metadata: {
         branchName: result.branchName,

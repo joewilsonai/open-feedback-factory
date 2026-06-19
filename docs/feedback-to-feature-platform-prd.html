@@ -1594,12 +1594,12 @@ pnpm demo</code></pre>
 <li>sample app;</li>
 <li>local control center;</li>
 <li>local API;</li>
-<li>fake or seeded feedback;</li>
-<li>simulated agent run;</li>
-<li>simulated PR lifecycle;</li>
+<li>clearly seeded sample feedback, labeled as sample input;</li>
+<li>queued or blocked agent lane unless a real runner is configured;</li>
+<li>real PR lifecycle only after GitHub is configured;</li>
 <li>user-facing status updates.</li>
 </ul>
-<p>This is the viral path. A developer should understand the product loop in a few minutes before connecting real infrastructure.</p>
+<p>This is the viral path. A developer should understand the product loop in a few minutes before connecting real infrastructure, without pretending that agent work, PRs, release proof, or costs happened.</p>
 <h4 id="indie-self-hosted-mode"><a class="heading-anchor" href="#indie-self-hosted-mode" aria-label="Link to Indie Self-Hosted Mode">#</a>Indie Self-Hosted Mode</h4>
 <p>Self-hosted mode should work on common indie-friendly infrastructure.</p>
 <p>Targets:</p>
@@ -1683,10 +1683,10 @@ pnpm demo</code></pre>
 <p>custom.</p>
 <li>Install SDK snippet.</li>
 <li>Submit test feedback.</li>
-<li>Watch a dry-run issue/PR simulation.</li>
+<li>Watch it queue, block, or run against real configured integrations.</li>
 <li>Explicitly enable real agent execution.</li>
 </ol>
-<p>The default path should start in dry-run. Real GitHub mutations and real model spend should require explicit enabling.</p>
+<p>The default path should start disabled and honest. Real GitHub mutations and real model spend should require explicit enabling.</p>
 <h3 id="17-3-admin-ui-control-surfaces"><a class="heading-anchor" href="#17-3-admin-ui-control-surfaces" aria-label="Link to 17.3 Admin UI Control Surfaces">#</a>17.3 Admin UI Control Surfaces</h3>
 <p>The admin UI should always answer:</p>
 <ul>

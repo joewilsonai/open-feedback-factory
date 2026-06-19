@@ -4,7 +4,7 @@
 
 **Goal:** Build the first internal dogfood version of Open Feedback Factory: a Docker Compose TypeScript monorepo with API/Postgres, web SDK, toy app, control center, Codex CLI runner seam, GitHub App integration seam, safe auto-merge policy, user follow-up statuses, feature usage attribution, tests, and local run commands.
 
-**Architecture:** Use a pnpm workspace with focused packages for core policy, database access, SDK, runner, API service, control center, and demo app. Keep raw feedback private in Postgres, send only sanitized summaries to GitHub/runner surfaces, and make the toy app exercise the same SDK/API path a real app would use. V1 runs locally through Docker Compose and can use either deterministic demo runner mode or the local Codex CLI monthly-subscription path.
+**Architecture:** Use a pnpm workspace with focused packages for core policy, database access, SDK, runner, API service, control center, and demo app. Keep raw feedback private in Postgres, send only sanitized summaries to GitHub/runner surfaces, and make the toy app exercise the same SDK/API path a real app would use. V1 runs locally through Docker Compose with implementation disabled by default or through the local Codex CLI monthly-subscription path when explicitly enabled.
 
 **Tech Stack:** TypeScript, pnpm workspaces, Fastify, Postgres, node-postgres, Vite React, Node test runner, Docker Compose, GitHub CLI/API seam, Codex CLI seam.
 
@@ -31,7 +31,7 @@
 - `packages/core`: pure policy/domain logic: types, sanitizer, clustering, work router, cost model, statuses, auto-merge gates.
 - `packages/db`: Postgres migration SQL and data access helpers.
 - `packages/sdk`: browser SDK consumed by the toy app.
-- `packages/runner`: deterministic demo runner and Codex CLI runner implementation.
+- `packages/runner`: Codex CLI runner implementation and GitHub client.
 - `services/api`: Fastify API for SDK, admin console, GitHub webhooks, runner jobs, release markers, health, and doctor data.
 - `apps/control-center`: Vite React operator console.
 - `apps/demo-app`: Vite React toy app that submits feedback, reads status, and records feature usage.
@@ -177,7 +177,6 @@
 
 **Files:**
 - Create: `packages/runner/src/types.ts`
-- Create: `packages/runner/src/demoRunner.ts`
 - Create: `packages/runner/src/codexCliRunner.ts`
 - Create: `packages/runner/src/githubClient.ts`
 - Create: `packages/runner/src/index.ts`
@@ -185,12 +184,11 @@
 - Modify: `packages/runner/package.json`
 
 **Interfaces:**
-- Produces `DemoRunner.run(workItem): Promise<RunnerResult>`.
 - Produces `CodexCliRunner.run(workItem): Promise<RunnerResult>`.
 - Produces `GitHubClient` seam for issue, branch, PR, checks, merge, comments, and cleanup.
 
-- [ ] Write tests for demo runner output and Codex CLI command construction.
-- [ ] Implement deterministic demo runner that produces structured results without mutating GitHub.
+- [ ] Write tests for disabled runner behavior and Codex CLI command construction.
+- [ ] Keep the default runner disabled so queued work cannot be reported as implemented.
 - [ ] Implement Codex CLI runner path using local `codex exec --json` and no OpenAI API key.
 - [ ] Implement GitHub client seam using `gh` commands for internal dogfood mode.
 - [ ] Run `pnpm --filter @open-feedback-factory/runner test`.

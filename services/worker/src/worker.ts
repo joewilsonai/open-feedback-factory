@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 import type { WorkItemRow } from "@open-feedback-factory/db";
-import { CodexCliRunner, DemoRunner, GitHubClient, type RunnerResult } from "@open-feedback-factory/runner";
+import { CodexCliRunner, GitHubClient, type RunnerResult } from "@open-feedback-factory/runner";
 import { readWorkerConfig, type WorkerConfig } from "./config.js";
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -25,7 +25,7 @@ export async function completeJob(
 ): Promise<string> {
   const response = await fetchImpl(`${config.apiBaseUrl}/runner/jobs/${workItemId}/complete`, {
     body: JSON.stringify({
-      agentName: config.runnerMode === "codex" ? "codex-cli-worker" : "demo-worker",
+      agentName: "codex-cli-worker",
       costActual: result.costActual,
       metadata: {
         branchName: result.branchName,
@@ -46,22 +46,21 @@ export async function completeJob(
 }
 
 export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike = fetch): Promise<boolean> {
+  if (config.runnerMode !== "codex") return false;
+
   const job = await claimJob(config, fetchImpl);
   if (!job) return false;
   console.log(`Claimed ${job.id}: ${job.title}`);
 
-  const runner =
-    config.runnerMode === "codex"
-      ? new CodexCliRunner({
-          cli: config.codexCli,
-          cwd: config.runnerWorkspace,
-          effort: config.codexEffort,
-          manageGit: config.codexManageGit,
-          model: config.codexModel,
-          pricing: config.codexPricing,
-          timeoutMs: config.codexTimeoutMs,
-        })
-      : new DemoRunner();
+  const runner = new CodexCliRunner({
+    cli: config.codexCli,
+    cwd: config.runnerWorkspace,
+    effort: config.codexEffort,
+    manageGit: config.codexManageGit,
+    model: config.codexModel,
+    pricing: config.codexPricing,
+    timeoutMs: config.codexTimeoutMs,
+  });
 
   let result = await runSafely(runner.run(job), job, config);
   const publication = await publishSafely(config, job, result);

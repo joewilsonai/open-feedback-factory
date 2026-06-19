@@ -1118,13 +1118,14 @@ It should launch:
 - sample app;
 - local control center;
 - local API;
-- fake or seeded feedback;
-- simulated agent run;
-- simulated PR lifecycle;
+- clearly seeded sample feedback, labeled as sample input;
+- queued or blocked agent lane unless a real runner is configured;
+- real PR lifecycle only after GitHub is configured;
 - user-facing status updates.
 
 This is the viral path. A developer should understand the product loop in a few
-minutes before connecting real infrastructure.
+minutes before connecting real infrastructure, without pretending that agent
+work, PRs, release proof, or costs happened.
 
 #### Indie Self-Hosted Mode
 
@@ -1224,11 +1225,11 @@ Setup steps:
    custom.
 8. Install SDK snippet.
 9. Submit test feedback.
-10. Watch a dry-run issue/PR simulation.
+10. Watch it queue, block, or run against real configured integrations.
 11. Explicitly enable real agent execution.
 
-The default path should start in dry-run. Real GitHub mutations and real model
-spend should require explicit enabling.
+The default path should start disabled and honest. Real GitHub mutations and
+real model spend should require explicit enabling.
 
 ### 17.3 Admin UI Control Surfaces
 

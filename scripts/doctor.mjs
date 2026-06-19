@@ -40,8 +40,8 @@ checks.push({
 
 checks.push({
   label: "Runner mode",
-  ok: ["codex", "demo"].includes(env.CODEX_RUNNER_MODE ?? "demo"),
-  detail: env.CODEX_RUNNER_MODE ?? "demo",
+  ok: ["codex", "disabled"].includes(env.CODEX_RUNNER_MODE ?? "disabled"),
+  detail: env.CODEX_RUNNER_MODE ?? "disabled",
 });
 
 checks.push({

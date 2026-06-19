@@ -45,9 +45,9 @@ test("claimJob posts worker identity and optional target work item", async () =>
   assert.equal(await claimJob(config, fetchImpl), null);
 });
 
-test("runWorkerOnce claims, runs demo worker, and completes with cost actual", async () => {
+test("runWorkerOnce leaves work queued when runner is disabled", async () => {
   const calls: Array<{ body: unknown; url: string }> = [];
-  const config = readWorkerConfig({ API_BASE_URL: "http://api.test", CODEX_RUNNER_MODE: "demo" });
+  const config = readWorkerConfig({ API_BASE_URL: "http://api.test" });
   const fetchImpl: FetchLike = async (url, init) => {
     calls.push({ body: init?.body ? JSON.parse(String(init.body)) : null, url });
     if (String(url).endsWith("/runner/jobs/claim")) return jsonResponse({ job });
@@ -55,11 +55,9 @@ test("runWorkerOnce claims, runs demo worker, and completes with cost actual", a
     return new Response("not found", { status: 404 });
   };
 
-  assert.equal(await runWorkerOnce(config, fetchImpl), true);
-  assert.equal(calls.length, 2);
-  assert.equal(calls[1]?.url, "http://api.test/runner/jobs/work_test/complete");
-  assert.equal((calls[1]?.body as { status?: string }).status, "succeeded");
-  assert.equal((calls[1]?.body as { costActual?: { amountUsd?: number } }).costActual?.amountUsd, 1.25);
+  assert.equal(config.runnerMode, "disabled");
+  assert.equal(await runWorkerOnce(config, fetchImpl), false);
+  assert.equal(calls.length, 0);
 });
 
 function jsonResponse(value: unknown): Response {

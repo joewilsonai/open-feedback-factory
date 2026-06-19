@@ -12,7 +12,7 @@ const config: ApiConfig = {
   apiHost: "127.0.0.1",
   apiPort: 4100,
   autoMergeEnabled: false,
-  codexRunnerMode: "demo",
+  codexRunnerMode: "disabled",
   controlCenterUrl: "http://control.test",
   databaseUrl: "postgres://example",
   githubMode: "disabled",
@@ -167,6 +167,33 @@ test("API records feature usage and exposes control room counts", async () => {
   const controlRoom = await app.inject({ method: "GET", url: "/admin/control-room" });
   assert.equal(controlRoom.statusCode, 200);
   assert.equal(controlRoom.json().counts.featureUsageEvents, 1);
+
+  await app.close();
+});
+
+test("admin run endpoint blocks implementation when Codex runner is disabled", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  const feedback = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add dark mode to settings",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+  const workItemId = feedback.json().workItemId;
+
+  const response = await app.inject({
+    method: "POST",
+    url: `/admin/work-items/${workItemId}/run`,
+  });
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(response.json().error, "codex runner disabled");
+  assert.equal(response.json().mode, "disabled");
+  assert.equal(store.workItems[0]?.status, "planned");
 
   await app.close();
 });

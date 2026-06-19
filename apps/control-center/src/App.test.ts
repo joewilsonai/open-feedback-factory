@@ -15,7 +15,7 @@ describe("control center UI contract", () => {
     expect(source).toContain("Cost");
     expect(source).toContain("Auto-merge");
     expect(source).toContain("Health");
-    expect(source).toContain("Simulation");
+    expect(source).toContain("Disabled");
     expect(source).toContain("Codex CLI");
   });
 

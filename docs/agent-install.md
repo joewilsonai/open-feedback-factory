@@ -33,7 +33,7 @@ codex --version
 ```
 
 `gh` is only needed for GitHub CLI mutation mode. `codex` is only needed for
-real Codex runner mode; demo mode does not need it.
+real Codex runner mode; disabled runner mode does not need it.
 
 ## Fresh Clone Install
 
@@ -120,11 +120,15 @@ credentials were added.
 
 ## Real Codex Runner Mode
 
-Demo mode is the default:
+Disabled mode is the default:
 
 ```bash
-CODEX_RUNNER_MODE=demo
+CODEX_RUNNER_MODE=disabled
 ```
+
+Disabled mode can intake feedback and queue work, but it must not claim work,
+create implementation records, invent costs, create PRs, or mark anything
+shipped.
 
 For a real local Codex subscription run, the Codex CLI auth usually lives on
 the host machine, not inside Docker. Stop the Docker worker and run the worker
@@ -159,7 +163,9 @@ After installation, report:
 - the control center and demo app URLs;
 - which verification commands passed;
 - whether GitHub App mode is configured;
-- whether runner mode is `demo` or `codex`;
+- whether runner mode is `disabled` or `codex`;
 - any required human action, especially GitHub confirmation screens.
 
 Never include secrets, private keys, tokens, or raw user feedback in the report.
+Never fake demo results. Report queued or blocked states when the real runner,
+GitHub, or release proof is not configured.

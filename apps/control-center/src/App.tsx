@@ -86,8 +86,10 @@ export function App() {
 
   async function runWorkItem(id: string) {
     setStatus("Running agent lane");
-    await fetch(`${apiBaseUrl}/admin/work-items/${id}/run`, { method: "POST" });
+    const response = await fetch(`${apiBaseUrl}/admin/work-items/${id}/run`, { method: "POST" });
+    const body = await response.json().catch(() => ({}));
     await refresh();
+    setStatus(response.ok ? "Agent lane accepted" : `Runner blocked: ${String(body.error ?? "not configured")}`);
   }
 
   async function releaseWorkItem(id: string) {
@@ -197,8 +199,12 @@ export function App() {
                 {selected.githubPrUrl ? <a href={selected.githubPrUrl}>Pull request</a> : <span>No PR yet</span>}
               </div>
               <div className="action-row">
-                <button type="button" onClick={() => runWorkItem(selected.id)}>
-                  {doctor?.codexRunnerMode === "codex" ? "Run Codex worker" : "Run simulation"}
+                <button
+                  type="button"
+                  disabled={doctor?.codexRunnerMode !== "codex"}
+                  onClick={() => runWorkItem(selected.id)}
+                >
+                  {doctor?.codexRunnerMode === "codex" ? "Run Codex worker" : "Runner disabled"}
                 </button>
                 <button type="button" onClick={() => attemptAutoMerge(selected.id)}>
                   Check auto-merge
@@ -335,7 +341,7 @@ function Detail(props: { label: string; value: string }) {
 
 function runnerModeLabel(mode: string): string {
   if (mode === "codex") return "Codex CLI";
-  if (mode === "demo") return "Simulation";
+  if (mode === "disabled") return "Disabled";
   return mode;
 }
 
