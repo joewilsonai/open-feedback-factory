@@ -31,3 +31,14 @@ test("clusterKeyForFeedback keeps unrelated copy requests separate", () => {
     "safe.copy.docs-codex-runner-smoke-file",
   );
 });
+
+test("clusterKeyForFeedback groups Daybook todo requests", () => {
+  assert.equal(
+    clusterKeyForFeedback({ sanitizedMessage: "Add due dates to todos" }),
+    "feature.daybook.due-date-todo",
+  );
+  assert.equal(
+    clusterKeyForFeedback({ sanitizedMessage: "Please add pinned notes" }),
+    "feature.daybook.pinned-note",
+  );
+});

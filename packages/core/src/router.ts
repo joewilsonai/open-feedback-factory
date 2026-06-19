@@ -77,6 +77,21 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
     });
   }
 
+  if (/due date|deadline|todo|task|pinned note|pin.*note|search.*note|notepad/.test(message)) {
+    return decision({
+      action: "create_work_item",
+      category: "feature_request",
+      clusterKey,
+      model: input.model,
+      riskTier: "safe_auto_merge",
+      shouldCreateIssue: true,
+      title: titleForDaybookFeature(message),
+      userMessage:
+        "This looks like a safe Daybook feature request. We can queue it for a small implementation PR.",
+      userStatus: "planned",
+    });
+  }
+
   const signalCount = input.signalCount ?? 1;
   if (signalCount < 2) {
     return decision({
@@ -123,4 +138,12 @@ function categoryFor(message: string, fallback: FeedbackCategory): FeedbackCateg
   if (/crash|bug|broken|error/.test(message)) return "bug";
   if (/confusing|where|how/.test(message)) return "ux_confusion";
   return fallback;
+}
+
+function titleForDaybookFeature(message: string): string {
+  if (/due date|deadline/.test(message)) return "Add due dates to todos";
+  if (/pinned note|pin.*note/.test(message)) return "Add pinned notes";
+  if (/search.*note/.test(message)) return "Add note search";
+  if (/todo|task/.test(message)) return "Improve todos";
+  return "Improve Daybook";
 }

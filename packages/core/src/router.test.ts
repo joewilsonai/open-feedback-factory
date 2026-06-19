@@ -43,3 +43,19 @@ test("routeFeedback keeps one-off unclear requests in needs-more-signal", () => 
   assert.equal(decision.shouldCreateIssue, false);
   assert.equal(decision.userStatus, "needs_more_signal");
 });
+
+test("routeFeedback queues safe Daybook todo features", () => {
+  const sanitized = sanitizeFeedback({
+    message: "Add due dates to todos",
+    source: "demo",
+  });
+
+  const decision = routeFeedback({ sanitized });
+
+  assert.equal(decision.action, "create_work_item");
+  assert.equal(decision.shouldCreateIssue, true);
+  assert.equal(decision.riskTier, "safe_auto_merge");
+  assert.equal(decision.title, "Add due dates to todos");
+  assert.equal(decision.userStatus, "planned");
+  assert.equal(decision.clusterKey, "feature.daybook.due-date-todo");
+});

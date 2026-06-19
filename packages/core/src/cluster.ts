@@ -6,6 +6,9 @@ const SYNONYMS: Array<[RegExp, string]> = [
   [/\b(settings screen|preferences|account screen)\b/g, "settings"],
   [/\b(copy|wording|label|text)\b/g, "copy"],
   [/\b(crash|crashes|crashed|freezes|hangs)\b/g, "crash"],
+  [/\b(to dos?|todos?|tasks?)\b/g, "todo"],
+  [/\b(deadlines?|due dates?)\b/g, "due date"],
+  [/\b(pinned notes?|pin notes?|pinned note|pin note)\b/g, "pinned note"],
 ];
 
 const STOP_WORDS = new Set([
@@ -43,6 +46,11 @@ export function clusterKeyForFeedback(input: Pick<SanitizedFeedback, "sanitizedM
 
   if (/\bcrash\b/.test(normalized)) {
     return "bug.crash";
+  }
+
+  if (/\b(todo|due date|pinned note|notes?)\b/.test(normalized)) {
+    const words = wordsForCluster(normalized).filter((word) => !STOP_WORDS.has(word)).slice(0, 8);
+    return words.length ? `feature.daybook.${words.join("-")}` : "feature.daybook";
   }
 
   const words = wordsForCluster(normalized).slice(0, 8);
