@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import type { GitHubIssueInput, GitHubPullRequestInput } from "./types.js";
+import type { GitHubCommentInput, GitHubIssueInput, GitHubPullRequestInput } from "./types.js";
 
 export class GitHubClient {
   constructor(private readonly options: { cwd: string; gh?: string }) {}
@@ -36,6 +36,18 @@ export class GitHubClient {
     );
   }
 
+  async pushBranch(branchName: string): Promise<string> {
+    return runGit(this.options.cwd, ["push", "--set-upstream", "origin", branchName]);
+  }
+
+  async comment(input: GitHubCommentInput): Promise<string> {
+    return runGh(
+      this.options.gh ?? "gh",
+      ["issue", "comment", input.issueOrPr, "--body", input.body],
+      this.options.cwd,
+    );
+  }
+
   async mergePullRequest(prUrlOrNumber: string): Promise<string> {
     return runGh(this.options.gh ?? "gh", ["pr", "merge", prUrlOrNumber, "--squash", "--auto"], this.options.cwd);
   }
@@ -62,6 +74,31 @@ function runGh(command: string, args: string[], cwd: string): Promise<string> {
         return;
       }
       reject(new Error(`gh exited ${code}: ${stderr || stdout}`));
+    });
+  });
+}
+
+function runGit(cwd: string, args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("git", args, {
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += String(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += String(chunk);
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve(stdout.trim());
+        return;
+      }
+      reject(new Error(`git exited ${code}: ${stderr || stdout}`));
     });
   });
 }

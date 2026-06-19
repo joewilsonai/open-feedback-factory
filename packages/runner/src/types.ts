@@ -14,6 +14,19 @@ export interface RunnerResult {
   summary: string;
 }
 
+export interface CodexUsage {
+  cachedInputTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  reasoningOutputTokens: number;
+}
+
+export interface CodexStructuredResult {
+  changedFiles: string[];
+  outcome: "blocked" | "failed" | "implemented";
+  summary: string;
+}
+
 export interface WorkRunner {
   run(workItem: WorkItemRow): Promise<RunnerResult>;
 }
@@ -29,4 +42,9 @@ export interface GitHubPullRequestInput {
   body: string;
   head: string;
   title: string;
+}
+
+export interface GitHubCommentInput {
+  body: string;
+  issueOrPr: string;
 }

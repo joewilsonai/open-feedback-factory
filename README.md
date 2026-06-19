@@ -77,6 +77,10 @@ auth/subscription path. For local dogfood, run the worker on the host with
 `pnpm --filter @open-feedback-factory/worker dev` so it can use your installed
 Codex CLI.
 
+`CODEX_MANAGE_GIT=true` lets the Codex runner create a work branch before it
+runs. `GITHUB_CREATE_PR=true` plus `GITHUB_MODE=gh` lets the worker push that
+branch and open a pull request after a successful Codex run.
+
 ## GitHub Modes
 
 `GITHUB_MODE=disabled` is the default.

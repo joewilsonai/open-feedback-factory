@@ -53,6 +53,7 @@ services:
       MAX_FEATURE_COST_USD: ${MAX_FEATURE_COST_USD:-5}
       MAX_SAFE_DIFF_LINES: ${MAX_SAFE_DIFF_LINES:-120}
       PROTECTED_PATHS: ${PROTECTED_PATHS:-auth,billing,privacy,legal,encryption,secrets,infra,migrations,release}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:4100}
     ports:
       - "${API_PORT:-4100}:4100"
     volumes:
@@ -74,8 +75,12 @@ services:
       API_BASE_URL: ${WORKER_API_BASE_URL:-http://api:4100}
       CODEX_CLI: ${CODEX_CLI:-codex}
       CODEX_EFFORT: ${CODEX_EFFORT:-extra-high}
+      CODEX_MANAGE_GIT: ${CODEX_MANAGE_GIT:-false}
       CODEX_MODEL: ${CODEX_MODEL:-gpt-5.5}
       CODEX_RUNNER_MODE: ${CODEX_RUNNER_MODE:-demo}
+      GITHUB_CREATE_PR: ${GITHUB_CREATE_PR:-false}
+      GITHUB_MODE: ${GITHUB_MODE:-disabled}
+      GITHUB_PR_BASE: ${GITHUB_PR_BASE:-main}
       RUNNER_WORKSPACE: ${RUNNER_WORKSPACE:-/workspace}
       WORKER_NAME: ${WORKER_NAME:-docker-worker}
       WORKER_POLL_INTERVAL_MS: ${WORKER_POLL_INTERVAL_MS:-5000}

@@ -15,5 +15,6 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
     githubMode: deps.config.githubMode,
     maxFeatureCostUsd: deps.config.maxFeatureCostUsd,
     protectedPathFragments: deps.config.protectedPathFragments,
+    publicBaseUrl: deps.config.publicBaseUrl,
   }));
 }

@@ -49,6 +49,18 @@ checks.push({
   detail: env.GITHUB_MODE ?? "disabled",
 });
 
+checks.push({
+  label: "Codex managed git",
+  ok: env.CODEX_MANAGE_GIT !== "true" || env.CODEX_RUNNER_MODE === "codex",
+  detail: env.CODEX_MANAGE_GIT === "true" ? "enabled" : "disabled",
+});
+
+checks.push({
+  label: "GitHub PR creation",
+  ok: env.GITHUB_CREATE_PR !== "true" || (env.GITHUB_MODE === "gh" && env.CODEX_MANAGE_GIT === "true"),
+  detail: env.GITHUB_CREATE_PR === "true" ? "enabled" : "disabled",
+});
+
 checks.push(await optionalHttpCheck(`http://localhost:${env.API_PORT ?? 4100}/doctor`, "API /doctor"));
 
 for (const check of checks) {

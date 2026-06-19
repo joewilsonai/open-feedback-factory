@@ -15,11 +15,13 @@ export async function registerGithubRoutes(app: FastifyInstance, deps: AppDeps):
       "Open Feedback Factory turns sanitized user feedback into guarded GitHub issues and PRs.",
     hook_attributes: {
       active: true,
-      url: `http://localhost:${deps.config.apiPort}/github/webhook`,
+      url: `${deps.config.publicBaseUrl}/github/webhook`,
     },
-    name: "Open Feedback Factory Local",
+    name: "Open Feedback Factory",
     public: false,
-    url: "https://github.com/joewilsonai/open-feedback-factory",
+    redirect_url: `${deps.config.publicBaseUrl}/github/app/installed`,
+    setup_url: `${deps.config.publicBaseUrl}/admin/control-room`,
+    url: `https://github.com/${deps.config.githubOwner}/${deps.config.githubRepo}`,
   }));
 
   app.post("/github/webhook", async (request) => ({

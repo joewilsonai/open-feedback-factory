@@ -17,6 +17,7 @@ const config: ApiConfig = {
   maxFeatureCostUsd: 5,
   maxSafeDiffLines: 120,
   protectedPathFragments: ["auth", "billing", "privacy"],
+  publicBaseUrl: "http://api.test",
   runnerWorkspace: "/tmp/open-feedback-factory-test",
 };
 
@@ -169,6 +170,8 @@ test("API exposes GitHub App manifest seam", async () => {
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().default_permissions.pull_requests, "write");
+  assert.equal(response.json().hook_attributes.url, "http://api.test/github/webhook");
+  assert.equal(response.json().url, "https://github.com/joewilsonai/open-feedback-factory");
 
   await app.close();
 });
