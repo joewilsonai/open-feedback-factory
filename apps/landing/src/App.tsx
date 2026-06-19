@@ -57,7 +57,7 @@ export function App() {
         <nav className="topbar" aria-label="Primary navigation">
           <a className="brand" href="#top" aria-label="Open Feedback Factory home">
             <span className="brand-mark" aria-hidden="true">
-              OF
+              <span />
             </span>
             <span>Open Feedback Factory</span>
           </a>
