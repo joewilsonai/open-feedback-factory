@@ -14,8 +14,14 @@
     "doctor": "node scripts/doctor.mjs",
     "render:prd": "node scripts/render-prd-html.mjs",
     "tunnel:tailscale": "node scripts/tailscale-funnel.mjs",
-    "test": "pnpm -r --if-present test",
-    "typecheck": "pnpm -r --if-present typecheck"
+    "test": "pnpm -r --if-present test && pnpm test:scripts",
+    "test:scripts": "node --test scripts/*.test.mjs",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "worker:install:host": "node scripts/worker-install.mjs install --mode host-cli",
+    "worker:print:docker-api": "node scripts/worker-install.mjs print --mode docker-api-key",
+    "worker:print:host": "node scripts/worker-install.mjs print --mode host-cli",
+    "worker:status:host": "node scripts/worker-install.mjs status --mode host-cli",
+    "worker:uninstall:host": "node scripts/worker-install.mjs uninstall --mode host-cli"
   },
   "devDependencies": {
     "@types/node": "^25.0.0",

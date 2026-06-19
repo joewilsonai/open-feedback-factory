@@ -107,9 +107,25 @@ agent runs, produce costs, or tell users something shipped.
 `CODEX_RUNNER_MODE=codex` uses `codex exec --json`. In `cli` auth mode, it uses
 the signed-in local Codex subscription path. In `api_key` auth mode, the worker
 loads `OPENAI_API_KEY` from `CODEX_SECRETS_PATH` or the environment and injects
-it into the Codex process. For local dogfood, run the worker on the host with
-`pnpm --filter @open-feedback-factory/worker dev` so it can use your installed
-Codex CLI.
+it into the Codex process.
+
+For local CLI/subscription installs, run the worker on the host so it can use
+the installed Codex CLI:
+
+```bash
+docker compose stop worker
+pnpm worker:install:host
+pnpm worker:status:host
+```
+
+The helper creates a macOS LaunchAgent or Linux user systemd service, sources
+the ignored `.env` file at startup, and avoids copying secrets into the service
+file. Remove it with `pnpm worker:uninstall:host`.
+
+For Docker API-key installs, save the API key in the control center, set
+`CODEX_RUNNER_MODE=codex` and `CODEX_AUTH_MODE=api_key`, then restart the worker
+service with `docker compose up -d --build worker`. Print the helper snippet
+with `pnpm worker:print:docker-api`.
 
 The worker reads live approval/auth settings from `/doctor` before each claim,
 so changing Codex auth mode in the control center is picked up by an attached
@@ -216,6 +232,7 @@ in-progress work.
 
 - [Agent instructions](AGENTS.md)
 - [Agent install guide](docs/agent-install.md)
+- [Agent runner setup](docs/agent-runner-setup.md)
 - [V1 dogfood build checklist](docs/v1-dogfood-build-checklist.md)
 - [V1 test strategy](docs/v1-test-strategy.md)
 - [PRD](docs/feedback-to-feature-platform-prd.md)

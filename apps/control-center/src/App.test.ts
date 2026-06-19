@@ -32,6 +32,12 @@ describe("control center UI contract", () => {
     expect(source).toContain("Save key");
     expect(source).toContain("Codex API key");
     expect(source).toContain("saved key injected server-side");
+    expect(source).toContain("Worker install");
+    expect(source).toContain("Runner setup");
+    expect(source).toContain("pnpm worker:install:host");
+    expect(source).toContain("pnpm worker:status:host");
+    expect(source).toContain("docker compose up -d --build worker");
+    expect(source).toContain("signed-in Codex CLI subscription");
     expect(source).toContain("Low-risk auto lane");
     expect(source).toContain("Implemented, awaiting review");
     expect(source).not.toContain("Demo centerpiece");
@@ -46,6 +52,7 @@ describe("control center UI contract", () => {
     expect(source).toContain("/admin/settings/codex-api-key");
     expect(source).toContain("/github/app/setup");
     expect(source).toContain("/github/app/manifest");
+    expect(source).toContain("runnerInstall");
     expect(source).toContain("/run");
     expect(source).toContain("/automerge");
     expect(source).toContain("/release");

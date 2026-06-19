@@ -261,7 +261,9 @@ Primary views:
 - latest actual cost and token evidence after runner completion;
 - reconciliation actions for stale in-progress work and missing release proof;
 - reconsideration candidates;
-- user follow-up status.
+- user follow-up status;
+- worker attachment/install guidance for host CLI workers and Docker API-key
+  workers.
 
 The control center should make the loop easy to demo without exposing private
 feedback.
@@ -327,6 +329,23 @@ V1 should include an operator-triggered reconciliation pass that requeues stale
 in-progress work and reports implemented items still waiting for release proof.
 This is not a full production scheduler yet; it is the minimum honest recovery
 lane for local dogfood and demos.
+
+V1 must productize worker attachment rather than relying on one-off local
+machine setup. The supported install lanes are:
+
+- host Codex CLI worker for local subscription auth, installed through a
+  generated macOS LaunchAgent or Linux user systemd service;
+- Docker API-key worker for installs that save a server-side OpenAI API key in
+  the control center and keep the worker inside Docker;
+- manual one-item worker command for targeted review, retries, and demos.
+
+The generated host service should source the ignored `.env` file at startup and
+set only worker-specific defaults such as `CODEX_RUNNER_MODE=codex`,
+`WORKER_RUN_ONCE=false`, `WORKER_API_BASE_URL`, `RUNNER_WORKSPACE`, and
+`CODEX_SECRETS_PATH`. It must not copy API keys, GitHub App private keys, or
+tokens into generated service files. It should also translate the Docker-only
+`WORKER_API_BASE_URL=http://api:4100` default to the host-reachable
+`http://localhost:4100` when generating local host worker services.
 
 ### 8.6 Review Gates
 
@@ -1515,18 +1534,20 @@ Setup steps:
 2. Choose install mode: dry-run demo, implement-only PR mode,
    agent-reviewed auto-merge, or human-exception-required.
 3. Add Codex auth mode: local CLI subscription or server-side API key.
-4. Set cost caps.
-5. Pick guardrail template: web app, iOS app, SaaS app, or open-source
+4. Attach a worker: host Codex CLI service, Docker API-key worker, or manual
+   one-item command.
+5. Set cost caps.
+6. Pick guardrail template: web app, iOS app, SaaS app, or open-source
    library.
-6. Choose execution cadence: manual, immediate safe lane, daily batch, weekly
+7. Choose execution cadence: manual, immediate safe lane, daily batch, weekly
    batch, threshold-based, or hybrid.
-7. Choose demand threshold preset: aggressive beta, balanced, conservative, or
+8. Choose demand threshold preset: aggressive beta, balanced, conservative, or
    custom.
-8. Install SDK snippet.
-9. Submit test feedback.
-10. Watch it queue, block, or run against real configured integrations.
-11. Explicitly enable real agent execution.
-12. Optionally configure OpenRouter, Requesty, or Fusion adapters after the
+9. Install SDK snippet.
+10. Submit test feedback.
+11. Watch it queue, block, or run against real configured integrations.
+12. Explicitly enable real agent execution.
+13. Optionally configure OpenRouter, Requesty, or Fusion adapters after the
     direct Codex path works.
 
 The default path should start disabled and honest. Real GitHub mutations and
@@ -1839,6 +1860,8 @@ V1 defaults:
 - built-in runner: Codex only;
 - Codex auth: local CLI subscription first, API-key mode optional;
 - runner mode: disabled until explicitly attached;
+- host worker installer: macOS LaunchAgent or Linux user systemd service;
+- Docker worker lane: API-key mode after the key is saved server-side;
 - approval mode: manual by default;
 - merge mode: implement-only by default;
 - auto-merge: off until explicitly enabled and still limited to
@@ -2155,9 +2178,13 @@ maintenance health obvious.
 
 The setup UI must make worker attachment explicit. Auto approval allows a live
 worker to claim queued work, but does not itself create a worker. The UI and
-docs must show the exact command or deployment path for manual one-item workers
-and auto-polling workers, including `CODEX_RUNNER_MODE`, `CODEX_AUTH_MODE`,
-`CODEX_SECRETS_PATH`, GitHub PR settings, model, effort, timeout, and workspace.
+docs must show the exact command or deployment path for manual one-item workers,
+host CLI auto-polling workers, and Docker API-key workers, including
+`CODEX_RUNNER_MODE`, `CODEX_AUTH_MODE`, `CODEX_SECRETS_PATH`, GitHub PR
+settings, model, effort, timeout, and workspace. The host install helper should
+generate macOS LaunchAgent and Linux user systemd files, provide status and
+uninstall commands, write logs under `.off/logs`, and avoid embedding secrets
+directly in generated service files.
 
 Admin and beta-user surfaces must not leak raw internal enum names. Labels such
 as `planned`, `safe_auto_merge`, `guarded_review`, and `not_planned` should be

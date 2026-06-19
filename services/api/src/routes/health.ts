@@ -36,6 +36,28 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
       maxFeatureCostUsd: deps.config.maxFeatureCostUsd,
       protectedPathFragments: deps.config.protectedPathFragments,
       publicBaseUrl: deps.config.publicBaseUrl,
+      runnerInstall: buildRunnerInstallPlan(codexAuthMode),
     };
   });
+}
+
+function buildRunnerInstallPlan(codexAuthMode: "api_key" | "cli") {
+  return {
+    dockerApiKey: {
+      env: ["CODEX_RUNNER_MODE=codex", "CODEX_AUTH_MODE=api_key"],
+      requirement: "Save an OpenAI API key in the control center before starting the Docker worker.",
+      startCommand: "docker compose up -d --build worker",
+      title: "Docker API-key worker",
+    },
+    hostCli: {
+      installCommand: "pnpm worker:install:host",
+      logPath: ".off/logs/host-worker.log",
+      printCommand: "pnpm worker:print:host",
+      service: "macOS LaunchAgent or Linux user systemd",
+      statusCommand: "pnpm worker:status:host",
+      title: "Host Codex CLI worker",
+      uninstallCommand: "pnpm worker:uninstall:host",
+    },
+    recommendedMode: codexAuthMode === "api_key" ? "docker_api_key" : "host_cli",
+  };
 }

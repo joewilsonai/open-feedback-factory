@@ -146,8 +146,26 @@ create implementation records, invent costs, create PRs, or mark anything
 shipped.
 
 For a real local Codex subscription run, the Codex CLI auth usually lives on
-the host machine, not inside Docker. Stop the Docker worker and run the worker
-locally:
+the host machine, not inside Docker. The durable path is the host worker
+installer:
+
+```bash
+docker compose stop worker
+pnpm worker:install:host
+pnpm worker:status:host
+```
+
+On macOS this creates a LaunchAgent. On Linux this creates a user systemd
+service. The generated service sources `.env` at startup and does not copy
+secrets into the service file.
+
+To remove it:
+
+```bash
+pnpm worker:uninstall:host
+```
+
+To run the same lane manually instead of installing a service:
 
 ```bash
 docker compose stop worker
@@ -175,6 +193,16 @@ The control center can also save a server-side OpenAI API key to
 The key is masked in the UI and is never returned to the browser. See
 [`docs/agent-runner-setup.md`](./agent-runner-setup.md) for the exact manual
 and auto worker commands.
+
+For the Docker API-key lane:
+
+```bash
+pnpm worker:print:docker-api
+docker compose up -d --build worker
+```
+
+The control center **Worker install** panel shows the same commands and marks
+the recommended lane based on the selected Codex auth mode.
 
 ## Rate Limits And Abuse Controls
 
@@ -222,6 +250,8 @@ After installation, report:
 - whether approval mode is `manual` or `auto`;
 - whether Codex auth mode is `cli` or `api_key`;
 - whether runner mode is `disabled` or `codex`;
+- whether the host worker service is installed/running or the Docker worker is
+  the selected lane;
 - any required human action, especially GitHub confirmation screens.
 - assumptions made, defaults chosen, checks skipped, and unresolved questions.
 

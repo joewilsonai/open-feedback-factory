@@ -100,6 +100,16 @@ checks.push({
   detail: env.GITHUB_CREATE_PR === "true" ? "enabled" : "disabled",
 });
 
+checks.push({
+  label: "Worker installers",
+  ok: existsSync(resolve(root, "scripts/worker-install.mjs")),
+  detail: "host CLI service and Docker API-key helper commands available",
+});
+
+if (env.CODEX_RUNNER_MODE === "codex" && env.CODEX_AUTH_MODE !== "api_key") {
+  checks.push(hostWorkerServiceStatus());
+}
+
 checks.push(await optionalHttpCheck(`http://localhost:${env.API_PORT ?? 4100}/doctor`, "API /doctor"));
 
 for (const check of checks) {
@@ -139,6 +149,44 @@ function githubAppConfigured(env) {
     env.GITHUB_APP_ID &&
       (env.GITHUB_APP_PRIVATE_KEY || (privateKeyPath && existsSync(privateKeyPath))),
   );
+}
+
+function hostWorkerServiceStatus() {
+  if (process.platform === "darwin") {
+    const result = spawnSync("launchctl", ["print", `gui/${process.getuid()}/com.openfeedbackfactory.host-worker`], {
+      cwd: root,
+      encoding: "utf8",
+      timeout: 10000,
+    });
+    return {
+      detail:
+        result.status === 0
+          ? "LaunchAgent running"
+          : "not installed; run pnpm worker:install:host or start the worker manually",
+      label: "Host worker service",
+      ok: true,
+    };
+  }
+  if (process.platform === "linux") {
+    const result = spawnSync("systemctl", ["--user", "is-active", "open-feedback-factory-worker.service"], {
+      cwd: root,
+      encoding: "utf8",
+      timeout: 10000,
+    });
+    return {
+      detail:
+        result.status === 0
+          ? "systemd user service active"
+          : "not installed; run pnpm worker:install:host or start the worker manually",
+      label: "Host worker service",
+      ok: true,
+    };
+  }
+  return {
+    detail: "manual worker command required on this platform",
+    label: "Host worker service",
+    ok: true,
+  };
 }
 
 async function portCheck(port, label) {
