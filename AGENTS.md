@@ -56,13 +56,18 @@ These rules must survive context loss, compaction, new agents, and new sessions.
    through the bridge for review. Luna reviews scope, leak risk, brand, honesty,
    and verifies substance before merge. Do not edit the same file set at the
    same time as another active agent.
-5. **Agent Division:** Codex owns planning, decomposition, structured and
+5. **Coordinate First:** In multi-agent work, check the bridge and coordinate
+   before acting on shared work or another agent's lane. This is bidirectional:
+   Codex does not act unilaterally on Luna-owned product/experience work, and
+   Luna does not act unilaterally on Codex-owned repo/infra/deploy work. State
+   the intended branch/repo/files before changing them when overlap is possible.
+6. **Agent Division:** Codex owns planning, decomposition, structured and
    mechanical execution, infra/CI/build/auth plumbing, and reviewing Luna's code
    for correctness. Luna owns product judgment, demo feel, UX/taste, honesty
    calls, spec fidelity, and the final gate on demo- or trust-facing work. Route
    taste, honesty, and vision calls to Luna; Codex drives planning and
    mechanical execution.
-6. **Research First / Do Not Assume:** Before implementing anything that touches
+7. **Research First / Do Not Assume:** Before implementing anything that touches
    established libraries, APIs, platform integrations, auth flows, data-fetching
    patterns, security controls, or recognized best practices, do a current
    research pass using primary sources or a dedicated research agent. Build from
@@ -71,13 +76,13 @@ These rules must survive context loss, compaction, new agents, and new sessions.
    runner auth, GitHub/Vercel/Railway integration, and control-center data
    fetching; prefer proven patterns such as stale-while-revalidate libraries
    over hand-rolled polling when they fit the codebase.
-7. **Railway Auth Hygiene:** Before mutating Railway from an agent shell, source
+8. **Railway Auth Hygiene:** Before mutating Railway from an agent shell, source
    `~/.luna/secrets/keys.env`, explicitly unset stale `RAILWAY_TOKEN` and
    `RAILWAY_PROJECT_TOKEN`, and use the account-scoped `RAILWAY_API_TOKEN`.
    Verify `railway whoami --json` and the target project/service before deploy.
    If Railway reports unauthorized, check env shadowing before assuming the new
    token is bad. Never echo or log token values.
-8. **Current Round Context:** The durable demo is an onboarding handoff: a user
+9. **Current Round Context:** The durable demo is an onboarding handoff: a user
    points a clean SDK-less plant-care app repo at OFF, and OFF does the rest.
    Prepare public distribution for only `@open-feedback-factory/sdk`; keep the
    OFF repo private. Hold the actual SDK publish for Joe.
