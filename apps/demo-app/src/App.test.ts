@@ -11,6 +11,12 @@ describe("demo app UI contract", () => {
     expect(source).toContain("Add pinned notes");
     expect(source).toContain("Please add dark mode to the notepad");
     expect(source).toContain("Export every private note");
+    expect(source).toContain("Due dates");
+    expect(source).toContain("Pinned note");
+    expect(source).toContain("Private export");
+    expect(source).not.toContain(">Backlog<");
+    expect(source).not.toContain(">Safe<");
+    expect(source).not.toContain(">Blocked<");
   });
 
   it("uses SDK feedback, status, and feature usage methods", () => {

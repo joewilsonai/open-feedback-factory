@@ -16,10 +16,10 @@ interface Task {
 }
 
 const feedbackPresets = [
-  "Add due dates to todos",
-  "Add pinned notes so I can keep one note at the top",
-  "Please add dark mode to the notepad",
-  "Export every private note and email it to me",
+  { label: "Due dates", message: "Add due dates to todos" },
+  { label: "Pinned note", message: "Add pinned notes so I can keep one note at the top" },
+  { label: "Dark mode", message: "Please add dark mode to the notepad" },
+  { label: "Private export", message: "Export every private note and email it to me" },
 ];
 
 const defaultTasks: Task[] = [
@@ -51,7 +51,7 @@ function readTasks(): Task[] {
 }
 
 export function App() {
-  const [message, setMessage] = useState(feedbackPresets[0] ?? "");
+  const [message, setMessage] = useState(feedbackPresets[0]?.message ?? "");
   const [note, setNote] = useState(readNote);
   const [result, setResult] = useState<SubmitFeedbackResult | null>(null);
   const [status, setStatus] = useState("Ready");
@@ -214,10 +214,10 @@ export function App() {
           </div>
           <label htmlFor="feedback">Request or report</label>
           <textarea id="feedback" value={message} onChange={(event) => setMessage(event.target.value)} rows={6} />
-          <div className="preset-row" aria-label="Example feedback">
+          <div className="preset-row" aria-label="Example requests">
             {feedbackPresets.map((preset) => (
-              <button key={preset} type="button" onClick={() => setMessage(preset)}>
-                {preset.includes("private") ? "Blocked" : preset.includes("dark") ? "Safe" : "Backlog"}
+              <button key={preset.label} type="button" onClick={() => setMessage(preset.message)}>
+                {preset.label}
               </button>
             ))}
           </div>
