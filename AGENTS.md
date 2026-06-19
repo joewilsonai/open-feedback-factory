@@ -56,7 +56,13 @@ These rules must survive context loss, compaction, new agents, and new sessions.
    through the bridge for review. Luna reviews scope, leak risk, brand, honesty,
    and verifies substance before merge. Do not edit the same file set at the
    same time as another active agent.
-5. **Current Round Context:** The durable demo is an onboarding handoff: a user
+5. **Agent Division:** Codex owns planning, decomposition, structured and
+   mechanical execution, infra/CI/build/auth plumbing, and reviewing Luna's code
+   for correctness. Luna owns product judgment, demo feel, UX/taste, honesty
+   calls, spec fidelity, and the final gate on demo- or trust-facing work. Route
+   taste, honesty, and vision calls to Luna; Codex drives planning and
+   mechanical execution.
+6. **Current Round Context:** The durable demo is an onboarding handoff: a user
    points a clean SDK-less plant-care app repo at OFF, and OFF does the rest.
    Prepare public distribution for only `@open-feedback-factory/sdk`; keep the
    OFF repo private. Hold the actual SDK publish for Joe.
