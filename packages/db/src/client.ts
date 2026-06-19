@@ -42,6 +42,85 @@ export interface WorkItemRow {
   updatedAt: string;
 }
 
+export interface AgentRunLedgerRow {
+  agentName: string;
+  completedAt: string | null;
+  costActual: Record<string, unknown> | null;
+  createdAt: string;
+  id: string;
+  metadata: Record<string, unknown>;
+  runType: string;
+  status: string;
+  summary: string;
+  workItemId: string | null;
+}
+
+export interface AssumptionLedgerRow extends AgentAssumptionRecord {
+  agentRunId: string | null;
+  createdAt: string;
+  id: string;
+  workItemId: string | null;
+}
+
+export interface CostLedgerRow {
+  amountUsd: number;
+  confidence: string;
+  createdAt: string;
+  id: string;
+  metadata: Record<string, unknown>;
+  model: string;
+  phase: string;
+  workItemId: string | null;
+}
+
+export interface GithubArtifactLedgerRow {
+  artifactNumber: number | null;
+  artifactType: string;
+  createdAt: string;
+  id: string;
+  metadata: Record<string, unknown>;
+  url: string;
+  workItemId: string | null;
+}
+
+export interface ReleaseLedgerRow {
+  createdAt: string;
+  id: string;
+  metadata: Record<string, unknown>;
+  status: string;
+  workItemId: string | null;
+}
+
+export interface NotificationLedgerRow {
+  createdAt: string;
+  feedbackId: string | null;
+  id: string;
+  message: string;
+  status: string;
+  workItemId: string | null;
+}
+
+export interface AuditLedgerRow {
+  actor: string;
+  createdAt: string;
+  event: string;
+  id: string;
+  metadata: Record<string, unknown>;
+  targetId: string;
+  targetType: string;
+}
+
+export interface WorkItemDetail {
+  agentRuns: AgentRunLedgerRow[];
+  assumptions: AssumptionLedgerRow[];
+  auditEvents: AuditLedgerRow[];
+  costRecords: CostLedgerRow[];
+  githubArtifacts: GithubArtifactLedgerRow[];
+  releaseEvents: ReleaseLedgerRow[];
+  userNotifications: NotificationLedgerRow[];
+  workItem: WorkItemRow;
+}
+
 export interface AgentRunInput {
   agentName: string;
   assumptions?: AgentAssumptionRecord[];
@@ -346,6 +425,83 @@ export class OpenFeedbackStore {
       [id],
     );
     return result.rows[0] ? workItemFromRow(result.rows[0]) : null;
+  }
+
+  async getWorkItemDetail(id: string): Promise<WorkItemDetail | null> {
+    const workItem = await this.getWorkItem(id);
+    if (!workItem) return null;
+
+    const [agentRuns, assumptions, costRecords, githubArtifacts, releaseEvents, userNotifications, auditEvents] =
+      await Promise.all([
+        this.pool.query(
+          `select id, work_item_id, run_type, agent_name, status, summary, cost_actual, metadata, created_at, completed_at
+           from agent_runs
+           where work_item_id = $1
+           order by coalesce(completed_at, created_at) desc
+           limit 50`,
+          [id],
+        ),
+        this.pool.query(
+          `select id, work_item_id, agent_run_id, assumptions, defaults_used, alternatives_skipped,
+                  checks_run, checks_skipped, human_questions, impact_areas, confidence, notes, unresolved, created_at
+           from agent_assumptions
+           where work_item_id = $1
+           order by created_at desc
+           limit 50`,
+          [id],
+        ),
+        this.pool.query(
+          `select id, work_item_id, phase, amount_usd, confidence, model, metadata, created_at
+           from cost_records
+           where work_item_id = $1
+           order by created_at desc
+           limit 50`,
+          [id],
+        ),
+        this.pool.query(
+          `select id, work_item_id, artifact_type, url, artifact_number, metadata, created_at
+           from github_artifacts
+           where work_item_id = $1
+           order by created_at desc
+           limit 50`,
+          [id],
+        ),
+        this.pool.query(
+          `select id, work_item_id, status, metadata, created_at
+           from release_events
+           where work_item_id = $1
+           order by created_at desc
+           limit 50`,
+          [id],
+        ),
+        this.pool.query(
+          `select id, feedback_id, work_item_id, status, message, created_at
+           from user_notifications
+           where work_item_id = $1
+           order by created_at desc
+           limit 50`,
+          [id],
+        ),
+        this.pool.query(
+          `select id, actor, event, target_type, target_id, metadata, created_at
+           from audit_events
+           where target_id = $1
+           order by created_at desc
+           limit 50`,
+          [id],
+        ),
+      ]);
+
+    return {
+      agentRuns: agentRuns.rows.map(agentRunLedgerFromRow),
+      assumptions: assumptions.rows.map(assumptionLedgerFromRow),
+      auditEvents: auditEvents.rows.map(auditLedgerFromRow),
+      costRecords: costRecords.rows.map(costLedgerFromRow),
+      githubArtifacts: githubArtifacts.rows.map(githubArtifactLedgerFromRow),
+      releaseEvents: releaseEvents.rows.map(releaseLedgerFromRow),
+      userNotifications: userNotifications.rows.map(notificationLedgerFromRow),
+      workItem,
+    };
   }
 
   async claimNextWorkItem(workerName = "worker", workItemId?: string): Promise<WorkItemRow | null> {
@@ -900,13 +1056,128 @@ function workItemFromRow(row: Record<string, unknown>): WorkItemRow {
   };
 }
 
+function agentRunLedgerFromRow(row: Record<string, unknown>): AgentRunLedgerRow {
+  return {
+    agentName: String(row.agent_name),
+    completedAt: dateOrNull(row.completed_at),
+    costActual: actualCostFromRow(row.cost_actual),
+    createdAt: dateString(row.created_at),
+    id: String(row.id),
+    metadata: recordFromRow(row.metadata),
+    runType: String(row.run_type),
+    status: String(row.status),
+    summary: String(row.summary),
+    workItemId: stringOrNull(row.work_item_id),
+  };
+}
+
+function assumptionLedgerFromRow(row: Record<string, unknown>): AssumptionLedgerRow {
+  return {
+    ...buildAssumptionRecord({
+      alternativesSkipped: stringArrayFromRow(row.alternatives_skipped),
+      assumptions: stringArrayFromRow(row.assumptions),
+      checksRun: stringArrayFromRow(row.checks_run),
+      checksSkipped: stringArrayFromRow(row.checks_skipped),
+      confidence: confidenceFromRow(row.confidence),
+      defaultsUsed: stringArrayFromRow(row.defaults_used),
+      humanQuestions: stringArrayFromRow(row.human_questions),
+      impactAreas: stringArrayFromRow(row.impact_areas) as AgentAssumptionRecord["impactAreas"],
+      notes: String(row.notes),
+      unresolved: row.unresolved === true,
+    }),
+    agentRunId: stringOrNull(row.agent_run_id),
+    createdAt: dateString(row.created_at),
+    id: String(row.id),
+    workItemId: stringOrNull(row.work_item_id),
+  };
+}
+
+function costLedgerFromRow(row: Record<string, unknown>): CostLedgerRow {
+  return {
+    amountUsd: Number(row.amount_usd ?? 0),
+    confidence: String(row.confidence),
+    createdAt: dateString(row.created_at),
+    id: String(row.id),
+    metadata: recordFromRow(row.metadata),
+    model: String(row.model),
+    phase: String(row.phase),
+    workItemId: stringOrNull(row.work_item_id),
+  };
+}
+
+function githubArtifactLedgerFromRow(row: Record<string, unknown>): GithubArtifactLedgerRow {
+  return {
+    artifactNumber: row.artifact_number === null || row.artifact_number === undefined ? null : Number(row.artifact_number),
+    artifactType: String(row.artifact_type),
+    createdAt: dateString(row.created_at),
+    id: String(row.id),
+    metadata: recordFromRow(row.metadata),
+    url: String(row.url),
+    workItemId: stringOrNull(row.work_item_id),
+  };
+}
+
+function releaseLedgerFromRow(row: Record<string, unknown>): ReleaseLedgerRow {
+  return {
+    createdAt: dateString(row.created_at),
+    id: String(row.id),
+    metadata: recordFromRow(row.metadata),
+    status: String(row.status),
+    workItemId: stringOrNull(row.work_item_id),
+  };
+}
+
+function notificationLedgerFromRow(row: Record<string, unknown>): NotificationLedgerRow {
+  return {
+    createdAt: dateString(row.created_at),
+    feedbackId: stringOrNull(row.feedback_id),
+    id: String(row.id),
+    message: String(row.message),
+    status: String(row.status),
+    workItemId: stringOrNull(row.work_item_id),
+  };
+}
+
+function auditLedgerFromRow(row: Record<string, unknown>): AuditLedgerRow {
+  return {
+    actor: String(row.actor),
+    createdAt: dateString(row.created_at),
+    event: String(row.event),
+    id: String(row.id),
+    metadata: recordFromRow(row.metadata),
+    targetId: String(row.target_id),
+    targetType: String(row.target_type),
+  };
+}
+
 function actualCostFromRow(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
 }
 
+function recordFromRow(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
 function stringOrNull(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function dateString(value: unknown): string {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string" && value.length > 0) return new Date(value).toISOString();
+  return new Date(0).toISOString();
+}
+
+function dateOrNull(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  return dateString(value);
+}
+
+function confidenceFromRow(value: unknown): AgentAssumptionRecord["confidence"] {
+  if (value === "high" || value === "medium" || value === "low") return value;
+  return "low";
 }
 
 function stringArrayFromRow(value: unknown): string[] {

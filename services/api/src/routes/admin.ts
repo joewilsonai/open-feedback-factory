@@ -55,6 +55,12 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
     return workItem;
   });
 
+  app.get<{ Params: { id: string } }>("/admin/work-items/:id/evidence", async (request, reply) => {
+    const detail = await deps.store.getWorkItemDetail(request.params.id);
+    if (!detail) return reply.code(404).send({ error: "work item not found" });
+    return detail;
+  });
+
   app.post<{ Params: { id: string } }>("/admin/work-items/:id/run", async (request, reply) => {
     const workItem = await deps.store.getWorkItem(request.params.id);
     if (!workItem) return reply.code(404).send({ error: "work item not found" });

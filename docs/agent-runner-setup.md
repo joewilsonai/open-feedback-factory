@@ -152,6 +152,8 @@ The worker polls `/doctor` for live settings, polls `/runner/jobs/claim`, runs
 changes when `CODEX_MANAGE_GIT=true`, optionally opens a PR, records actual
 token usage, records cost when pricing rates are configured, records assumptions
 and skipped checks, and posts the run result back to the API.
+Those records appear in the control center work-item evidence ledger alongside
+GitHub artifacts, release proof, user notifications, and audit events.
 
 The runner's final structured result must include:
 

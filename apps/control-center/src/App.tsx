@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import "./styles.css";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -51,6 +51,67 @@ interface AgentAssumption {
   impactAreas: string[];
   notes: string;
   unresolved: boolean;
+}
+
+interface WorkItemEvidence {
+  agentRuns: Array<{
+    agentName: string;
+    completedAt: string | null;
+    costActual: WorkItem["latestActualCost"];
+    createdAt: string;
+    id: string;
+    metadata: Record<string, unknown>;
+    runType: string;
+    status: string;
+    summary: string;
+  }>;
+  assumptions: Array<
+    AgentAssumption & {
+      agentRunId: string | null;
+      createdAt: string;
+      id: string;
+    }
+  >;
+  auditEvents: Array<{
+    actor: string;
+    createdAt: string;
+    event: string;
+    id: string;
+    metadata: Record<string, unknown>;
+    targetId: string;
+    targetType: string;
+  }>;
+  costRecords: Array<{
+    amountUsd: number;
+    confidence: string;
+    createdAt: string;
+    id: string;
+    metadata: Record<string, unknown>;
+    model: string;
+    phase: string;
+  }>;
+  githubArtifacts: Array<{
+    artifactNumber: number | null;
+    artifactType: string;
+    createdAt: string;
+    id: string;
+    metadata: Record<string, unknown>;
+    url: string;
+  }>;
+  releaseEvents: Array<{
+    createdAt: string;
+    id: string;
+    metadata: Record<string, unknown>;
+    status: string;
+  }>;
+  userNotifications: Array<{
+    createdAt: string;
+    feedbackId: string | null;
+    id: string;
+    message: string;
+    status: string;
+  }>;
+  workItem: WorkItem;
 }
 
 interface Doctor {
@@ -139,6 +200,8 @@ export function App() {
   const [adminAuthBlocked, setAdminAuthBlocked] = useState(false);
   const [credentialUpdating, setCredentialUpdating] = useState(false);
   const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const [evidence, setEvidence] = useState<WorkItemEvidence | null>(null);
+  const [evidenceLoading, setEvidenceLoading] = useState(false);
   const [modeUpdating, setModeUpdating] = useState(false);
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
   const [status, setStatus] = useState("Connecting");
@@ -157,6 +220,20 @@ export function App() {
     return fetch(`${apiBaseUrl}${path}`, { ...init, headers });
   }
 
+  async function loadWorkItemEvidence(id: string) {
+    setEvidenceLoading(true);
+    try {
+      const response = await adminFetch(`/admin/work-items/${id}/evidence`);
+      if (!response.ok) {
+        setEvidence(null);
+        return;
+      }
+      setEvidence((await response.json()) as WorkItemEvidence);
+    } finally {
+      setEvidenceLoading(false);
+    }
+  }
+
   async function refresh() {
     setStatus("Refreshing");
     const doctorResponse = await fetch(`${apiBaseUrl}/doctor`);
@@ -170,7 +247,11 @@ export function App() {
       return;
     }
     setAdminAuthBlocked(false);
-    setSnapshot((await snapshotResponse.json()) as Snapshot);
+    const nextSnapshot = (await snapshotResponse.json()) as Snapshot;
+    setSnapshot(nextSnapshot);
+    const evidenceId = selectedId ?? nextSnapshot.workItems[0]?.id ?? null;
+    if (evidenceId) await loadWorkItemEvidence(evidenceId);
+    else setEvidence(null);
     setStatus("Live");
   }
 
@@ -391,7 +472,10 @@ export function App() {
                   className={selected?.id === item.id ? "work-row active" : "work-row"}
                   key={item.id}
                   type="button"
-                  onClick={() => setSelectedId(item.id)}
+                  onClick={() => {
+                    setSelectedId(item.id);
+                    void loadWorkItemEvidence(item.id);
+                  }}
                 >
                   <span>{item.title}</span>
                   <small>{workStatusLabel(item.status)} / {riskTierLabel(item.riskTier)}</small>
@@ -448,6 +532,8 @@ export function App() {
             <p className="empty">The factory is waiting for its first signal.</p>
           )}
         </div>
+
+        <EvidenceLedgerPanel evidence={evidence} loading={evidenceLoading} selected={selected} />
 
         <ExecutionPanel doctor={doctor} modeUpdating={modeUpdating} onSetApprovalMode={setApprovalMode} />
         <AgentCredentialsPanel
@@ -847,6 +933,151 @@ function ReconciliationPanel(props: { onRun: () => void }) {
   );
 }
 
+function EvidenceLedgerPanel(props: {
+  evidence: WorkItemEvidence | null;
+  loading: boolean;
+  selected: WorkItem | null;
+}) {
+  const evidence = props.evidence;
+
+  return (
+    <div className="panel ledger-panel">
+      <div className="panel-heading">
+        <p className="eyebrow">Evidence ledger</p>
+        <h2>{props.selected ? "Feature trail" : "No selected work"}</h2>
+      </div>
+      {!props.selected ? (
+        <p className="empty">Select a work item to inspect its evidence trail.</p>
+      ) : props.loading ? (
+        <p className="empty">Loading evidence.</p>
+      ) : evidence ? (
+        <div className="ledger-grid">
+          <LedgerSection title="Cost ledger">
+            {evidence.costRecords.length ? (
+              evidence.costRecords.slice(0, 6).map((cost) => (
+                <LedgerItem
+                  key={cost.id}
+                  label={`${titleCase(cost.phase)} / ${cost.confidence}`}
+                  meta={`${cost.model} / ${dateLabel(cost.createdAt)}`}
+                  text={formatMoney(cost.amountUsd)}
+                />
+              ))
+            ) : (
+              <p className="empty">No cost records yet.</p>
+            )}
+          </LedgerSection>
+          <LedgerSection title="Agent runs">
+            {evidence.agentRuns.length ? (
+              evidence.agentRuns.slice(0, 6).map((run) => (
+                <LedgerItem
+                  key={run.id}
+                  label={`${run.agentName} / ${workStatusLabel(run.status)}`}
+                  meta={`${run.runType} / ${dateLabel(run.completedAt ?? run.createdAt)}`}
+                  text={run.summary}
+                />
+              ))
+            ) : (
+              <p className="empty">No agent runs yet.</p>
+            )}
+          </LedgerSection>
+          <LedgerSection title="Assumptions">
+            {evidence.assumptions.length ? (
+              evidence.assumptions.slice(0, 6).map((assumption) => (
+                <LedgerItem
+                  key={assumption.id}
+                  label={assumption.unresolved ? "Unresolved" : "Recorded"}
+                  meta={`${assumption.impactAreas.join(", ") || "none"} / ${dateLabel(assumption.createdAt)}`}
+                  text={assumption.notes}
+                />
+              ))
+            ) : (
+              <p className="empty">No assumptions recorded yet.</p>
+            )}
+          </LedgerSection>
+          <LedgerSection title="Release proof">
+            {evidence.releaseEvents.length ? (
+              evidence.releaseEvents.slice(0, 4).map((release) => (
+                <LedgerItem
+                  key={release.id}
+                  label={userStatusLabel(release.status)}
+                  meta={dateLabel(release.createdAt)}
+                  text="Release marker recorded for this work item."
+                />
+              ))
+            ) : (
+              <p className="empty">Waiting for release proof.</p>
+            )}
+          </LedgerSection>
+          <LedgerSection title="GitHub artifacts">
+            {evidence.githubArtifacts.length ? (
+              evidence.githubArtifacts.slice(0, 4).map((artifact) => (
+                <LedgerItem
+                  key={artifact.id}
+                  href={artifact.url}
+                  label={titleCase(artifact.artifactType)}
+                  meta={dateLabel(artifact.createdAt)}
+                  text={artifact.url}
+                />
+              ))
+            ) : (
+              <p className="empty">No GitHub artifacts yet.</p>
+            )}
+          </LedgerSection>
+          <LedgerSection title="User follow-up">
+            {evidence.userNotifications.length ? (
+              evidence.userNotifications.slice(0, 4).map((notification) => (
+                <LedgerItem
+                  key={notification.id}
+                  label={userStatusLabel(notification.status)}
+                  meta={dateLabel(notification.createdAt)}
+                  text={notification.message}
+                />
+              ))
+            ) : (
+              <p className="empty">No user-facing updates yet.</p>
+            )}
+          </LedgerSection>
+          <LedgerSection title="Audit events">
+            {evidence.auditEvents.length ? (
+              evidence.auditEvents.slice(0, 6).map((event) => (
+                <LedgerItem
+                  key={event.id}
+                  label={titleCase(event.event)}
+                  meta={`${event.actor} / ${dateLabel(event.createdAt)}`}
+                  text={`${event.targetType}: ${event.targetId}`}
+                />
+              ))
+            ) : (
+              <p className="empty">No audit events yet.</p>
+            )}
+          </LedgerSection>
+        </div>
+      ) : (
+        <p className="empty">Evidence is unavailable for this work item.</p>
+      )}
+    </div>
+  );
+}
+
+function LedgerSection(props: { children: ReactNode; title: string }) {
+  return (
+    <section className="ledger-section">
+      <h3>{props.title}</h3>
+      <div className="ledger-list">{props.children}</div>
+    </section>
+  );
+}
+
+function LedgerItem(props: { href?: string; label: string; meta: string; text: string }) {
+  return (
+    <article className="ledger-item">
+      <strong>{props.label}</strong>
+      {props.href ? <a href={props.href}>{props.text}</a> : <span>{props.text}</span>}
+      <small>{props.meta}</small>
+    </article>
+  );
+}
+
 function AssumptionList(props: { assumptions: AgentAssumption[] }) {
   if (!props.assumptions.length) {
     return <p className="assumption-note">No unresolved agent assumptions on this work item.</p>;
@@ -1005,6 +1236,19 @@ function actualCostLabel(item: WorkItem): string {
   const confidence = actual.confidence ? ` ${actual.confidence}` : "";
   const tokens = typeof actual.tokens === "number" ? ` / ${actual.tokens} tokens` : "";
   return `$${actual.amountUsd.toFixed(4)}${confidence}${tokens}`;
+}
+
+function formatMoney(amount: number): string {
+  return `$${amount.toFixed(4)}`;
+}
+
+function dateLabel(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+  return date.toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 }
 
 function sourceLabel(sources: string[]): string {

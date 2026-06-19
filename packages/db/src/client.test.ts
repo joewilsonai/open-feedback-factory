@@ -120,6 +120,18 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(duplicateAfterRun.status.state, "implemented");
     assert.match(duplicateAfterRun.status.message, /waiting for review or release/);
 
+    await store.markWorkItemReleased(claimed?.id ?? "", "Dashboard focus meter has shipped.");
+    const detail = await store.getWorkItemDetail(claimed?.id ?? "");
+    assert.equal(detail?.workItem.status, "shipped");
+    assert.equal(detail?.agentRuns[0]?.id, runId);
+    assert.equal(detail?.costRecords.some((cost) => cost.phase === "estimate"), true);
+    assert.equal(detail?.costRecords.some((cost) => cost.phase === "actual" && cost.amountUsd === 1.25), true);
+    assert.equal(detail?.assumptions[0]?.notes, "A release-health assumption should block auto-merge until resolved.");
+    assert.equal(detail?.githubArtifacts.some((artifact) => artifact.url.endsWith("/pull/123")), true);
+    assert.equal(detail?.releaseEvents[0]?.status, "shipped");
+    assert.equal(detail?.userNotifications[0]?.message, "Dashboard focus meter has shipped.");
+    assert.equal(detail?.auditEvents.some((event) => event.event === "work_item_run_completed"), true);
+
     const staleFeedback = {
       message: `Please add pinned notes stale ${uniqueSuffix}`,
       metadata: { route: "/daybook", surface: "notes" },

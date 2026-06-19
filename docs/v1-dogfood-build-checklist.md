@@ -87,7 +87,9 @@ Required behavior:
 5. Control center:
    show setup health, queues, work item detail, assumptions, agent runs, PRs,
    release state, cost estimate vs actual, user follow-up, feature usage, and
-   policy blockers using human-readable labels.
+   policy blockers using human-readable labels. Each work item should expose an
+   evidence ledger for agent runs, cost records, assumptions, GitHub artifacts,
+   release proof, user notifications, and audit events.
 
 6. GitHub:
    support GitHub App manifest/install/webhook flow, sanitized issue creation,
