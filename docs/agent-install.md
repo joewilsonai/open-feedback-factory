@@ -106,10 +106,10 @@ Expected result after credentials are configured:
 - `githubMode` is `app` when `.env` contains `GITHUB_MODE=app`.
 - `githubAppConfigured` is `true`.
 
-Local `localhost` installs intentionally create the GitHub App without webhook
-events because GitHub cannot reach local webhook URLs. For webhook testing, set
-`PUBLIC_BASE_URL` to an HTTPS tunnel or deployed URL, restart Docker, then run
-the wizard again.
+Local `localhost` installs intentionally use a disabled placeholder webhook and
+subscribe to no webhook events because GitHub cannot reach local webhook URLs.
+For webhook testing, set `PUBLIC_BASE_URL` to an HTTPS tunnel or deployed URL,
+restart Docker, then run the wizard again.
 
 Do not print the private key or webhook secret in chat. Summarize only that
 credentials were added.

@@ -114,10 +114,10 @@ The control center shows a GitHub App install wizard at
 `http://localhost:5173`. Use **Create GitHub App** to start GitHub's
 manifest-based App registration flow. GitHub still requires a confirmation
 screen, then it returns to the local callback page where you can generate and
-copy the `GITHUB_MODE=app` env values for Docker. Local `localhost` installs
-omit webhook events because GitHub cannot call local webhook URLs; set
-`PUBLIC_BASE_URL` to an HTTPS tunnel or deployed URL before using the wizard if
-you want GitHub webhooks enabled.
+copy the `GITHUB_MODE=app` env values for Docker. Local `localhost` installs use
+a disabled placeholder webhook and subscribe to no webhook events because GitHub
+cannot call local webhook URLs; set `PUBLIC_BASE_URL` to an HTTPS tunnel or
+deployed URL before using the wizard if you want GitHub webhooks enabled.
 
 The API also exposes `/github/app/manifest`, `/github/app/setup`,
 `/github/app/installed`, and `/github/webhook` for the App installation and

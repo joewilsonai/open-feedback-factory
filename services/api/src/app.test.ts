@@ -199,7 +199,7 @@ test("API exposes GitHub App manifest seam", async () => {
   await app.close();
 });
 
-test("GitHub App manifest omits webhooks for localhost setup", async () => {
+test("GitHub App manifest disables webhooks for localhost setup", async () => {
   const localConfig: ApiConfig = {
     ...config,
     controlCenterUrl: "http://localhost:5173",
@@ -210,13 +210,15 @@ test("GitHub App manifest omits webhooks for localhost setup", async () => {
 
   assert.equal(response.statusCode, 200);
   const body = response.json();
-  assert.equal("hook_attributes" in body, false);
+  assert.equal(body.hook_attributes.active, false);
+  assert.equal(body.hook_attributes.url, "https://example.com/open-feedback-factory/webhook-disabled");
   assert.equal("default_events" in body, false);
   assert.deepEqual(body.callback_urls, ["http://localhost:4100/github/app/installed"]);
 
   const setup = await app.inject({ method: "GET", url: "/github/app/setup" });
   assert.match(setup.body, /Local mode: GitHub cannot reach localhost webhooks/);
-  assert.doesNotMatch(setup.body, /hook_attributes/);
+  assert.match(setup.body, /webhook-disabled/);
+  assert.doesNotMatch(setup.body, /http:\/\/localhost:4100\/github\/webhook/);
 
   await app.close();
 });

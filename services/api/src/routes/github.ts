@@ -2,6 +2,8 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
 
+const LOCAL_WEBHOOK_PLACEHOLDER_URL = "https://example.com/open-feedback-factory/webhook-disabled";
+
 export async function registerGithubRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   app.get("/github/app/manifest", async () => buildGithubAppManifest(deps));
 
@@ -29,7 +31,7 @@ export async function registerGithubRoutes(app: FastifyInstance, deps: AppDeps):
       <p>${
         webhooksEnabled
           ? "Webhook events are enabled because PUBLIC_BASE_URL is publicly reachable."
-          : "Local mode: GitHub cannot reach localhost webhooks, so webhook events are disabled for this manifest. Set PUBLIC_BASE_URL to an HTTPS tunnel or deployed URL to enable webhooks."
+          : "Local mode: GitHub cannot reach localhost webhooks, so this manifest uses a disabled placeholder webhook and subscribes to no webhook events. Set PUBLIC_BASE_URL to an HTTPS tunnel or deployed URL to enable webhooks."
       }</p>
       <form method="post" action="${escapeHtml(action)}">
         <input type="hidden" name="manifest" value="${escapeHtml(manifest)}">
@@ -173,6 +175,10 @@ export function buildGithubAppManifest(deps: AppDeps): Record<string, unknown> {
     },
     description:
       "Open Feedback Factory turns sanitized user feedback into guarded GitHub issues and PRs.",
+    hook_attributes: {
+      active: false,
+      url: LOCAL_WEBHOOK_PLACEHOLDER_URL,
+    },
     name: "Open Feedback Factory",
     public: false,
     redirect_url: `${deps.config.publicBaseUrl}/github/app/installed`,
