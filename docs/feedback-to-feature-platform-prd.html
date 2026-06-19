@@ -1019,7 +1019,7 @@ trackFeatureOutcome({
 <p>a human only because a policy, reviewer, CI, release, cost, or risk gate failed or requires explicit approval.</p>
 </ul>
 <p>The desired default for real indie repos is not &quot;a person reviews every PR.&quot; The default should be &quot;agents do the routine implementation and review work; humans handle exceptions.&quot; The PR remains the audit artifact and rollback point, but human review is a policy outcome, not the universal bottleneck.</p>
-<p>Approval to run and approval to merge are separate controls. <code>auto</code> approval allows an attached worker to claim eligible queued work. It does not mean the PR can merge. Auto-merge requires separate reviewer agents, passing checks, guardrail evaluation, provenance checks, and cost/release policy compliance. Reviewer approval must be persisted as a work-item review decision before it can unlock any merge path. A transient API request flag or UI assumption is not enough evidence for auto-merge.</p>
+<p>Approval to run and approval to merge are separate controls. <code>auto</code> approval allows an attached worker to claim eligible queued work. It does not mean the PR can merge. Auto-merge requires separate reviewer agents, passing checks, guardrail evaluation, provenance checks, and cost/release policy compliance. Reviewer approval must be persisted as a work-item review decision before it can unlock any merge path. A transient API request flag or UI assumption is not enough evidence for auto-merge. Branch provenance, changed files, diff size, check status, and cost evidence must come from stored runner output or live GitHub PR data, not caller-supplied request fields.</p>
 <p>Agent-reviewed auto-merge requires at minimum:</p>
 <ul>
 <li>a separate reviewer agent from the builder agent;</li>
@@ -1281,7 +1281,7 @@ trackFeatureOutcome({
 <li>pause the runner when CI failure rate crosses a threshold;</li>
 <li>pause auto-merge when rollback or production incident signals are active.</li>
 </ul>
-<p>V1 should persist the core merge guardrails in policy config: policy-level auto-merge allowance, max safe diff lines, and protected path fragments. These settings should be visible in <code>/doctor</code>, editable in the control center, and used by the auto-merge evaluator. The environment-level <code>AUTO_MERGE_ENABLED</code> switch remains a hard kill switch above the live policy.</p>
+<p>V1 should persist the core merge guardrails in policy config: policy-level auto-merge allowance, max safe diff lines, and protected path fragments. These settings should be visible in <code>/doctor</code>, editable in the control center, and used by the auto-merge evaluator. The environment-level <code>AUTO_MERGE_ENABLED</code> switch remains a hard kill switch above the live policy. The evaluator should use recorded runner/GitHub evidence for branch provenance, changed files, diff size, checks, and cost instead of trusting a request-body shortcut.</p>
 <p>Cost controls should be explicit and visible before work starts.</p>
 <p>Examples:</p>
 <ul>
@@ -2256,6 +2256,8 @@ feedback-factory demo</code></pre>
 <li>Agent reviewer gate.</li>
 <li>Durable review-decision ledger that safe auto-merge reads instead of trusting</li>
 <p>a one-off request flag.</p>
+<li>Durable merge-evidence path that reads stored runner output and live GitHub PR</li>
+<p>data instead of trusting caller-supplied branch, diff, check, or cost fields.</p>
 <li>Policy-governed merge modes: implement-only, agent-reviewed auto-merge, and</li>
 <p>human-exception-required.</p>
 <li>Estimated and actual cost capture.</li>

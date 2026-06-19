@@ -953,6 +953,23 @@ test("admin can configure merge guardrails and auto-merge reads them", async () 
     url: "/sdk/feedback",
   });
   const workItemId = feedback.json().workItemId;
+  await store.completeWorkItemRun({
+    agentName: "codex-test",
+    costActual: {
+      amountUsd: 1.25,
+      confidence: "high",
+      model: "gpt-5.5",
+    },
+    metadata: {
+      branchName: "off/codex/work_1",
+      changedFiles: ["apps/demo-app/src/App.tsx"],
+      diffLineCount: 12,
+    },
+    runType: "implementation",
+    status: "succeeded",
+    summary: "Implemented test work.",
+    workItemId,
+  });
   await store.recordGithubArtifact({
     artifactType: "pull_request",
     url: "https://github.com/joewilsonai/open-feedback-factory/pull/42",
@@ -968,11 +985,11 @@ test("admin can configure merge guardrails and auto-merge reads them", async () 
   const diffBlocked = await app.inject({
     method: "POST",
     payload: {
-      branchTrusted: true,
-      changedFiles: ["apps/demo-app/src/App.tsx"],
+      branchTrusted: false,
+      changedFiles: ["README.md"],
       checksPassed: true,
-      costActualUsd: 1.25,
-      diffLineCount: 12,
+      costActualUsd: 0.01,
+      diffLineCount: 1,
       redactionWarnings: 0,
       releaseHealthy: true,
     },
@@ -980,6 +997,9 @@ test("admin can configure merge guardrails and auto-merge reads them", async () 
   });
   assert.equal(diffBlocked.statusCode, 409);
   assert.equal(diffBlocked.json().evaluation.reasons.includes("diff_too_large"), true);
+  assert.equal(diffBlocked.json().evidence.evidenceSource, "stored_runner");
+  assert.deepEqual(diffBlocked.json().evidence.changedFiles, ["apps/demo-app/src/App.tsx"]);
+  assert.equal(diffBlocked.json().evidence.diffLineCount, 12);
 
   await app.inject({
     method: "PATCH",
@@ -995,10 +1015,10 @@ test("admin can configure merge guardrails and auto-merge reads them", async () 
     method: "POST",
     payload: {
       branchTrusted: true,
-      changedFiles: ["apps/demo-app/src/App.tsx"],
+      changedFiles: ["README.md"],
       checksPassed: true,
       costActualUsd: 1.25,
-      diffLineCount: 12,
+      diffLineCount: 1,
       redactionWarnings: 0,
       releaseHealthy: true,
     },
@@ -1006,6 +1026,7 @@ test("admin can configure merge guardrails and auto-merge reads them", async () 
   });
   assert.equal(pathBlocked.statusCode, 409);
   assert.equal(pathBlocked.json().evaluation.reasons.includes("protected_path_changed"), true);
+  assert.deepEqual(pathBlocked.json().evidence.changedFiles, ["apps/demo-app/src/App.tsx"]);
 
   await app.close();
 });
@@ -1567,7 +1588,8 @@ test("admin review decisions are durable auto-merge gates", async () => {
   });
   assert.equal(afterReview.statusCode, 409);
   assert.equal(afterReview.json().evaluation.reasons.includes("reviewer_not_approved"), false);
-  assert.deepEqual(afterReview.json().evaluation.reasons, ["github_merge_mode_not_enabled"]);
+  assert.equal(afterReview.json().evaluation.reasons.includes("github_merge_mode_not_enabled"), true);
+  assert.equal(afterReview.json().evaluation.reasons.includes("checks_not_passing"), true);
 
   const evidence = await app.inject({ method: "GET", url: `/admin/work-items/${workItemId}/evidence` });
   assert.equal(evidence.json().auditEvents[0].event, "work_item_review_recorded");
@@ -1640,7 +1662,7 @@ test("auto merge blocks when an agent left unresolved assumptions", async () => 
   const store = new MemoryStore();
   store.approvalMode = "auto";
   const app = await buildApp({
-    config: { ...config, autoMergeEnabled: true, githubMode: "gh" },
+    config: { ...config, autoMergeEnabled: true },
     store,
   });
 
@@ -1686,6 +1708,11 @@ test("auto merge blocks when an agent left unresolved assumptions", async () => 
         },
       ],
       costActual: { amountUsd: 1.25, confidence: "low", model: "gpt-5.5" },
+      metadata: {
+        branchName: "off/codex/work_1",
+        changedFiles: ["apps/demo-app/src/App.tsx"],
+        diffLineCount: 12,
+      },
       status: "succeeded",
       summary: "Implemented by worker.",
     },
@@ -1709,7 +1736,8 @@ test("auto merge blocks when an agent left unresolved assumptions", async () => 
   });
 
   assert.equal(merge.statusCode, 409);
-  assert.deepEqual(merge.json().evaluation.reasons, ["unresolved_assumption_blocks_automerge"]);
+  assert.equal(merge.json().evaluation.reasons.includes("unresolved_assumption_blocks_automerge"), true);
+  assert.equal(merge.json().evaluation.reasons.includes("github_merge_mode_not_enabled"), true);
 
   await app.close();
 });

@@ -196,6 +196,8 @@ docker compose up --build
 - Cost caps, max diff lines, protected paths, and policy-level auto-merge
   allowance are live control-center policy, with the env auto-merge switch as a
   hard kill switch.
+- Auto-merge evidence comes from stored runner output and live GitHub PR data,
+  not caller-supplied request fields.
 - Reviewer approval is recorded as a durable work-item decision before
   auto-merge can pass; the system never trusts a request-body shortcut.
 - A release marker is required before a user sees shipped.

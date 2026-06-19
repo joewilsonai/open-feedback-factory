@@ -7,6 +7,8 @@ import type {
   GitHubCheckSummary,
   GitHubCommentInput,
   GitHubIssueInput,
+  GitHubPullRequestEvidence,
+  GitHubPullRequestFileSummary,
   GitHubPullRequestInput,
 } from "./types.js";
 
@@ -143,20 +145,25 @@ export class GitHubClient {
   }
 
   async listPullRequestFiles(prUrlOrNumber: string): Promise<string[]> {
+    return (await this.listPullRequestFileSummaries(prUrlOrNumber)).map((file) => file.path);
+  }
+
+  async listPullRequestFileSummaries(prUrlOrNumber: string): Promise<GitHubPullRequestFileSummary[]> {
     const number = githubNumberFromReference(prUrlOrNumber);
     if (this.mode() === "gh") {
       const output = await runGh(
         this.options.gh ?? "gh",
-        ["pr", "view", String(number), "--json", "files", "--jq", ".files[].path"],
+        ["pr", "view", String(number), "--json", "files", "--jq", ".files"],
         this.options.cwd,
       );
-      return output.split(/\r?\n/).filter(Boolean);
+      const files = JSON.parse(output) as Array<Record<string, unknown>>;
+      return files.map(fileSummaryFromGitHub).filter((file) => file.path);
     }
 
     const files = await this.appRequest<Array<Record<string, unknown>>>(
       `/repos/${this.repoPath()}/pulls/${number}/files`,
     );
-    return files.map((file) => String(file.filename)).filter(Boolean);
+    return files.map(fileSummaryFromGitHub).filter((file) => file.path);
   }
 
   async listPullRequestChecks(ref: string): Promise<GitHubCheckSummary[]> {
@@ -179,6 +186,45 @@ export class GitHubClient {
       status: String(check.status ?? "unknown"),
       url: typeof check.html_url === "string" ? check.html_url : null,
     }));
+  }
+
+  async getPullRequestEvidence(prUrlOrNumber: string): Promise<GitHubPullRequestEvidence> {
+    const number = githubNumberFromReference(prUrlOrNumber);
+    if (this.mode() === "gh") {
+      const output = await runGh(
+        this.options.gh ?? "gh",
+        ["pr", "view", String(number), "--json", "files,headRefName,statusCheckRollup", "--jq", "."],
+        this.options.cwd,
+      );
+      const pr = JSON.parse(output) as Record<string, unknown>;
+      const fileSummaries = arrayFrom(pr.files).map(fileSummaryFromGitHub).filter((file) => file.path);
+      const checkSummaries = arrayFrom(pr.statusCheckRollup).map(checkSummaryFromGh);
+      return {
+        changedFiles: fileSummaries.map((file) => file.path),
+        checkSummaries,
+        checksPassed: checksPassed(checkSummaries),
+        diffLineCount: diffLineCount(fileSummaries),
+        fileSummaries,
+        headBranch: typeof pr.headRefName === "string" ? pr.headRefName : null,
+        headSha: null,
+      };
+    }
+
+    const pr = await this.appRequest<Record<string, unknown>>(`/repos/${this.repoPath()}/pulls/${number}`);
+    const head = recordFrom(pr.head);
+    const headSha = typeof head.sha === "string" ? head.sha : null;
+    const headBranch = typeof head.ref === "string" ? head.ref : null;
+    const fileSummaries = await this.listPullRequestFileSummaries(String(number));
+    const checkSummaries = headSha ? await this.listPullRequestChecks(headSha) : [];
+    return {
+      changedFiles: fileSummaries.map((file) => file.path),
+      checkSummaries,
+      checksPassed: checksPassed(checkSummaries),
+      diffLineCount: diffLineCount(fileSummaries),
+      fileSummaries,
+      headBranch,
+      headSha,
+    };
   }
 
   async cleanupBranch(branchName: string): Promise<string> {
@@ -311,6 +357,45 @@ function checkSummaryFromGh(check: Record<string, unknown>): GitHubCheckSummary 
     status: String(check.status ?? "unknown"),
     url: typeof check.detailsUrl === "string" ? check.detailsUrl : null,
   };
+}
+
+function checksPassed(checks: GitHubCheckSummary[]): boolean {
+  return (
+    checks.length > 0 &&
+    checks.every((check) => {
+      const status = check.status.toLowerCase();
+      const conclusion = (check.conclusion ?? "").toLowerCase();
+      return status === "completed" && ["success", "neutral", "skipped"].includes(conclusion);
+    })
+  );
+}
+
+function diffLineCount(files: GitHubPullRequestFileSummary[]): number {
+  return files.reduce((total, file) => total + file.changes, 0);
+}
+
+function fileSummaryFromGitHub(file: Record<string, unknown>): GitHubPullRequestFileSummary {
+  const additions = numberFrom(file.additions);
+  const deletions = numberFrom(file.deletions);
+  const changes = numberFrom(file.changes) || additions + deletions;
+  return {
+    additions,
+    changes,
+    deletions,
+    path: String(file.path ?? file.filename ?? ""),
+  };
+}
+
+function arrayFrom(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object")) : [];
+}
+
+function recordFrom(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+function numberFrom(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
 function githubNumberFromReference(value: string): string {

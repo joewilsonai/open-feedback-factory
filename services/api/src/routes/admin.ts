@@ -1,9 +1,23 @@
 import { evaluateAutoMerge, type WorkRiskTier } from "@open-feedback-factory/core";
+import type { AgentRunLedgerRow, WorkItemDetail, WorkItemRow } from "@open-feedback-factory/db";
 import { CodexCliRunner } from "@open-feedback-factory/runner";
+import type { GitHubPullRequestEvidence } from "@open-feedback-factory/runner";
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
 import { buildGithubClient } from "../githubClient.js";
 import { getCodexApiKeyStatus, readCodexApiKey, removeCodexApiKey, saveCodexApiKey } from "../secrets.js";
+
+interface AutoMergeEvidence {
+  branchTrusted: boolean;
+  changedFiles: string[];
+  checksPassed: boolean;
+  costActualUsd: number;
+  diffLineCount: number;
+  evidenceSource: "github_live" | "stored_runner";
+  headBranch: string | null;
+  redactionWarnings: number;
+  releaseHealthy: boolean;
+}
 
 export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   app.get("/admin/control-room", async () => deps.store.getControlRoomSnapshot());
@@ -274,54 +288,77 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
     return { result, status: "reconciled" };
   });
 
-  app.post<{
-    Body: {
-      branchTrusted?: boolean;
-      changedFiles?: string[];
-      checksPassed?: boolean;
-      costActualUsd?: number;
-      diffLineCount?: number;
-      redactionWarnings?: number;
-      releaseHealthy?: boolean;
-      reviewerApproved?: boolean;
-    };
-    Params: { id: string };
-  }>("/admin/work-items/:id/automerge", async (request, reply) => {
-    const workItem = await deps.store.getWorkItem(request.params.id);
-    if (!workItem) return reply.code(404).send({ error: "work item not found" });
+  app.post<{ Params: { id: string } }>("/admin/work-items/:id/automerge", async (request, reply) => {
+    const detail = await deps.store.getWorkItemDetail(request.params.id);
+    if (!detail) return reply.code(404).send({ error: "work item not found" });
+    const workItem = detail.workItem;
     const maxFeatureCostUsd = await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd);
     const mergeGuardrails = await deps.store.getMergeGuardrailPolicy(defaultMergeGuardrailPolicy(deps));
     const reviewDecision = await deps.store.getWorkItemReviewDecision(workItem.id);
+    const prUrl = workItem.githubPrUrl;
+    const evidence = storedAutoMergeEvidence(detail, mergeGuardrails.maxSafeDiffLines);
+    const externalReasons: string[] = [];
+
+    if (!prUrl) externalReasons.push("missing_pr_url");
+    if (deps.config.githubMode === "disabled") externalReasons.push("github_merge_mode_not_enabled");
+
+    const github = prUrl && deps.config.githubMode !== "disabled" ? buildGithubClient(deps.config) : null;
+    if (github && prUrl) {
+      try {
+        Object.assign(evidence, liveAutoMergeEvidence(workItem, await github.getPullRequestEvidence(prUrl)));
+      } catch (error) {
+        externalReasons.push("github_evidence_unavailable");
+        await deps.store.recordAgentRun({
+          agentName: "github-safe-automerge",
+          metadata: {
+            error: error instanceof Error ? error.message : String(error),
+            prUrl,
+          },
+          runType: "automerge_evidence",
+          status: "blocked",
+          summary: "Could not fetch live GitHub PR evidence for auto-merge.",
+          workItemId: workItem.id,
+        });
+      }
+    }
 
     const evaluation = evaluateAutoMerge({
       autoMergeEnabled: deps.config.autoMergeEnabled && mergeGuardrails.autoMergePolicyEnabled,
-      branchTrusted: request.body.branchTrusted === true,
-      changedFiles: request.body.changedFiles ?? [],
-      checksPassed: request.body.checksPassed === true,
-      costActualUsd: request.body.costActualUsd ?? workItem.costEstimate.amountUsd,
+      branchTrusted: evidence.branchTrusted,
+      changedFiles: evidence.changedFiles,
+      checksPassed: evidence.checksPassed,
+      costActualUsd: evidence.costActualUsd,
       costCapUsd: maxFeatureCostUsd,
-      diffLineCount: request.body.diffLineCount ?? deps.config.maxSafeDiffLines + 1,
+      diffLineCount: evidence.diffLineCount,
       maxDiffLineCount: mergeGuardrails.maxSafeDiffLines,
       protectedPathFragments: mergeGuardrails.protectedPathFragments,
-      redactionWarnings: request.body.redactionWarnings ?? 0,
-      releaseHealthy: request.body.releaseHealthy === true,
+      redactionWarnings: evidence.redactionWarnings,
+      releaseHealthy: evidence.releaseHealthy,
       reviewerApproved: reviewDecision?.approved === true,
       riskTier: workItem.riskTier as WorkRiskTier,
       unresolvedAssumptions: workItem.unresolvedAssumptions,
     });
-
-    const prUrl = workItem.githubPrUrl;
-    if (!prUrl) evaluation.reasons.push("missing_pr_url");
-    if (deps.config.githubMode === "disabled") evaluation.reasons.push("github_merge_mode_not_enabled");
+    evaluation.reasons.push(...externalReasons);
 
     if (!evaluation.eligible || evaluation.reasons.length > 0) {
-      return reply.code(409).send({ evaluation: { eligible: false, reasons: evaluation.reasons }, status: "blocked" });
+      return reply.code(409).send({
+        evaluation: { eligible: false, reasons: evaluation.reasons },
+        evidence,
+        status: "blocked",
+      });
     }
     if (!prUrl) {
       return reply.code(409).send({ evaluation: { eligible: false, reasons: ["missing_pr_url"] }, status: "blocked" });
     }
 
-    const github = buildGithubClient(deps.config);
+    if (!github) {
+      return reply.code(409).send({
+        evaluation: { eligible: false, reasons: ["github_merge_mode_not_enabled"] },
+        evidence,
+        status: "blocked",
+      });
+    }
+
     const mergeOutput = await github.mergePullRequest(prUrl);
     const cleanupOutput = isGeneratedRunnerBranch(workItem.latestBranchName)
       ? await github.cleanupBranch(workItem.latestBranchName)
@@ -334,6 +371,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
         mergeOutput,
         prUrl,
         branchName: workItem.latestBranchName,
+        evidence,
         mergeGuardrails,
         reviewDecision,
       },
@@ -343,12 +381,68 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
       workItemId: workItem.id,
     });
 
-    return { cleanupOutput, evaluation, mergeOutput, runId, status: "merged" };
+    return { cleanupOutput, evaluation, evidence, mergeOutput, runId, status: "merged" };
   });
+}
+
+function storedAutoMergeEvidence(detail: WorkItemDetail, maxSafeDiffLines: number): AutoMergeEvidence {
+  const run = latestImplementationRun(detail.agentRuns);
+  const changedFiles = stringArrayFromMetadata(run?.metadata.changedFiles);
+  const branchName = stringFromMetadata(run?.metadata.branchName) ?? detail.workItem.latestBranchName;
+  return {
+    branchTrusted: isGeneratedRunnerBranch(branchName),
+    changedFiles,
+    checksPassed: false,
+    costActualUsd: amountUsdFromActual(detail.workItem.latestActualCost) ?? detail.workItem.costEstimate.amountUsd,
+    diffLineCount: positiveNumberFromMetadata(run?.metadata.diffLineCount) ?? maxSafeDiffLines + 1,
+    evidenceSource: "stored_runner",
+    headBranch: branchName,
+    redactionWarnings: 0,
+    releaseHealthy: true,
+  };
+}
+
+function liveAutoMergeEvidence(workItem: WorkItemRow, evidence: GitHubPullRequestEvidence): AutoMergeEvidence {
+  const latestBranch = workItem.latestBranchName;
+  const branchTrusted =
+    isGeneratedRunnerBranch(latestBranch) &&
+    (!evidence.headBranch || evidence.headBranch === latestBranch || latestBranch.endsWith(`/${evidence.headBranch}`));
+  return {
+    branchTrusted,
+    changedFiles: evidence.changedFiles,
+    checksPassed: evidence.checksPassed,
+    costActualUsd: amountUsdFromActual(workItem.latestActualCost) ?? workItem.costEstimate.amountUsd,
+    diffLineCount: evidence.diffLineCount,
+    evidenceSource: "github_live",
+    headBranch: evidence.headBranch,
+    redactionWarnings: 0,
+    releaseHealthy: true,
+  };
+}
+
+function latestImplementationRun(runs: AgentRunLedgerRow[]): AgentRunLedgerRow | null {
+  return runs.find((run) => run.runType === "implementation" && run.status === "succeeded") ?? null;
 }
 
 function isGeneratedRunnerBranch(branchName: string | null): branchName is string {
   return Boolean(branchName && /^(off\/codex|codex\/off|agent)\/[a-zA-Z0-9/_-]+$/.test(branchName));
+}
+
+function amountUsdFromActual(value: Record<string, unknown> | null): number | null {
+  const amount = value?.amountUsd;
+  return typeof amount === "number" && Number.isFinite(amount) ? amount : null;
+}
+
+function positiveNumberFromMetadata(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function stringArrayFromMetadata(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.length > 0) : [];
+}
+
+function stringFromMetadata(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 function defaultDecisionMessage(status: "blocked" | "not_planned"): string {

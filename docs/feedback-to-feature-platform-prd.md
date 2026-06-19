@@ -404,6 +404,9 @@ guardrail evaluation, provenance checks, and cost/release policy compliance.
 Reviewer approval must be persisted as a work-item review decision before it can
 unlock any merge path. A transient API request flag or UI assumption is not
 enough evidence for auto-merge.
+Branch provenance, changed files, diff size, check status, and cost evidence
+must come from stored runner output or live GitHub PR data, not caller-supplied
+request fields.
 
 Agent-reviewed auto-merge requires at minimum:
 
@@ -764,6 +767,9 @@ auto-merge allowance, max safe diff lines, and protected path fragments. These
 settings should be visible in `/doctor`, editable in the control center, and
 used by the auto-merge evaluator. The environment-level `AUTO_MERGE_ENABLED`
 switch remains a hard kill switch above the live policy.
+The evaluator should use recorded runner/GitHub evidence for branch provenance,
+changed files, diff size, checks, and cost instead of trusting a request-body
+shortcut.
 
 Cost controls should be explicit and visible before work starts.
 
@@ -1985,6 +1991,8 @@ should win on setup, reliability, observability, and scale.
 - Agent reviewer gate.
 - Durable review-decision ledger that safe auto-merge reads instead of trusting
   a one-off request flag.
+- Durable merge-evidence path that reads stored runner output and live GitHub PR
+  data instead of trusting caller-supplied branch, diff, check, or cost fields.
 - Policy-governed merge modes: implement-only, agent-reviewed auto-merge, and
   human-exception-required.
 - Estimated and actual cost capture.

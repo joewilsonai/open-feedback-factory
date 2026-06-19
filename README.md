@@ -239,6 +239,8 @@ that mode, newly accepted sanitized feedback can create a GitHub issue and store
 the URL on the work item. Safe auto-merge still requires every gate to pass:
 safe risk tier, trusted branch, persisted reviewer approval, passing checks,
 release health, cost cap, allowed paths, and an attached PR URL.
+Branch, diff, check, and cost evidence is read from stored runner output or live
+GitHub PR data, not caller-supplied request fields.
 
 `GITHUB_MODE=app` is the installable GitHub App path. Configure
 `GITHUB_APP_ID` plus either `GITHUB_APP_PRIVATE_KEY` or
