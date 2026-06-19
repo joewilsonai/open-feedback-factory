@@ -5,6 +5,7 @@ const apiProxyTarget = process.env.VITE_DEV_API_PROXY_TARGET ?? "http://127.0.0.
 const apiProxyPaths = ["/admin", "/doctor", "/github", "/health", "/runner", "/sdk"];
 
 export default defineConfig({
+  base: "/ops/",
   plugins: [react()],
   server: {
     allowedHosts: allowedHosts(),

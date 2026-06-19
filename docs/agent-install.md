@@ -90,12 +90,12 @@ Use the control center wizard as the primary path. GitHub will not create a
 manifest-based App from `localhost` URLs, so local installs need a public HTTPS
 tunnel first.
 
-1. Start the Tailscale demo/API tunnel: `pnpm run tunnel:tailscale`.
+1. Start the Tailscale demo/control/API tunnel: `pnpm run tunnel:tailscale`.
 2. Get the HTTPS URL from the printed `tailscale funnel status` output.
 3. Put the printed HTTPS URL in `.env` as `PUBLIC_BASE_URL`.
 4. If Tailscale Funnel is not enabled, use `cloudflared tunnel --url http://localhost:4100` for the API-only wizard path.
 5. Restart Docker: `docker compose up -d --build`.
-6. Open `http://localhost:5173`.
+6. Open `http://localhost:5173` locally or `/ops` on the public Funnel URL.
 7. In **Install wizard**, click **Create GitHub App**.
 8. GitHub opens a required confirmation screen.
 9. After confirmation, GitHub returns to `/github/app/installed`.
@@ -112,8 +112,8 @@ Expected result after credentials are configured:
 
 - `githubMode` is `app` when `.env` contains `GITHUB_MODE=app`.
 - `githubAppConfigured` is `true`.
-- The Funnel root serves the demo app, while `/sdk`, `/admin`, `/runner`,
-  `/doctor`, `/health`, and `/github` route to the API.
+- The Funnel root serves the demo app, `/ops` serves the control center, and
+  `/sdk`, `/admin`, `/runner`, `/doctor`, `/health`, and `/github` route to the API.
 
 Do not print the private key or webhook secret in chat. Summarize only that
 credentials were added.

@@ -10,10 +10,13 @@ const env = {
 };
 
 const apiPort = Number(env.API_PORT || 4100);
+const controlCenterPort = Number(env.CONTROL_CENTER_PORT || 5173);
 const demoPort = Number(env.DEMO_APP_PORT || 5174);
+const controlCenterTarget = `http://127.0.0.1:${controlCenterPort}/ops`;
 const demoTarget = `http://127.0.0.1:${demoPort}`;
 const routes = [
   ["/", demoTarget],
+  ["/ops", controlCenterTarget],
   ["/sdk", apiTarget("/sdk")],
   ["/admin", apiTarget("/admin")],
   ["/runner", apiTarget("/runner")],

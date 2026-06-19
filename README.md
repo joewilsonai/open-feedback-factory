@@ -116,15 +116,17 @@ issues, PR creation, PR comments, branch cleanup, and guarded merges use
 installation tokens instead of a personal GitHub CLI session.
 
 The control center shows a GitHub App install wizard at
-`http://localhost:5173`. Use **Create GitHub App** to start GitHub's
+`http://localhost:5173` locally and `/ops` through the Tailscale public demo.
+Use **Create GitHub App** to start GitHub's
 manifest-based App registration flow. GitHub still requires a confirmation
 screen, then it returns to the local callback page where you can generate and
 copy the `GITHUB_MODE=app` env values for Docker. GitHub will not create a
 manifest-based App from `localhost` URLs. For local testing, run
 `pnpm run tunnel:tailscale`, set `PUBLIC_BASE_URL` to the printed HTTPS URL,
 restart Docker, then use the wizard. The helper maps `/` to the demo app and
-keeps `/sdk`, `/admin`, `/runner`, `/doctor`, `/health`, and `/github` pointed
-at the API so the public demo and GitHub webhook callback work on one hostname.
+`/ops` to the control center, while keeping `/sdk`, `/admin`, `/runner`,
+`/doctor`, `/health`, and `/github` pointed at the API so the public demo,
+control center, and GitHub webhook callback work on one hostname.
 If Tailscale Funnel is not available, `cloudflared tunnel --url
 http://localhost:4100` can expose the API-only wizard path, but it will not serve
 the demo app unless you add equivalent routing.
