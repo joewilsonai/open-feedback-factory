@@ -99,6 +99,9 @@ capture, release proof, and agent assumptions.
 - Safe auto-merge reads live merge guardrail policy for max diff lines,
   protected path fragments, and policy-level auto-merge allowance. The env
   `AUTO_MERGE_ENABLED` switch remains a hard kill switch.
+- Safe auto-merge reads branch provenance, changed files, diff size, check
+  status, and cost evidence from stored runner output or live GitHub PR data,
+  not from caller-supplied request fields.
 - Rate-limit responses are user-safe and observable: they do not silently drop
   feedback, and they either queue, defer, or return a clear retry/status path.
 - Webhook delivery is idempotent and replay-resistant enough that duplicate

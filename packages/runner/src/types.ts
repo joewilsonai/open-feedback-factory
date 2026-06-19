@@ -71,3 +71,20 @@ export interface GitHubCheckSummary {
   status: string;
   url: string | null;
 }
+
+export interface GitHubPullRequestFileSummary {
+  additions: number;
+  changes: number;
+  deletions: number;
+  path: string;
+}
+
+export interface GitHubPullRequestEvidence {
+  changedFiles: string[];
+  checkSummaries: GitHubCheckSummary[];
+  checksPassed: boolean;
+  diffLineCount: number;
+  fileSummaries: GitHubPullRequestFileSummary[];
+  headBranch: string | null;
+  headSha: string | null;
+}

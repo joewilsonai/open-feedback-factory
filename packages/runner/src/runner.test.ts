@@ -270,7 +270,7 @@ test("GitHubClient app mode deletes generated branches with installation tokens"
       url: String(url),
     });
     if (String(url).endsWith("/app/installations/456/access_tokens")) {
-      return jsonResponse({ expires_at: new Date(Date.now() + 60_000).toISOString(), token: "installation-token" });
+      return jsonResponse({ expires_at: new Date(Date.now() + 120_000).toISOString(), token: "installation-token" });
     }
     if (String(url).endsWith("/repos/owner/repo/git/refs/heads/off/codex/work_1")) {
       assert.equal((init?.headers as Record<string, string>).authorization, "Bearer installation-token");
@@ -296,6 +296,66 @@ test("GitHubClient app mode deletes generated branches with installation tokens"
     [
       "POST https://api.github.com/app/installations/456/access_tokens",
       "DELETE https://api.github.com/repos/owner/repo/git/refs/heads/off/codex/work_1",
+    ],
+  );
+});
+
+test("GitHubClient app mode reads pull request evidence", async () => {
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
+  const calls: Array<{ method: string; url: string }> = [];
+  const fetchImpl: typeof fetch = async (url, init) => {
+    calls.push({
+      method: init?.method ?? "GET",
+      url: String(url),
+    });
+    if (String(url).endsWith("/app/installations/456/access_tokens")) {
+      return jsonResponse({ expires_at: new Date(Date.now() + 120_000).toISOString(), token: "installation-token" });
+    }
+    if (String(url).endsWith("/repos/owner/repo/pulls/42")) {
+      return jsonResponse({ head: { ref: "off/codex/work_1", sha: "abc123" } });
+    }
+    if (String(url).endsWith("/repos/owner/repo/pulls/42/files")) {
+      return jsonResponse([
+        { additions: 12, changes: 14, deletions: 2, filename: "apps/demo-app/src/App.tsx" },
+        { additions: 1, deletions: 0, filename: "README.md" },
+      ]);
+    }
+    if (String(url).endsWith("/repos/owner/repo/commits/abc123/check-runs")) {
+      return jsonResponse({
+        check_runs: [
+          { conclusion: "success", html_url: "https://github.com/owner/repo/actions/runs/1", name: "verify", status: "completed" },
+        ],
+      });
+    }
+    return new Response("not found", { status: 404 });
+  };
+
+  const client = new GitHubClient({
+    appId: "123",
+    appPrivateKey: normalizePrivateKey(pem.replace(/\n/g, "\\n")),
+    cwd: "/repo",
+    fetch: fetchImpl,
+    installationId: "456",
+    mode: "app",
+    owner: "owner",
+    repo: "repo",
+  });
+
+  const evidence = await client.getPullRequestEvidence("https://github.com/owner/repo/pull/42");
+
+  assert.deepEqual(evidence.changedFiles, ["apps/demo-app/src/App.tsx", "README.md"]);
+  assert.equal(evidence.checksPassed, true);
+  assert.equal(evidence.diffLineCount, 15);
+  assert.equal(evidence.headBranch, "off/codex/work_1");
+  assert.equal(evidence.headSha, "abc123");
+  assert.deepEqual(
+    calls.map((call) => `${call.method} ${call.url}`),
+    [
+      "POST https://api.github.com/app/installations/456/access_tokens",
+      "GET https://api.github.com/repos/owner/repo/pulls/42",
+      "GET https://api.github.com/repos/owner/repo/pulls/42/files",
+      "GET https://api.github.com/repos/owner/repo/commits/abc123/check-runs",
     ],
   );
 });
