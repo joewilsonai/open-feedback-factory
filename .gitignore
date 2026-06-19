@@ -11,5 +11,6 @@ coverage/
 .pnpm-store/
 .off/
 .agent-room/
+.worktrees/
 .superpowers/
 *.log
