@@ -24,10 +24,42 @@ Default local URLs:
 - Demo app: `http://localhost:5174`
 - Postgres: `localhost:55432`
 
-Hosted Demo Alpha uses the separate `joewilsonai/launchbrief-demo` repo and
-`https://launchbrief-demo.vercel.app`. LaunchBrief intentionally starts without
-the OFF SDK installed. Do not pre-wire the SDK into that repo unless the task is
-the real SDK-install PR/demo step.
+Hosted Demo Alpha is moving from the LaunchBrief proof app to a clean plant-care
+demo app. LaunchBrief at `https://launchbrief-demo.vercel.app` already uses the
+real OFF SDK and should be treated as an interim SDK proof, not the final demo
+target. The next demo repo must start SDK-less so OFF can create the real
+SDK-install PR. Do not pre-wire the SDK into the new plant-care repo unless the
+task is the real SDK-install PR/demo step.
+
+## Standing Disciplines
+
+These rules must survive context loss, compaction, new agents, and new sessions.
+
+1. **Honesty / Verify Substance:** No fake states in code or docs. Do not rely
+   on commit messages, branch names, PR titles, agent claims, or UI labels as
+   proof. Read the actual code/import/dependency/behavior and verify the live or
+   testable substance before saying something is done. `DONE` must mean really
+   done.
+2. **Status Discipline:** [docs/implementation-status.md](docs/implementation-status.md)
+   is a one-time baseline audit snapshot of what is actually built versus the
+   PRD. Keep it truthful while editing it, but do not treat hand-maintained
+   Markdown as the permanent live status system. Live implementation status is
+   expected to move to GitHub Issues and Projects, where PRs close linked
+   issues and the board updates from real workflow events. Overclaiming a stub
+   as `DONE` is blocked like any fake state.
+3. **Outward-Facing / Irreversible = Hold For Joe:** Prepare but do not execute
+   outward-facing, spend-bearing, public, or hard-to-undo actions without Joe's
+   explicit go. This includes `npm publish`, making the repo public, sending
+   public posts/emails, purchases, production data mutation, broad user invites,
+   and public launch/deploy decisions that cannot be cleanly reversed.
+4. **Review Protocol:** Codex builds in scoped branches/worktrees and rings Luna
+   through the bridge for review. Luna reviews scope, leak risk, brand, honesty,
+   and verifies substance before merge. Do not edit the same file set at the
+   same time as another active agent.
+5. **Current Round Context:** The durable demo is an onboarding handoff: a user
+   points a clean SDK-less plant-care app repo at OFF, and OFF does the rest.
+   Prepare public distribution for only `@open-feedback-factory/sdk`; keep the
+   OFF repo private. Hold the actual SDK publish for Joe.
 
 Private dogfood auth:
 

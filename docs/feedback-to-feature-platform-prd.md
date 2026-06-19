@@ -6,9 +6,31 @@
 **Status:** Internal dogfood v0.1
 **Distribution thesis:** Private dogfood first; open-source launch later
 
+**Current implementation status:** See
+[Implementation Status](implementation-status.md) for the baseline audit
+snapshot. Live status should move to GitHub Issues and Projects.
+
 ---
 
 ## 1. Product Thesis
+
+### Current Snapshot
+
+As of 2026-06-19:
+
+- The local/internal OFF loop has real core policy, API, database, SDK,
+  control-center, runner seams, tests, and CI.
+- The SDK launcher is real and can submit feedback, show a user-visible request
+  receipt, and track status without requiring user access to the control center.
+- LaunchBrief proved the real SDK can run in a live app, but it is now treated
+  as an interim proof app rather than the final demo.
+- The next durable demo app should be a clean SDK-less plant-care app that
+  stands in for a customer's product.
+- The highest-leverage next slice is preparing
+  `@open-feedback-factory/sdk` for public npm distribution while holding the
+  actual publish step for Joe's explicit go.
+- The product must not claim durable package install or normal Vercel rebuilds
+  until the SDK is actually available through a public package path.
 
 Beta users should be able to ask for improvements from inside a product and
 receive a real answer: shipped, already available, planned, needs more signal,
@@ -700,6 +722,21 @@ The product should expose safe MCP tools for agent access, such as:
 Agents should not query raw private feedback directly. Raw beta data should not
 be sent to Codex Cloud. The private database remains the source of truth; Codex
 receives sanitized summaries and narrow tool access.
+
+OFF should make Codex subscription usage a first-class lane for indie teams.
+Many small teams already pay for Codex through ChatGPT and will resist
+duplicating spend through API-key usage. The product should expose three clear
+runner lanes:
+
+- **Local subscription worker:** a trusted developer machine runs the host Codex CLI worker with `CODEX_AUTH_MODE=cli`. This is the default alpha and self-hosted path because it uses the developer's signed-in Codex subscription and keeps code execution on their own machine.
+- **Trusted private remote subscription worker:** a future advanced path for customer-owned private runners that can preserve Codex account auth or provider-supported access tokens safely. This is only acceptable for trusted, serialized runner infrastructure with explicit secret handling and audit.
+- **Hosted API-key worker:** a managed paid path for teams that want OFF to run workers without keeping a local machine online. This uses standard provider API-key billing and must show cost controls clearly before work is claimed.
+
+The hosted alpha should use a hosted control plane plus a local subscription
+worker. Hosted containers must not imply they can use a user's local Codex
+subscription unless OpenAI exposes a safe delegated auth flow for that account
+type. Until then, fully hosted autonomous workers should remain disabled or
+API-key-backed.
 
 Experimental Codex surfaces such as app-server, exec-server, and remote-control
 should not be core MVP dependencies. They can be revisited later if they become
@@ -1981,7 +2018,7 @@ Setup steps:
 1. Connect GitHub repo.
 2. Choose install mode: dry-run demo, implement-only PR mode,
    agent-reviewed auto-merge, or human-exception-required.
-3. Add Codex auth mode: local CLI subscription or server-side API key.
+3. Add Codex auth mode: local CLI subscription, trusted private subscription runner, or server-side API key.
 4. Attach a worker: host Codex CLI service, Docker API-key worker, or manual
    one-item command.
 5. Set cost caps.
@@ -3066,8 +3103,9 @@ with an open-source wedge and GitHub-native developer workflow.
 ## 24. First Demo Script
 
 The demo should use a tiny real app, not a mock dashboard. The near-term hosted
-demo app is LaunchBrief: a clean product-launch workspace with no OFF SDK
-installed at the start.
+demo app should be a clean SDK-less plant-care app: clearly consumer, clearly a
+stand-in for a customer's product, and not confused with OFF itself.
+LaunchBrief is only an interim real-SDK proof app.
 
 The first demo has two modes:
 
@@ -3080,14 +3118,14 @@ The first demo has two modes:
 
 Scenario:
 
-1. Open `https://launchbrief-demo.vercel.app`.
-2. Show LaunchBrief is a normal app: tasks, beta signals, no feedback launcher,
-   and no OFF SDK dependency.
+1. Open the clean plant-care demo app.
+2. Show the plant app is a normal consumer app: plant list, watering reminders,
+   plant notes, no feedback launcher, and no OFF SDK dependency.
 3. Open the OFF control center and show the Hosted Demo Alpha panel.
-4. Connect the `joewilsonai/launchbrief-demo` repo through the OFF GitHub App.
+4. Connect the plant-care repo through the OFF GitHub App.
 5. Approve the SDK-install work item.
 6. OFF creates a real sanitized issue or PR lane for adding the SDK launcher.
-7. The worker opens a PR against the LaunchBrief repo.
+7. The worker opens a PR against the plant-care repo.
 8. Tests pass.
 9. Reviewer, check, policy, cost, and provenance gates pass.
 10. The PR merges only if the configured merge mode allows it.

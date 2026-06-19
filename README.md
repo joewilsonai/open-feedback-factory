@@ -50,9 +50,10 @@ are configured.
 - Hosted trial/sandbox path for developers who want to test before installing.
 - Web SDK first, including a floating suggestion launcher with automatic
   in-widget request status tracking.
-- Hosted landing page and hosted LaunchBrief demo for developers who need to
-  see the loop before self-hosting. LaunchBrief intentionally starts without
-  the OFF SDK so the demo can show a real SDK-install PR.
+- Hosted landing page and a clean plant-care demo for developers who need to
+  see the loop before self-hosting. The plant app must start without the OFF
+  SDK so the demo can show a real SDK-install PR. LaunchBrief is only an
+  interim real-SDK proof app.
 - Postgres database.
 - GitHub App integration.
 - Codex-only built-in runner.

@@ -13,6 +13,9 @@ If GitHub, provider keys, runners, release proof, or app integrations are not
 configured, the hosted UI should show queued, blocked, disabled, or
 needs-configuration states.
 
+See [Implementation Status](implementation-status.md) for the current canonical
+DONE / PARTIAL / NOT-STARTED / DEFERRED map.
+
 ## Current Private Hosted Stack
 
 The private hosted stack is deployed on Railway, with the landing page on
@@ -23,8 +26,9 @@ Vercel:
 | Landing | `https://openfeedbackfactory.com` | Public landing page |
 | API | `https://api.openfeedbackfactory.com` | Feedback intake, admin API, runner API, GitHub App setup, doctor/health |
 | Control center | `https://app.openfeedbackfactory.com/ops/` | Private operator UI |
-| Demo app | `https://launchbrief-demo.vercel.app` | Clean LaunchBrief app with no OFF SDK installed |
-| Worker | Railway private service | Deployed but disabled until real runner credentials are configured |
+| Current proof app | `https://launchbrief-demo.vercel.app` | LaunchBrief app using the real SDK; interim proof, not final demo |
+| Next demo app | TBD plant-care app URL | Clean SDK-less consumer app that OFF should connect and mutate |
+| Worker | Railway private service | Deployed but disabled; alpha implementation lane is local host Codex CLI worker |
 | Postgres | Railway private service | Hosted V1 database |
 
 Temporary provider URLs still exist for recovery/debugging:
@@ -100,28 +104,46 @@ The first private hosted stack intentionally starts safe:
 - `APPROVAL_MODE=manual`;
 - `AUTO_MERGE_ENABLED=false`;
 - `CODEX_RUNNER_MODE=disabled`;
-- `CODEX_AUTH_MODE=api_key`;
-- `GITHUB_MODE=disabled`;
+- `CODEX_AUTH_MODE=cli`;
+- `GITHUB_MODE=app`;
 - admin and runner tokens enabled;
-- GitHub App not configured yet;
+- GitHub App configured for the private hosted demo path;
 - OpenAI API key not configured yet.
 
 This means hosted feedback can be received, sanitized, clustered, cost-estimated,
-and shown in the control center. It should not claim agent implementation,
-GitHub issue creation, PR creation, cost actuals, release proof, or shipped
-status until the relevant real integrations are configured.
+turned into sanitized GitHub issues, and shown in the control center. It should
+not claim agent implementation, PR creation, cost actuals, release proof, or
+shipped status until a real worker is attached and the downstream proof exists.
+
+The private hosted alpha should not configure a hosted OpenAI API-key Codex
+worker by default. The alpha runner path is:
+
+1. hosted Railway control plane for intake, routing, GitHub App, and control
+   center;
+2. runner disabled on Railway;
+3. local host Codex CLI worker on a trusted developer machine, using that
+   developer's signed-in Codex/ChatGPT subscription;
+4. hosted `RUNNER_TOKEN` synced into the local worker environment so the local
+   worker can claim hosted work items.
+
+Fully hosted autonomous workers are a later paid/managed option. If a hosted
+worker runs in Railway or another container, it cannot use a developer's local
+Codex CLI subscription session; it must either use API-key auth or a future
+provider-supported delegated subscription token flow.
 
 ## Hosted Demo Alpha
 
-The current demo app for the near-term hosted demo is LaunchBrief:
+The current proof app is LaunchBrief:
 
 - app: `https://launchbrief-demo.vercel.app`;
 - repo: `https://github.com/joewilsonai/launchbrief-demo`.
 
-LaunchBrief intentionally starts without the OFF SDK installed. The demo should
-show OFF connecting to this repo and creating a real PR that adds the SDK
-launcher. Keep Daybook available as an internal SDK smoke app, but do not use it
-as the main demo story.
+LaunchBrief now uses the real OFF SDK and is only an interim proof app. The
+durable hosted demo should use a new clean plant-care repo that starts without
+the OFF SDK installed. The demo should show OFF connecting to that repo and
+creating a real PR that adds the SDK launcher from the public npm package. Keep
+Daybook available as an internal SDK smoke app, but do not use it as the main
+demo story.
 
 See [Hosted Demo Alpha](./hosted-demo-alpha.md).
 

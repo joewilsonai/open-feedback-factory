@@ -4,6 +4,13 @@
 
 **Goal:** Build the first internal dogfood version of Open Feedback Factory: a Docker Compose TypeScript monorepo with API/Postgres, web SDK, Daybook demo app, control center, Codex CLI runner seam, GitHub App integration seam, safe auto-merge policy, user follow-up statuses, feature usage attribution, tests, and local run commands.
 
+**Current status:** Mostly implemented for local/internal dogfood. Deterministic
+tests, typecheck, build, and GitHub CI are green. Remaining work is the durable
+public SDK package path, clean SDK-less plant-care demo repo, hosted
+control-plane to local-worker proof, real SDK-install PR from npm, and full
+plant-app feedback-to-feature loop. See
+[docs/implementation-status.md](../../implementation-status.md).
+
 **Architecture:** Use a pnpm workspace with focused packages for core policy, database access, SDK, runner, API service, control center, and demo app. Keep raw feedback private in Postgres, send only sanitized summaries to GitHub/runner surfaces, and make the Daybook notepad/todo app exercise the same SDK/API path a real app would use. V1 runs locally through Docker Compose with implementation disabled by default or through the local Codex CLI monthly-subscription path when explicitly enabled.
 
 **Tech Stack:** TypeScript, pnpm workspaces, Fastify, Postgres, node-postgres, Vite React, Node test runner, Docker Compose, GitHub CLI/API seam, Codex CLI seam.
@@ -62,13 +69,13 @@
 - Produces root commands: `pnpm install`, `pnpm test`, `pnpm typecheck`, `pnpm build`, `pnpm dev`, `pnpm docker:up`, `pnpm run doctor`.
 - Produces service ports: API `4100`, control center `5173`, demo app `5174`, Postgres `55432`.
 
-- [ ] Create pnpm workspace files and package manifests.
-- [ ] Add Docker Compose with Postgres, API, worker, control center, and demo app.
-- [ ] Add `.env.example` with safe defaults and disabled real Codex/GitHub mutations by default.
-- [ ] Update README with local quickstart and the selected V1 ports.
-- [ ] Confirm the implementation tracks the required coverage in `docs/v1-test-strategy.md`.
-- [ ] Run `pnpm install`.
-- [ ] Run `pnpm typecheck` and verify the empty scaffold compiles.
+- [x] Create pnpm workspace files and package manifests.
+- [x] Add Docker Compose with Postgres, API, worker, control center, and demo app.
+- [x] Add `.env.example` with safe defaults and disabled real Codex/GitHub mutations by default.
+- [x] Update README with local quickstart and the selected V1 ports.
+- [x] Confirm the implementation tracks the required coverage in `docs/v1-test-strategy.md`.
+- [x] Run `pnpm install`.
+- [x] Run `pnpm typecheck` and verify the scaffold compiles.
 
 ## Task 2: Core Domain Logic
 
@@ -93,13 +100,13 @@
 - Produces `buildUserStatus(input): UserFeedbackStatus`.
 - Produces `buildAssumptionRecord(input): AgentAssumptionRecord`.
 
-- [ ] Write tests for redaction of emails, phone numbers, obvious secrets, and raw screenshots/transcripts.
-- [ ] Write tests for deterministic clustering of phrasing variants like dark mode/color/theme requests.
-- [ ] Write tests for routing safe feature requests, blocked unsafe/private requests, and needs-more-signal requests.
-- [ ] Write tests for auto-merge gate failures and one passing safe lane.
-- [ ] Write tests that assumption records block auto-merge when they affect privacy, cost, merge safety, or release status.
-- [ ] Implement core logic until tests pass.
-- [ ] Run `pnpm --filter @open-feedback-factory/core test`.
+- [x] Write tests for redaction of emails, phone numbers, obvious secrets, and raw screenshots/transcripts.
+- [x] Write tests for deterministic clustering of phrasing variants like dark mode/color/theme requests.
+- [x] Write tests for routing safe feature requests, blocked unsafe/private requests, and needs-more-signal requests.
+- [x] Write tests for auto-merge gate failures and one passing safe lane.
+- [x] Write tests that assumption records block auto-merge when they affect privacy, cost, merge safety, or release status.
+- [x] Implement core logic until tests pass.
+- [x] Run `pnpm --filter @open-feedback-factory/core test`.
 
 ## Task 3: Postgres Schema And Data Access
 
@@ -116,12 +123,12 @@
 - Produces `migrateDatabase(databaseUrl): Promise<void>`.
 - Produces `OpenFeedbackStore` with methods for feedback signals, clusters, work items, agent runs, assumption records, cost records, GitHub artifacts, release events, notifications, feature usage, policy configs, and audit events.
 
-- [ ] Add schema tables from the V1 design.
-- [ ] Implement migration runner using `pg`.
-- [ ] Implement store methods with JSONB metadata and timestamp normalization.
-- [ ] Persist agent assumptions on agent runs and expose unresolved assumptions on work items.
-- [ ] Add tests that run store logic against a temporary schema when `TEST_DATABASE_URL` is available and skip with a clear message otherwise.
-- [ ] Run `pnpm --filter @open-feedback-factory/db test`.
+- [x] Add schema tables from the V1 design.
+- [x] Implement migration runner using `pg`.
+- [x] Implement store methods with JSONB metadata and timestamp normalization.
+- [x] Persist agent assumptions on agent runs and expose unresolved assumptions on work items.
+- [x] Add tests that run store logic against a temporary schema when `TEST_DATABASE_URL` is available and skip with a clear message otherwise.
+- [x] Run `pnpm --filter @open-feedback-factory/db test`.
 
 ## Task 4: API Service
 
@@ -155,13 +162,13 @@
   - `GET /github/app/manifest`
 - Produces `GET /health` and `GET /doctor`.
 
-- [ ] Write API tests using an in-memory store adapter for fast route verification.
-- [ ] Implement feedback ingestion with sanitization, routing, cost estimate, cluster/work item creation, and user-safe status.
-- [ ] Implement feature usage attribution endpoint.
-- [ ] Implement control-room snapshot endpoint with queues, costs, follow-ups, and usage counts.
-- [ ] Implement runner/release/admin mutation endpoints.
-- [ ] Implement GitHub App manifest endpoint and webhook receiver seam.
-- [ ] Run `pnpm --filter @open-feedback-factory/api test`.
+- [x] Write API tests using an in-memory store adapter for fast route verification.
+- [x] Implement feedback ingestion with sanitization, routing, cost estimate, cluster/work item creation, and user-safe status.
+- [x] Implement feature usage attribution endpoint.
+- [x] Implement control-room snapshot endpoint with queues, costs, follow-ups, and usage counts.
+- [x] Implement runner/release/admin mutation endpoints.
+- [x] Implement GitHub App manifest endpoint and webhook receiver seam.
+- [x] Run `pnpm --filter @open-feedback-factory/api test`.
 
 ## Task 5: Web SDK
 
@@ -175,10 +182,10 @@
 - Produces `createOpenFeedbackClient({ apiBaseUrl, userId, metadata })`.
 - Produces client methods `submitFeedback`, `getFeedbackStatus`, and `trackFeatureUsage`.
 
-- [ ] Write SDK tests with a mocked `fetch`.
-- [ ] Implement privacy-safe payload construction.
-- [ ] Implement status and usage helpers.
-- [ ] Run `pnpm --filter @open-feedback-factory/sdk test`.
+- [x] Write SDK tests with a mocked `fetch`.
+- [x] Implement privacy-safe payload construction.
+- [x] Implement status and usage helpers.
+- [x] Run `pnpm --filter @open-feedback-factory/sdk test`.
 
 ## Task 6: Runner And GitHub/Codex Seams
 
@@ -194,12 +201,12 @@
 - Produces `CodexCliRunner.run(workItem): Promise<RunnerResult>`.
 - Produces `GitHubClient` seam for issue, branch, PR, checks, merge, comments, and cleanup.
 
-- [ ] Write tests for disabled runner behavior and Codex CLI command construction.
-- [ ] Keep the default runner disabled so queued work cannot be reported as implemented.
-- [ ] Implement Codex CLI runner path using local `codex exec --json` with `cli` auth by default and `api_key` auth only when configured.
-- [ ] Require structured runner output to include `outcome`, `summary`, `assumptions`, `checksRun`, `checksSkipped`, `costSummary`, and `userMessage`.
-- [ ] Implement GitHub client seam using `gh` commands for internal dogfood mode.
-- [ ] Run `pnpm --filter @open-feedback-factory/runner test`.
+- [x] Write tests for disabled runner behavior and Codex CLI command construction.
+- [x] Keep the default runner disabled so queued work cannot be reported as implemented.
+- [x] Implement Codex CLI runner path using local `codex exec --json` with `cli` auth by default and `api_key` auth only when configured.
+- [x] Require structured runner output to include `outcome`, `summary`, `assumptions`, `checksRun`, `checksSkipped`, `costSummary`, and `userMessage`.
+- [x] Implement GitHub client seam for internal dogfood and GitHub App paths.
+- [x] Run `pnpm --filter @open-feedback-factory/runner test`.
 
 ## Task 7: Toy Demo App
 
@@ -216,11 +223,11 @@
 - Produces the positive demo feedback path and negative demo feedback path.
 - Produces feature usage event for the shipped demo feature.
 
-- [ ] Build a real first-screen notepad/todo app, not a landing page.
-- [ ] Add feedback form with suggested positive and negative prompts.
-- [ ] Add status panel that polls feedback status.
-- [ ] Add feature usage trigger for the demo feature.
-- [ ] Run `pnpm --filter @open-feedback-factory/demo-app test`.
+- [x] Build a real first-screen notepad/todo app, not a landing page.
+- [x] Add feedback entry through the SDK launcher path.
+- [x] Add status tracking through the SDK launcher path.
+- [x] Add feature usage trigger for the demo feature.
+- [x] Run `pnpm --filter @open-feedback-factory/demo-app test`.
 
 ## Task 8: Control Center
 
@@ -236,10 +243,10 @@
 - Consumes `/admin/control-room` and `/admin/work-items/:id`.
 - Produces operator console for setup health, feedback inbox, queue, work items, agent runs, assumption records, PR/release status, costs, auto-merge state, follow-ups, and feature usage.
 
-- [ ] Build focused operator console with dense but readable sections.
-- [ ] Add setup health, queue, work items, agent runs, assumptions, cost, user follow-up, and feature usage panels.
-- [ ] Add run/release action buttons that call admin endpoints.
-- [ ] Run `pnpm --filter @open-feedback-factory/control-center test`.
+- [x] Build focused operator console with dense but readable sections.
+- [x] Add setup health, queue, work items, agent runs, assumptions, cost, user follow-up, and feature usage panels.
+- [x] Add run/release action buttons that call admin endpoints.
+- [x] Run `pnpm --filter @open-feedback-factory/control-center test`.
 
 ## Task 9: Doctor, Demo Seed, And Local Verification
 
@@ -254,15 +261,15 @@
 - Produces `pnpm demo:seed`.
 - Produces documented local URLs.
 
-- [ ] Implement doctor checks for Node, pnpm, Docker, Codex CLI auth/version, gh auth, env vars, ports, migration state, and safe auto-merge config.
-- [ ] Implement demo seed command that creates one shipped-like, one blocked/not-planned, and one actionable feedback example.
-- [ ] Run `pnpm run doctor`.
-- [ ] Run `pnpm demo:seed` against local API.
-- [ ] Run `pnpm test`, `pnpm typecheck`, and `pnpm build`.
-- [ ] Run `docker compose up --build` and verify API, demo app, and control center URLs.
-- [ ] Verify dry-run demo never shows fake PRs, fake costs, fake releases, fake shipped states, or fake agent runs.
-- [ ] Verify private dogfood mode blocks with explicit missing requirements until GitHub, Codex, cost settings, and release proof are truly configured.
-- [ ] Record which tests are deterministic CI tests and which are opt-in private dogfood tests.
+- [x] Implement doctor checks for Node, pnpm, Docker, Codex CLI auth/version, gh auth, env vars, ports, migration state, and safe auto-merge config.
+- [x] Implement demo seed command with clearly labeled sample states.
+- [x] Run `pnpm run doctor`.
+- [ ] Run `pnpm demo:seed` against local API in the current plant-demo cycle.
+- [x] Run `pnpm test`, `pnpm typecheck`, and `pnpm build`.
+- [ ] Run `docker compose up --build` and verify API, demo app, and control center URLs for the current cycle.
+- [x] Verify dry-run demo never shows fake PRs, fake costs, fake releases, fake shipped states, or fake agent runs in deterministic tests and copy.
+- [ ] Verify private dogfood mode blocks with explicit missing requirements until GitHub, Codex, cost settings, and release proof are truly configured in the plant-app demo.
+- [x] Record which tests are deterministic CI tests and which are opt-in private dogfood tests.
 
 ## Task 10: Finish, Commit, Push, And Keep Goal Active If Not Fully Verified
 
@@ -272,8 +279,9 @@
 **Interfaces:**
 - Produces pushed implementation branch and verification notes.
 
-- [ ] Run final gates: `pnpm test`, `pnpm typecheck`, `pnpm build`, `pnpm run doctor`, `git diff --check`.
-- [ ] Confirm `docs/v1-test-strategy.md` coverage has no unassigned V1 must-have areas.
-- [ ] Commit coherent implementation changes.
-- [ ] Push `codex/open-feedback-factory-v1`.
-- [ ] If Docker Compose and local URLs are fully verified, report them. If not, leave the goal active with exact remaining blockers.
+- [x] Run final gates for current main: `pnpm test`, `pnpm typecheck`, `pnpm build`, `git diff --check`.
+- [ ] Run `pnpm run doctor` in the current cycle.
+- [x] Confirm `docs/v1-test-strategy.md` coverage has explicit status markers.
+- [x] Commit coherent implementation changes for the current mainline slices.
+- [x] Push current mainline slices.
+- [ ] Verify Docker Compose and local URLs for the current plant-demo cycle; keep remaining blockers explicit until verified.

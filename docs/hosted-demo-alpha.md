@@ -6,6 +6,9 @@ The goal is not multi-user hosted alpha yet. The goal is a polished, truthful,
 repo-connected demo that shows the product loop with controlled internal repos
 and real infrastructure.
 
+See [Implementation Status](implementation-status.md) for the current canonical
+DONE / PARTIAL / NOT-STARTED / DEFERRED map.
+
 ## Demo Surfaces
 
 | Surface | URL | Purpose |
@@ -13,25 +16,34 @@ and real infrastructure.
 | Landing | `https://openfeedbackfactory.com` | Public narrative and entry point |
 | Control center | `https://app.openfeedbackfactory.com/ops/` | Operator view for the lifecycle |
 | API | `https://api.openfeedbackfactory.com` | Feedback, admin, runner, and GitHub APIs |
-| Demo app | `https://launchbrief-demo.vercel.app` | Clean user app with no OFF SDK installed |
-| Demo app repo | `https://github.com/joewilsonai/launchbrief-demo` | Real repo OFF should connect and mutate |
+| Current proof app | `https://launchbrief-demo.vercel.app` | Verified real-SDK proof; not the final demo concept |
+| Current proof app repo | `https://github.com/joewilsonai/launchbrief-demo` | Real repo that currently imports the SDK |
+| Next demo app | TBD plant-care app URL | Clean SDK-less consumer app that stands in for a user's product |
+| Next demo app repo | TBD plant-care repo | Real repo OFF should connect, inspect, and mutate |
 
 ## Important Constraint
 
-LaunchBrief intentionally starts without the Open Feedback Factory SDK.
+The durable demo app must intentionally start without the Open Feedback Factory
+SDK.
 
 That is the demo. OFF should connect to the repo, inspect it, and create a real
 PR that installs the SDK launcher. The demo should not start from an app that is
 already wired to OFF, because that hides the most important onboarding moment.
 
+LaunchBrief has now served as a real-SDK proof, but it is not the final demo
+target. The next demo should be a clean plant-care app: clearly consumer,
+clearly labeled as a sample stand-in for a user's product, and de-emphasized so
+OFF remains the star.
+
 ## Demo Story
 
-1. Open LaunchBrief.
-2. Show it is a normal app: launch tasks, beta signals, no feedback launcher.
+1. Open the clean plant-care sample app.
+2. Show it is a normal consumer app: plant list, watering reminders, plant
+   notes, no OFF feedback launcher.
 3. Open the OFF control center.
-4. Show the hosted demo panel: LaunchBrief app, LaunchBrief repo, SDK missing,
-   GitHub App state, worker state, and next action.
-5. Connect the LaunchBrief repo through the OFF GitHub App.
+4. Show the hosted demo panel: plant app, plant repo, SDK missing, GitHub App
+   state, worker state, and next action.
+5. Connect the plant repo through the OFF GitHub App.
 6. Approve a work item to install the SDK launcher.
 7. OFF creates a sanitized GitHub issue or directly creates a branch/PR,
    depending on the configured lane.
@@ -58,23 +70,34 @@ already wired to OFF, because that hides the most important onboarding moment.
 
 - LaunchBrief repo exists and is private.
 - LaunchBrief production deployment is live on Vercel.
-- LaunchBrief has no OFF SDK dependency, no SDK API calls, and no feedback
-  launcher.
+- LaunchBrief uses the real `@open-feedback-factory/sdk` at runtime and proved
+  the in-app launcher path.
+- LaunchBrief is an interim proof app, not the final demo app.
+- The durable demo needs a new clean plant-care repo that starts SDK-less.
+- Durable SDK installation needs public npm distribution for
+  `@open-feedback-factory/sdk`. The actual publish step is on hold for Joe's
+  explicit go.
 - OFF hosted control center has a Hosted Demo Alpha panel that links to the app
   and repo and derives setup readiness from `/doctor`.
-- Hosted workers remain prepared but disabled until a real runner credential is
-  configured.
+- Hosted Railway workers remain disabled for alpha.
+- The real alpha implementation lane is a local host Codex CLI worker attached
+  to the hosted API. This lets the demo use a developer's signed-in Codex
+  subscription instead of per-token API-key spend.
+- The local worker must receive the hosted `RUNNER_TOKEN` through its ignored
+  environment file before it can claim hosted work items.
 
 ## Definition of Done
 
-- LaunchBrief clean app builds and deploys.
-- LaunchBrief repo is connected to the OFF GitHub App.
-- Control center shows repo/app/setup status without refresh.
-- OFF can create a real sanitized issue for the SDK install request.
-- OFF can run a real worker against the LaunchBrief repo after manual approval.
-- Worker opens a real PR that installs the SDK launcher.
-- PR includes assumptions, checks, and cost evidence.
-- The merged/redeployed app can send real feedback through the installed
-  launcher.
-- Control center shows that feedback as a real routed work item.
-
+| Item | Status | Notes |
+| --- | --- | --- |
+| LaunchBrief real-SDK proof app builds and deploys | Done | Useful proof, but not final demo concept |
+| Control center shows repo/app/setup status without refresh | Needs work | UI exists, but final plant-app setup flow still needs proof |
+| Public SDK package exists for normal installs | Needs work | Prep package; hold publish for Joe |
+| Clean plant-care app repo exists and starts SDK-less | Not started | Next demo target |
+| Plant repo is connected to the OFF GitHub App | Not started | Must verify repo scope before mutation |
+| OFF creates a real sanitized issue or work item for SDK install | Needs work | Existing seams exist; needs plant-app proof |
+| Local host Codex CLI worker can claim hosted work after manual approval | Needs work | Requires hosted `RUNNER_TOKEN` sync and live proof |
+| Worker opens a real PR that installs SDK from npm | Needs work | Blocked on public package publish |
+| PR includes assumptions, checks, and cost evidence | Needs work | Must be proven in plant-app run |
+| Merged/redeployed app sends real feedback through installed launcher | Needs work | LaunchBrief proves runtime path; plant-app flow pending |
+| Control center shows feedback lifecycle as a real routed work item | Needs work | Needs plant-app end-to-end run |

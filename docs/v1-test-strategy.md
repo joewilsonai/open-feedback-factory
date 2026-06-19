@@ -5,6 +5,25 @@ works and the product stays honest when something is missing or blocked. Tests
 must cover happy paths, negative paths, no-fake-demo behavior, safety gates, cost
 capture, release proof, and agent assumptions.
 
+See [Implementation Status](implementation-status.md) for the current canonical
+status map.
+
+## Current Coverage Status
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| Deterministic CI tests | Done | Workspace `pnpm test`, `pnpm typecheck`, and `pnpm build` pass locally and in GitHub CI |
+| Core policy tests | Done | Sanitization, clustering, routing, statuses, assumptions, and auto-merge gates are covered |
+| API tests | Done | SDK intake/status/usage, admin config, runner gates, GitHub seams, release markers, rate limits, and user-safe decisions are covered |
+| Database/RLS tests | Done | Postgres integration tests cover store behavior and workspace RLS when `TEST_DATABASE_URL` is available |
+| SDK tests | Done | Client payload safety, usage events, and launcher contract are covered |
+| Runner/GitHub seam tests | Done | Codex args, JSONL parsing, cost usage, GitHub App token flows, PR evidence, and branch cleanup are covered with seams/mocks |
+| Control-center UI tests | Done for current internal UI | Final plant-app onboarding state still needs tests once implemented |
+| LaunchBrief live proof | Done as interim proof | Proved real SDK runtime path; not the final demo target |
+| Plant-care demo E2E | Not started | Needs clean SDK-less app, OFF SDK-install PR, merge/redeploy, feedback request, implementation PR, release/user status |
+| Public npm SDK install test | Needs work | Must be added before claiming durable package install |
+| Hosted control plane to local worker proof | Needs work | Must prove hosted `RUNNER_TOKEN` sync and real local CLI claim against hosted API |
+
 ## Test Principles
 
 - Test product promises, not only functions.
