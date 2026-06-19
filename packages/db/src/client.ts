@@ -4,6 +4,7 @@ import {
   type FeatureCostEstimate,
   type FeedbackInput,
   type SanitizedFeedback,
+  type UserFeedbackState,
   type UserFeedbackStatus,
   type WorkRoutingDecision,
 } from "@open-feedback-factory/core";
@@ -42,6 +43,18 @@ export interface AgentRunInput {
   runType: string;
   status: string;
   summary: string;
+  workItemId: string;
+}
+
+export interface RunnerJobCompletionInput extends AgentRunInput {
+  status: "blocked" | "failed" | "succeeded";
+}
+
+export interface GithubArtifactInput {
+  artifactNumber?: number;
+  artifactType: "issue" | "pull_request";
+  metadata?: Record<string, unknown>;
+  url: string;
   workItemId: string;
 }
 
@@ -252,6 +265,60 @@ export class OpenFeedbackStore {
     return result.rows[0] ? workItemFromRow(result.rows[0]) : null;
   }
 
+  async claimNextWorkItem(workerName = "worker", workItemId?: string): Promise<WorkItemRow | null> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("begin");
+      const result = await client.query(
+        `with next_work_item as (
+         select id from work_items
+           where status = 'planned'
+             and ($1::text is null or id = $1)
+           order by created_at asc
+           for update skip locked
+           limit 1
+         )
+         update work_items wi
+         set status = 'in_progress',
+             user_status = 'in_progress',
+             updated_at = now()
+         from next_work_item
+         where wi.id = next_work_item.id
+         returning wi.id, wi.cluster_key, wi.title, wi.summary, wi.category, wi.risk_tier,
+                   wi.status, wi.user_status, wi.cost_estimate, wi.should_create_issue,
+                   wi.github_issue_url, wi.github_pr_url, wi.auto_merge_eligible,
+                   wi.created_at, wi.updated_at`,
+        [workItemId ?? null],
+      );
+
+      const row = result.rows[0];
+      if (!row) {
+        await client.query("commit");
+        return null;
+      }
+
+      const workItem = workItemFromRow(row);
+      await upsertClusterUserMessage(client, {
+        clusterKey: workItem.clusterKey,
+        message: "An agent has picked this up and is working on it.",
+        status: "in_progress",
+        workItemId: workItem.id,
+      });
+      await client.query(
+        `insert into audit_events (id, actor, event, target_type, target_id, metadata)
+         values ($1, $2, 'work_item_claimed', 'work_item', $3, $4)`,
+        [`audit_${randomUUID()}`, workerName, workItem.id, JSON.stringify({ workerName })],
+      );
+      await client.query("commit");
+      return workItem;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async recordAgentRun(input: AgentRunInput): Promise<string> {
     const id = `run_${randomUUID()}`;
     await this.pool.query(
@@ -270,6 +337,145 @@ export class OpenFeedbackStore {
       ],
     );
     return id;
+  }
+
+  async completeWorkItemRun(input: RunnerJobCompletionInput): Promise<string> {
+    const client = await this.pool.connect();
+    const runId = `run_${randomUUID()}`;
+    const completion = completionStateForRun(input.status);
+    const githubIssueUrl = stringFromMetadata(input.metadata, "githubIssueUrl");
+    const githubPrUrl = stringFromMetadata(input.metadata, "githubPrUrl");
+
+    try {
+      await client.query("begin");
+      await client.query(
+        `insert into agent_runs
+         (id, work_item_id, run_type, agent_name, status, summary, cost_actual, metadata, completed_at)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, now())`,
+        [
+          runId,
+          input.workItemId,
+          input.runType,
+          input.agentName,
+          input.status,
+          input.summary,
+          JSON.stringify(input.costActual ?? null),
+          JSON.stringify(input.metadata ?? {}),
+        ],
+      );
+
+      if (isActualCost(input.costActual)) {
+        await client.query(
+          `insert into cost_records (id, work_item_id, phase, amount_usd, confidence, model, metadata)
+           values ($1, $2, 'actual', $3, $4, $5, $6)`,
+          [
+            `cost_${randomUUID()}`,
+            input.workItemId,
+            input.costActual.amountUsd,
+            input.costActual.confidence,
+            input.costActual.model,
+            JSON.stringify({ agentRunId: runId }),
+          ],
+        );
+      }
+
+      const workItemResult = await client.query<{ cluster_key: string }>(
+        `update work_items
+         set status = $2,
+             user_status = $3,
+             github_issue_url = coalesce($4, github_issue_url),
+             github_pr_url = coalesce($5, github_pr_url),
+             updated_at = now()
+         where id = $1
+         returning cluster_key`,
+        [input.workItemId, completion.workItemStatus, completion.userStatus, githubIssueUrl, githubPrUrl],
+      );
+
+      const clusterKey = workItemResult.rows[0]?.cluster_key;
+      if (clusterKey) {
+        await upsertClusterUserMessage(client, {
+          clusterKey,
+          message: completion.message,
+          status: completion.userStatus,
+          workItemId: input.workItemId,
+        });
+      }
+
+      await client.query(
+        `insert into audit_events (id, actor, event, target_type, target_id, metadata)
+         values ($1, $2, 'work_item_run_completed', 'work_item', $3, $4)`,
+        [
+          `audit_${randomUUID()}`,
+          input.agentName,
+          input.workItemId,
+          JSON.stringify({
+            runId,
+            status: input.status,
+            workItemStatus: completion.workItemStatus,
+          }),
+        ],
+      );
+      await client.query("commit");
+      return runId;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async recordGithubArtifact(input: GithubArtifactInput): Promise<string> {
+    const id = `gh_${randomUUID()}`;
+    const client = await this.pool.connect();
+    try {
+      await client.query("begin");
+      await client.query(
+        `insert into github_artifacts (id, work_item_id, artifact_type, url, artifact_number, metadata)
+         values ($1, $2, $3, $4, $5, $6)`,
+        [
+          id,
+          input.workItemId,
+          input.artifactType,
+          input.url,
+          input.artifactNumber ?? null,
+          JSON.stringify(input.metadata ?? {}),
+        ],
+      );
+
+      if (input.artifactType === "issue") {
+        await client.query(
+          `update work_items set github_issue_url = $2, updated_at = now() where id = $1`,
+          [input.workItemId, input.url],
+        );
+      } else {
+        await client.query(
+          `update work_items set github_pr_url = $2, updated_at = now() where id = $1`,
+          [input.workItemId, input.url],
+        );
+      }
+
+      await client.query(
+        `insert into audit_events (id, actor, event, target_type, target_id, metadata)
+         values ($1, 'github', 'github_artifact_recorded', 'work_item', $2, $3)`,
+        [
+          `audit_${randomUUID()}`,
+          input.workItemId,
+          JSON.stringify({
+            artifactId: id,
+            artifactType: input.artifactType,
+            url: input.url,
+          }),
+        ],
+      );
+      await client.query("commit");
+      return id;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async markWorkItemReleased(workItemId: string, message = "This request has shipped."): Promise<void> {
@@ -336,7 +542,7 @@ export class OpenFeedbackStore {
       }>(
         `select
           (select count(*) from feedback_signals)::text as feedback_signals,
-          (select count(*) from work_items where status not in ('shipped', 'closed'))::text as open_work_items,
+          (select count(*) from work_items where status not in ('shipped', 'closed', 'not_planned', 'blocked', 'failed'))::text as open_work_items,
           (select count(*) from agent_runs)::text as agent_runs,
           (select count(*) from feature_usage_events)::text as feature_usage_events`,
       ),
@@ -389,4 +595,71 @@ function workItemFromRow(row: Record<string, unknown>): WorkItemRow {
     updatedAt: (row.updated_at as Date).toISOString(),
     userStatus: String(row.user_status),
   };
+}
+
+async function upsertClusterUserMessage(
+  client: pg.PoolClient,
+  input: {
+    clusterKey: string;
+    message: string;
+    status: UserFeedbackState;
+    workItemId: string;
+  },
+): Promise<void> {
+  await client.query(
+    `update feedback_signals
+     set status = $2, user_message = $3, updated_at = now()
+     where cluster_key = $1`,
+    [input.clusterKey, input.status, input.message],
+  );
+  await client.query(
+    `insert into user_notifications (id, feedback_id, work_item_id, status, message)
+     select $1 || '_' || fs.id, fs.id, $2, $3, $4
+     from feedback_signals fs
+     where fs.cluster_key = $5`,
+    [`note_${randomUUID()}`, input.workItemId, input.status, input.message, input.clusterKey],
+  );
+}
+
+function completionStateForRun(status: RunnerJobCompletionInput["status"]): {
+  message: string;
+  userStatus: UserFeedbackState;
+  workItemStatus: string;
+} {
+  if (status === "succeeded") {
+    return {
+      message: "An agent implemented this and it is waiting for review or release.",
+      userStatus: "in_progress",
+      workItemStatus: "implemented",
+    };
+  }
+  if (status === "blocked") {
+    return {
+      message: "We reviewed this, but it is blocked and will not ship without human intervention.",
+      userStatus: "blocked",
+      workItemStatus: "blocked",
+    };
+  }
+  return {
+    message: "An agent tried this, but it failed and needs human review before it can ship.",
+    userStatus: "blocked",
+    workItemStatus: "failed",
+  };
+}
+
+function isActualCost(value: Record<string, unknown> | undefined): value is {
+  amountUsd: number;
+  confidence: "high" | "medium" | "low";
+  model: string;
+} {
+  return (
+    typeof value?.amountUsd === "number" &&
+    (value.confidence === "high" || value.confidence === "medium" || value.confidence === "low") &&
+    typeof value.model === "string"
+  );
+}
+
+function stringFromMetadata(metadata: Record<string, unknown> | undefined, key: string): string | null {
+  const value = metadata?.[key];
+  return typeof value === "string" && value.length > 0 ? value : null;
 }

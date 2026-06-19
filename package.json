@@ -8,7 +8,7 @@
     "build": "pnpm -r --if-present build",
     "db:migrate": "pnpm --filter @open-feedback-factory/db migrate",
     "demo:seed": "node scripts/demo-seed.mjs",
-    "dev": "pnpm --parallel --filter @open-feedback-factory/api --filter @open-feedback-factory/control-center --filter @open-feedback-factory/demo-app dev",
+    "dev": "pnpm --parallel --filter @open-feedback-factory/api --filter @open-feedback-factory/worker --filter @open-feedback-factory/control-center --filter @open-feedback-factory/demo-app dev",
     "docker:up": "docker compose up --build",
     "doctor": "node scripts/doctor.mjs",
     "render:prd": "node scripts/render-prd-html.mjs",

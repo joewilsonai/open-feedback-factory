@@ -1,0 +1,19 @@
+{
+  "name": "@open-feedback-factory/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/worker.js",
+  "types": "dist/worker.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/worker.ts",
+    "start": "node dist/worker.js",
+    "test": "node --import tsx --test src/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@open-feedback-factory/db": "workspace:*",
+    "@open-feedback-factory/runner": "workspace:*"
+  }
+}

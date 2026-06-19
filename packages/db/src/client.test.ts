@@ -12,14 +12,15 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
   const store = new OpenFeedbackStore(databaseUrl);
 
   try {
+    const uniqueSuffix = Date.now().toString(36);
     const feedback = {
-      message: "Please add dark mode to settings",
+      message: `Please add a dashboard focus meter ${uniqueSuffix}`,
       metadata: { route: "/settings", surface: "settings" },
       source: "test",
       userId: "user-1",
     };
     const sanitized = sanitizeFeedback(feedback);
-    const decision = routeFeedback({ sanitized });
+    const decision = routeFeedback({ sanitized, signalCount: 2 });
     const intake = await store.createFeedbackIntake({ decision, feedback, sanitized });
 
     assert.match(intake.feedbackId, /^feedback_/);
@@ -40,6 +41,27 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(snapshot.counts.feedbackSignals > 0, true);
     assert.equal(snapshot.counts.featureUsageEvents > 0, true);
     assert.equal(snapshot.workItems.length > 0, true);
+
+    const claimed = await store.claimNextWorkItem("db-test-worker", intake.workItemId ?? undefined);
+    assert.equal(claimed?.id, intake.workItemId);
+    assert.equal(claimed?.status, "in_progress");
+
+    const runId = await store.completeWorkItemRun({
+      agentName: "db-test-worker",
+      costActual: { amountUsd: 1.25, confidence: "low", model: "gpt-5.5" },
+      metadata: { changedFiles: ["apps/demo-app/src/styles.css"] },
+      runType: "implementation",
+      status: "succeeded",
+      summary: "Implemented by the DB integration test.",
+      workItemId: claimed?.id ?? "",
+    });
+    assert.match(runId, /^run_/);
+
+    const completed = await store.getWorkItem(claimed?.id ?? "");
+    assert.equal(completed?.status, "implemented");
+
+    const progressedStatus = await store.getUserFeedbackStatus(intake.feedbackId);
+    assert.equal(progressedStatus?.state, "in_progress");
   } finally {
     await store.close();
   }

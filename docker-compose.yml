@@ -28,6 +28,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:4100/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
     environment:
       API_HOST: 0.0.0.0
       API_PORT: ${API_PORT:-4100}
@@ -57,10 +66,19 @@ services:
     command: >
       sh -lc "npm install -g pnpm@10.28.1 &&
       pnpm install --frozen-lockfile=false &&
-      node -e \"console.log('Open Feedback Factory worker container ready; API owns V1 job execution.'); setInterval(() => {}, 3600000)\""
+      pnpm --filter @open-feedback-factory/worker dev"
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
+    environment:
+      API_BASE_URL: ${WORKER_API_BASE_URL:-http://api:4100}
+      CODEX_CLI: ${CODEX_CLI:-codex}
+      CODEX_EFFORT: ${CODEX_EFFORT:-extra-high}
+      CODEX_MODEL: ${CODEX_MODEL:-gpt-5.5}
+      CODEX_RUNNER_MODE: ${CODEX_RUNNER_MODE:-demo}
+      RUNNER_WORKSPACE: ${RUNNER_WORKSPACE:-/workspace}
+      WORKER_NAME: ${WORKER_NAME:-docker-worker}
+      WORKER_POLL_INTERVAL_MS: ${WORKER_POLL_INTERVAL_MS:-5000}
     volumes:
       - .:/workspace
       - worker-node-modules:/workspace/node_modules
@@ -75,7 +93,7 @@ services:
       pnpm --filter @open-feedback-factory/control-center dev --host 0.0.0.0"
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4100}
     ports:
@@ -94,7 +112,7 @@ services:
       pnpm --filter @open-feedback-factory/demo-app dev --host 0.0.0.0"
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4100}
     ports:

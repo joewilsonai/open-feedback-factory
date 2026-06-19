@@ -10,10 +10,12 @@ describe("control center UI contract", () => {
     expect(source).toContain("Agent runs");
     expect(source).toContain("Feature usage");
     expect(source).toContain("Cost");
+    expect(source).toContain("Auto-merge");
   });
 
-  it("can trigger run and release actions", () => {
+  it("can trigger run, auto-merge, and release actions", () => {
     expect(source).toContain("/run");
+    expect(source).toContain("/automerge");
     expect(source).toContain("/release");
   });
 });

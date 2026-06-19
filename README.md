@@ -49,6 +49,16 @@ cp .env.example .env
 pnpm docker:up
 ```
 
+Seed the local loop after the stack is up:
+
+```bash
+pnpm demo:seed
+```
+
+The Docker stack starts Postgres, the API, the worker, the control center, and
+the toy app. The worker polls `/runner/jobs/claim`, runs the configured runner,
+and posts results back to `/runner/jobs/:id/complete`.
+
 Safety defaults:
 
 - real auto-merge is disabled by default;
@@ -56,6 +66,37 @@ Safety defaults:
 - runner mode defaults to deterministic demo mode;
 - Codex CLI mode uses the local Codex subscription/auth path instead of an
   OpenAI API key.
+
+## Runner Modes
+
+`CODEX_RUNNER_MODE=demo` is the default. It produces deterministic agent runs,
+actual-cost records, and user follow-up statuses without changing GitHub.
+
+`CODEX_RUNNER_MODE=codex` uses `codex exec --json` through the local Codex CLI
+auth/subscription path. For local dogfood, run the worker on the host with
+`pnpm --filter @open-feedback-factory/worker dev` so it can use your installed
+Codex CLI.
+
+## GitHub Modes
+
+`GITHUB_MODE=disabled` is the default.
+
+`GITHUB_MODE=gh` enables internal dogfood mutations through the GitHub CLI. In
+that mode, newly accepted sanitized feedback can create a GitHub issue and store
+the URL on the work item. Safe auto-merge still requires every gate to pass:
+safe risk tier, trusted branch, reviewer approval, passing checks, release
+health, cost cap, allowed paths, and an attached PR URL.
+
+`GITHUB_MODE=app` is reserved for the installable GitHub App path. The API
+already exposes `/github/app/manifest` and `/github/webhook` as the V1
+integration seam.
+
+## CI And Safe Merge
+
+The default GitHub Actions workflow runs tests, typecheck, build, and the
+Postgres-backed DB integration test on pull requests. Safe auto-merge depends
+on that check lane plus the Open Feedback Factory policy gates; it is disabled
+until `AUTO_MERGE_ENABLED=true` and GitHub mutation mode are explicitly set.
 
 ## Docs
 

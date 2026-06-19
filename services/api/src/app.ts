@@ -19,6 +19,16 @@ export interface AppStore {
     status: UserFeedbackStatus;
     workItemId: string | null;
   }>;
+  claimNextWorkItem(workerName?: string, workItemId?: string): Promise<WorkItemRow | null>;
+  completeWorkItemRun(input: {
+    agentName: string;
+    costActual?: Record<string, unknown>;
+    metadata?: Record<string, unknown>;
+    runType: string;
+    status: "blocked" | "failed" | "succeeded";
+    summary: string;
+    workItemId: string;
+  }): Promise<string>;
   getControlRoomSnapshot(): Promise<ControlRoomSnapshot>;
   getUserFeedbackStatus(feedbackId: string): Promise<UserFeedbackStatus | null>;
   getWorkItem(id: string): Promise<WorkItemRow | null>;
@@ -38,6 +48,13 @@ export interface AppStore {
     featureId: string;
     metadata?: Record<string, unknown>;
     userId?: string;
+  }): Promise<string>;
+  recordGithubArtifact(input: {
+    artifactNumber?: number;
+    artifactType: "issue" | "pull_request";
+    metadata?: Record<string, unknown>;
+    url: string;
+    workItemId: string;
   }): Promise<string>;
 }
 

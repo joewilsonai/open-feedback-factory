@@ -1,4 +1,5 @@
 import { routeFeedback, sanitizeFeedback, type FeedbackInput } from "@open-feedback-factory/core";
+import { GitHubClient } from "@open-feedback-factory/runner";
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
 
@@ -35,8 +36,35 @@ export async function registerSdkRoutes(app: FastifyInstance, deps: AppDeps): Pr
       sanitized,
     });
     const intake = await deps.store.createFeedbackIntake({ decision, feedback, sanitized });
+    let githubIssueError: string | null = null;
+    let githubIssueUrl: string | null = null;
+    if (intake.workItemId && deps.config.githubMode === "gh" && decision.shouldCreateIssue) {
+      try {
+        githubIssueUrl = await createSanitizedGithubIssue(deps, {
+          category: decision.category,
+          clusterKey: decision.clusterKey,
+          summary: sanitized.sanitizedMessage,
+          title: decision.title,
+          riskTier: decision.riskTier,
+          workItemId: intake.workItemId,
+        });
+      } catch (error) {
+        githubIssueError = error instanceof Error ? error.message : String(error);
+        await deps.store.recordAgentRun({
+          agentName: "github-issue-writer",
+          metadata: {
+            error: githubIssueError,
+            mode: deps.config.githubMode,
+          },
+          runType: "github_issue",
+          status: "failed",
+          summary: "GitHub issue creation failed after feedback intake.",
+          workItemId: intake.workItemId,
+        });
+      }
+    }
 
-    return reply.code(201).send(intake);
+    return reply.code(201).send({ ...intake, githubIssueError, githubIssueUrl });
   });
 
   app.get<{ Params: { id: string } }>("/sdk/feedback/:id/status", async (request, reply) => {
@@ -62,4 +90,53 @@ export async function registerSdkRoutes(app: FastifyInstance, deps: AppDeps): Pr
       return reply.code(201).send({ usageId });
     },
   );
+}
+
+async function createSanitizedGithubIssue(
+  deps: AppDeps,
+  input: {
+    category: string;
+    clusterKey: string;
+    riskTier: string;
+    summary: string;
+    title: string;
+    workItemId: string;
+  },
+): Promise<string | null> {
+  const github = new GitHubClient({ cwd: deps.config.runnerWorkspace });
+  const url = await github.createIssue({
+    body: [
+      "## Sanitized Feedback",
+      "",
+      input.summary,
+      "",
+      "## Routing",
+      "",
+      `- Work item: ${input.workItemId}`,
+      `- Cluster: ${input.clusterKey}`,
+      `- Category: ${input.category}`,
+      `- Risk tier: ${input.riskTier}`,
+      "",
+      "Raw user feedback stays in the Open Feedback Factory database and is not posted to GitHub.",
+    ].join("\n"),
+    labels: ["enhancement"],
+    title: input.title,
+  });
+  await deps.store.recordGithubArtifact({
+    artifactNumber: githubNumberFromUrl(url),
+    artifactType: "issue",
+    metadata: {
+      clusterKey: input.clusterKey,
+      riskTier: input.riskTier,
+    },
+    url,
+    workItemId: input.workItemId,
+  });
+  return url;
+}
+
+function githubNumberFromUrl(url: string): number | undefined {
+  const lastSegment = url.split("/").filter(Boolean).at(-1);
+  const number = Number(lastSegment);
+  return Number.isInteger(number) ? number : undefined;
 }

@@ -99,6 +99,9 @@ importers:
       '@open-feedback-factory/core':
         specifier: workspace:*
         version: link:../core
+      '@open-feedback-factory/db':
+        specifier: workspace:*
+        version: link:../db
 
   packages/sdk:
     dependencies:
@@ -123,6 +126,15 @@ importers:
       fastify:
         specifier: ^5.6.2
         version: 5.8.5
+
+  services/worker:
+    dependencies:
+      '@open-feedback-factory/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@open-feedback-factory/runner':
+        specifier: workspace:*
+        version: link:../../packages/runner
 
 packages:
 

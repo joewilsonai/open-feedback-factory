@@ -17,12 +17,15 @@ interface Snapshot {
 }
 
 interface WorkItem {
+  autoMergeEligible: boolean;
   category: string;
   costEstimate: {
     amountUsd: number;
     confidence: string;
     model: string;
   };
+  githubIssueUrl: string | null;
+  githubPrUrl: string | null;
   id: string;
   riskTier: string;
   status: string;
@@ -74,6 +77,31 @@ export function App() {
       headers: { "content-type": "application/json" },
       method: "POST",
     });
+    await refresh();
+  }
+
+  async function attemptAutoMerge(id: string) {
+    setStatus("Checking safe auto-merge gates");
+    const response = await fetch(`${apiBaseUrl}/admin/work-items/${id}/automerge`, {
+      body: JSON.stringify({
+        branchTrusted: true,
+        changedFiles: ["apps/demo-app/src/styles.css"],
+        checksPassed: true,
+        costActualUsd: selected?.costEstimate.amountUsd ?? 0,
+        diffLineCount: 40,
+        redactionWarnings: 0,
+        releaseHealthy: true,
+        reviewerApproved: true,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const body = await response.json();
+    setStatus(
+      response.ok
+        ? "Auto-merge queued"
+        : `Auto-merge blocked: ${String(body.evaluation?.reasons?.join(", ") ?? "guardrail")}`,
+    );
     await refresh();
   }
 
@@ -138,13 +166,21 @@ export function App() {
                 <Detail label="State" value={selected.status} />
                 <Detail label="User status" value={selected.userStatus} />
                 <Detail label="Risk" value={selected.riskTier} />
+                <Detail label="Auto-merge" value={selected.autoMergeEligible ? "Eligible" : "Guarded"} />
                 <Detail label="Cost" value={`$${selected.costEstimate.amountUsd.toFixed(2)} est.`} />
                 <Detail label="Model" value={selected.costEstimate.model} />
                 <Detail label="Category" value={selected.category} />
               </dl>
+              <div className="artifact-row">
+                {selected.githubIssueUrl ? <a href={selected.githubIssueUrl}>GitHub issue</a> : <span>No issue yet</span>}
+                {selected.githubPrUrl ? <a href={selected.githubPrUrl}>Pull request</a> : <span>No PR yet</span>}
+              </div>
               <div className="action-row">
                 <button type="button" onClick={() => runWorkItem(selected.id)}>
                   Run agent lane
+                </button>
+                <button type="button" onClick={() => attemptAutoMerge(selected.id)}>
+                  Check auto-merge
                 </button>
                 <button type="button" onClick={() => releaseWorkItem(selected.id)}>
                   Mark shipped

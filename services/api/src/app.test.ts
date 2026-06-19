@@ -75,6 +75,23 @@ class MemoryStore implements AppStore {
     };
   }
 
+  async claimNextWorkItem() {
+    const item = this.workItems.find((workItem) => workItem.status === "planned");
+    if (!item) return null;
+    item.status = "in_progress";
+    item.userStatus = "in_progress";
+    return item;
+  }
+
+  async completeWorkItemRun(input: Parameters<AppStore["completeWorkItemRun"]>[0]) {
+    const item = this.workItems.find((workItem) => workItem.id === input.workItemId);
+    if (item) {
+      item.status = input.status === "succeeded" ? "implemented" : input.status;
+      item.userStatus = input.status === "succeeded" ? "in_progress" : "blocked";
+    }
+    return "run_1";
+  }
+
   async getUserFeedbackStatus(feedbackId: string) {
     return this.feedbackStatuses.get(feedbackId) ?? null;
   }
@@ -96,6 +113,13 @@ class MemoryStore implements AppStore {
   async recordFeatureUsage() {
     this.usageCount += 1;
     return `usage_${this.usageCount}`;
+  }
+
+  async recordGithubArtifact(input: Parameters<AppStore["recordGithubArtifact"]>[0]) {
+    const item = this.workItems.find((workItem) => workItem.id === input.workItemId);
+    if (item && input.artifactType === "issue") item.githubIssueUrl = input.url;
+    if (item && input.artifactType === "pull_request") item.githubPrUrl = input.url;
+    return "gh_1";
   }
 }
 
@@ -145,6 +169,82 @@ test("API exposes GitHub App manifest seam", async () => {
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().default_permissions.pull_requests, "write");
+
+  await app.close();
+});
+
+test("runner claims planned work and completes it with actual cost", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  const feedback = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add dark mode to settings",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+  const workItemId = feedback.json().workItemId;
+
+  const claim = await app.inject({
+    method: "POST",
+    payload: { workerName: "worker-test" },
+    url: "/runner/jobs/claim",
+  });
+  assert.equal(claim.statusCode, 200);
+  assert.equal(claim.json().job.id, workItemId);
+  assert.equal(claim.json().job.status, "in_progress");
+
+  const complete = await app.inject({
+    method: "POST",
+    payload: {
+      agentName: "worker-test",
+      costActual: { amountUsd: 1.25, confidence: "low", model: "gpt-5.5" },
+      status: "succeeded",
+      summary: "Implemented by worker.",
+    },
+    url: `/runner/jobs/${workItemId}/complete`,
+  });
+  assert.equal(complete.statusCode, 200);
+  assert.equal(complete.json().runId, "run_1");
+  assert.equal(store.workItems[0]?.status, "implemented");
+
+  await app.close();
+});
+
+test("safe auto-merge endpoint is blocked by default guardrails", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  const feedback = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add dark mode to settings",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+  const workItemId = feedback.json().workItemId;
+
+  const response = await app.inject({
+    method: "POST",
+    payload: {
+      branchTrusted: true,
+      changedFiles: ["apps/demo-app/src/styles.css"],
+      checksPassed: true,
+      costActualUsd: 1.25,
+      diffLineCount: 40,
+      redactionWarnings: 0,
+      releaseHealthy: true,
+      reviewerApproved: true,
+    },
+    url: `/admin/work-items/${workItemId}/automerge`,
+  });
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(response.json().evaluation.reasons.includes("auto_merge_disabled"), true);
+  assert.equal(response.json().evaluation.reasons.includes("missing_pr_url"), true);
 
   await app.close();
 });

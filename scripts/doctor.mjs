@@ -31,6 +31,26 @@ checks.push({
   detail: env.AUTO_MERGE_ENABLED === "true" ? "enabled" : "disabled",
 });
 
+checks.push({
+  label: "Runner mode",
+  ok: ["codex", "demo"].includes(env.CODEX_RUNNER_MODE ?? "demo"),
+  detail: env.CODEX_RUNNER_MODE ?? "demo",
+});
+
+checks.push({
+  label: "Worker poll interval",
+  ok: Number(env.WORKER_POLL_INTERVAL_MS ?? 5000) > 0,
+  detail: `${env.WORKER_POLL_INTERVAL_MS ?? 5000}ms`,
+});
+
+checks.push({
+  label: "GitHub mode",
+  ok: ["app", "disabled", "gh"].includes(env.GITHUB_MODE ?? "disabled"),
+  detail: env.GITHUB_MODE ?? "disabled",
+});
+
+checks.push(await optionalHttpCheck(`http://localhost:${env.API_PORT ?? 4100}/doctor`, "API /doctor"));
+
 for (const check of checks) {
   const mark = check.ok ? "✓" : "✗";
   console.log(`${mark} ${check.label}: ${check.detail}`);
@@ -78,6 +98,19 @@ async function portCheck(port, label) {
     });
     server.listen(port, "127.0.0.1");
   });
+}
+
+async function optionalHttpCheck(url, label) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      return { detail: `${response.status} from ${url}`, label, ok: false };
+    }
+    const body = await response.json();
+    return { detail: `${body.api ?? "ok"} (${body.codexRunnerMode ?? "unknown"} mode)`, label, ok: true };
+  } catch {
+    return { detail: "not running; start Docker or pnpm dev to verify runtime", label, ok: true };
+  }
 }
 
 function loadEnv(...paths) {
