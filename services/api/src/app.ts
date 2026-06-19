@@ -1,6 +1,6 @@
 import cors from "@fastify/cors";
 import { type AgentAssumptionRecord, type FeedbackInput, type UserFeedbackStatus } from "@open-feedback-factory/core";
-import type { ControlRoomSnapshot, WorkItemRow } from "@open-feedback-factory/db";
+import type { ControlRoomSnapshot, ReconciliationResult, WorkItemRow } from "@open-feedback-factory/db";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { ApiConfig } from "./config.js";
 import { registerAdminRoutes } from "./routes/admin.js";
@@ -38,6 +38,7 @@ export interface AppStore {
   getWorkItem(id: string): Promise<WorkItemRow | null>;
   listWorkItems(): Promise<WorkItemRow[]>;
   markWorkItemReleased(workItemId: string, message?: string): Promise<void>;
+  reconcileWorkItems(input?: { actor?: string; staleAfterMinutes?: number }): Promise<ReconciliationResult>;
   recordAgentRun(input: {
     agentName: string;
     assumptions?: AgentAssumptionRecord[];

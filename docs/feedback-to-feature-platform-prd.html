@@ -845,6 +845,7 @@
 <li>Release tracking watches for deployment or TestFlight availability.</li>
 <li>The original users are notified with a clear outcome.</li>
 </ol>
+<p>Implementation or merge is not the same as shipped. V1 should require an explicit release marker before user-facing status becomes shipped, and it should refuse release markers for work that has not reached an implemented state.</p>
 <h2 id="8-v1-product-surface"><a class="heading-anchor" href="#8-v1-product-surface" aria-label="Link to 8. V1 Product Surface">#</a>8. V1 Product Surface</h2>
 <h3 id="8-1-sdk"><a class="heading-anchor" href="#8-1-sdk" aria-label="Link to 8.1 SDK">#</a>8.1 SDK</h3>
 <p>Small SDKs for web and mobile apps.</p>
@@ -923,6 +924,8 @@ trackFeatureOutcome({
 <li>feature usage and impact attribution;</li>
 <li>decisions not to build;</li>
 <li>guardrail and cost-control configuration;</li>
+<li>latest actual cost and token evidence after runner completion;</li>
+<li>reconciliation actions for stale in-progress work and missing release proof;</li>
 <li>reconsideration candidates;</li>
 <li>user follow-up status.</li>
 </ul>
@@ -966,6 +969,7 @@ trackFeatureOutcome({
 <li>never merge unless gates allow it;</li>
 <li>clean up temporary workspace state.</li>
 </ul>
+<p>V1 should include an operator-triggered reconciliation pass that requeues stale in-progress work and reports implemented items still waiting for release proof. This is not a full production scheduler yet; it is the minimum honest recovery lane for local dogfood and demos.</p>
 <h3 id="8-6-review-gates"><a class="heading-anchor" href="#8-6-review-gates" aria-label="Link to 8.6 Review Gates">#</a>8.6 Review Gates</h3>
 <p>V1 risk tiers:</p>
 <ul>

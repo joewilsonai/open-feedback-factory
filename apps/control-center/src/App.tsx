@@ -28,6 +28,12 @@ interface WorkItem {
   githubIssueUrl: string | null;
   githubPrUrl: string | null;
   id: string;
+  latestActualCost: {
+    amountUsd?: number;
+    confidence?: string;
+    model?: string;
+    tokens?: number;
+  } | null;
   riskTier: string;
   status: string;
   summary: string;
@@ -199,12 +205,38 @@ export function App() {
 
   async function releaseWorkItem(id: string) {
     setStatus("Marking shipped");
-    await fetch(`${apiBaseUrl}/admin/work-items/${id}/release`, {
+    const response = await fetch(`${apiBaseUrl}/admin/work-items/${id}/release`, {
       body: JSON.stringify({ message: "This request has shipped." }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
+    const body = await response.json().catch(() => ({}));
     await refresh();
+    setStatus(response.ok ? "Marked shipped" : `Release blocked: ${String(body.error ?? "not ready")}`);
+  }
+
+  async function runReconciliation() {
+    setStatus("Running reconciliation");
+    const response = await fetch(`${apiBaseUrl}/admin/reconciliation/run`, {
+      body: JSON.stringify({ staleAfterMinutes: 60 }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const body = await response.json().catch(() => ({}));
+    await refresh();
+    const result = body.result as
+      | {
+          implementedAwaitingReleaseIds?: string[];
+          staleInProgressRequeuedIds?: string[];
+        }
+      | undefined;
+    setStatus(
+      response.ok
+        ? `Reconciled: ${result?.staleInProgressRequeuedIds?.length ?? 0} requeued, ${
+            result?.implementedAwaitingReleaseIds?.length ?? 0
+          } waiting release`
+        : `Reconciliation blocked: ${String(body.error ?? "not run")}`,
+    );
   }
 
   async function attemptAutoMerge(id: string) {
@@ -214,7 +246,7 @@ export function App() {
         branchTrusted: true,
         changedFiles: ["apps/demo-app/src/styles.css"],
         checksPassed: true,
-        costActualUsd: selected?.costEstimate.amountUsd ?? 0,
+        costActualUsd: selected?.latestActualCost?.amountUsd ?? selected?.costEstimate.amountUsd ?? 0,
         diffLineCount: 40,
         redactionWarnings: 0,
         releaseHealthy: true,
@@ -297,7 +329,8 @@ export function App() {
                 <Detail label="User status" value={userStatusLabel(selected.userStatus)} />
                 <Detail label="Risk" value={riskTierLabel(selected.riskTier)} />
                 <Detail label="Auto-merge" value={selected.autoMergeEligible ? "Eligible" : "Guarded"} />
-                <Detail label="Cost" value={`$${selected.costEstimate.amountUsd.toFixed(2)} est.`} />
+                <Detail label="Cost estimate" value={`$${selected.costEstimate.amountUsd.toFixed(2)}`} />
+                <Detail label="Actual cost" value={actualCostLabel(selected)} />
                 <Detail label="Model" value={selected.costEstimate.model} />
                 <Detail label="Category" value={selected.category} />
               </dl>
@@ -340,6 +373,7 @@ export function App() {
         <SetupWizard doctor={doctor} />
         <ActivityPanel title="Recent feedback" rows={snapshot.recentFeedback} />
         <SetupPanel doctor={doctor} />
+        <ReconciliationPanel onRun={runReconciliation} />
         <AssumptionsPanel rows={snapshot.recentAssumptions} />
         <ActivityPanel title="Agent runs" rows={snapshot.recentAgentRuns} />
         <ActivityPanel title="Feature usage" rows={snapshot.recentUsage} />
@@ -600,6 +634,22 @@ function SetupPanel(props: { doctor: Doctor | null }) {
   );
 }
 
+function ReconciliationPanel(props: { onRun: () => void }) {
+  return (
+    <div className="panel reconciliation-panel">
+      <div className="panel-heading">
+        <p className="eyebrow">Recovery</p>
+        <h2>Reconciliation</h2>
+      </div>
+      <div className="reconciliation-actions">
+        <button type="button" onClick={props.onRun}>
+          Run reconciliation
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AssumptionList(props: { assumptions: AgentAssumption[] }) {
   if (!props.assumptions.length) {
     return <p className="assumption-note">No unresolved agent assumptions on this work item.</p>;
@@ -750,6 +800,14 @@ function runButtonLabel(doctor: Doctor | null): string {
 
 function credentialsReady(doctor: Doctor): boolean {
   return doctor.codexAuthMode === "cli" || (doctor.codexAuthMode === "api_key" && doctor.codexApiKeyConfigured);
+}
+
+function actualCostLabel(item: WorkItem): string {
+  const actual = item.latestActualCost;
+  if (!actual || typeof actual.amountUsd !== "number") return "Waiting";
+  const confidence = actual.confidence ? ` ${actual.confidence}` : "";
+  const tokens = typeof actual.tokens === "number" ? ` / ${actual.tokens} tokens` : "";
+  return `$${actual.amountUsd.toFixed(4)}${confidence}${tokens}`;
 }
 
 function titleCase(value: string): string {

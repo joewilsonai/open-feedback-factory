@@ -124,11 +124,32 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
     async (request, reply) => {
       const workItem = await deps.store.getWorkItem(request.params.id);
       if (!workItem) return reply.code(404).send({ error: "work item not found" });
+      if (workItem.status !== "implemented" && workItem.status !== "shipped") {
+        return reply.code(409).send({
+          error: "release marker requires implemented work",
+          status: "blocked",
+          workItemStatus: workItem.status,
+        });
+      }
 
       await deps.store.markWorkItemReleased(request.params.id, request.body.message);
       return reply.code(202).send({ status: "shipped" });
     },
   );
+
+  app.post<{ Body: { staleAfterMinutes?: unknown } }>("/admin/reconciliation/run", async (request, reply) => {
+    const staleAfterMinutes =
+      typeof request.body?.staleAfterMinutes === "number" ? Math.floor(request.body.staleAfterMinutes) : 60;
+    if (staleAfterMinutes < 1 || staleAfterMinutes > 10_080) {
+      return reply.code(400).send({ error: "staleAfterMinutes must be between 1 and 10080" });
+    }
+
+    const result = await deps.store.reconcileWorkItems({
+      actor: "control-center",
+      staleAfterMinutes,
+    });
+    return { result, status: "reconciled" };
+  });
 
   app.post<{
     Body: {

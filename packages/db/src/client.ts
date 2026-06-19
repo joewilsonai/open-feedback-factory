@@ -30,6 +30,7 @@ export interface WorkItemRow {
   status: string;
   userStatus: string;
   costEstimate: FeatureCostEstimate;
+  latestActualCost: Record<string, unknown> | null;
   shouldCreateIssue: boolean;
   unresolvedAssumptions: AgentAssumptionRecord[];
   githubIssueUrl: string | null;
@@ -74,6 +75,12 @@ export interface ControlRoomSnapshot {
   recentFeedback: Array<Record<string, unknown>>;
   recentUsage: Array<Record<string, unknown>>;
   workItems: WorkItemRow[];
+}
+
+export interface ReconciliationResult {
+  failedWithoutPrIds: string[];
+  implementedAwaitingReleaseIds: string[];
+  staleInProgressRequeuedIds: string[];
 }
 
 export type ApprovalMode = "auto" | "manual";
@@ -254,6 +261,15 @@ export class OpenFeedbackStore {
       `select wi.id, wi.cluster_key, wi.title, wi.summary, wi.category, wi.risk_tier, wi.status, wi.user_status,
               wi.cost_estimate, wi.should_create_issue, wi.github_issue_url, wi.github_pr_url,
               wi.auto_merge_eligible, wi.created_at, wi.updated_at,
+              (
+                select ar.cost_actual
+                from agent_runs ar
+                where ar.work_item_id = wi.id
+                  and ar.cost_actual is not null
+                  and ar.cost_actual <> 'null'::jsonb
+                order by coalesce(ar.completed_at, ar.created_at) desc
+                limit 1
+              ) as latest_actual_cost,
               coalesce(
                 (
                   select jsonb_agg(assumption_record_json(aa) order by aa.created_at desc)
@@ -274,6 +290,15 @@ export class OpenFeedbackStore {
       `select wi.id, wi.cluster_key, wi.title, wi.summary, wi.category, wi.risk_tier, wi.status, wi.user_status,
               wi.cost_estimate, wi.should_create_issue, wi.github_issue_url, wi.github_pr_url,
               wi.auto_merge_eligible, wi.created_at, wi.updated_at,
+              (
+                select ar.cost_actual
+                from agent_runs ar
+                where ar.work_item_id = wi.id
+                  and ar.cost_actual is not null
+                  and ar.cost_actual <> 'null'::jsonb
+                order by coalesce(ar.completed_at, ar.created_at) desc
+                limit 1
+              ) as latest_actual_cost,
               coalesce(
                 (
                   select jsonb_agg(assumption_record_json(aa) order by aa.created_at desc)
@@ -311,6 +336,7 @@ export class OpenFeedbackStore {
          returning wi.id, wi.cluster_key, wi.title, wi.summary, wi.category, wi.risk_tier,
                    wi.status, wi.user_status, wi.cost_estimate, wi.should_create_issue,
                    wi.github_issue_url, wi.github_pr_url, wi.auto_merge_eligible,
+                   null::jsonb as latest_actual_cost,
                    wi.created_at, wi.updated_at`,
         [workItemId ?? null],
       );
@@ -575,6 +601,75 @@ export class OpenFeedbackStore {
     }
   }
 
+  async reconcileWorkItems(input: {
+    actor?: string;
+    staleAfterMinutes?: number;
+  } = {}): Promise<ReconciliationResult> {
+    const staleAfterMinutes = Math.max(1, Math.floor(input.staleAfterMinutes ?? 60));
+    const actor = input.actor ?? "reconciliation";
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("begin");
+      const stale = await client.query<{ cluster_key: string; id: string }>(
+        `update work_items
+         set status = 'planned',
+             user_status = 'planned',
+             updated_at = now()
+         where status = 'in_progress'
+           and updated_at < now() - ($1::text || ' minutes')::interval
+         returning id, cluster_key`,
+        [staleAfterMinutes],
+      );
+
+      for (const row of stale.rows) {
+        await upsertClusterUserMessage(client, {
+          clusterKey: row.cluster_key,
+          message: "The previous agent run did not finish, so this is back in the queue for another attempt.",
+          status: "planned",
+          workItemId: row.id,
+        });
+      }
+
+      const implementedAwaitingRelease = await client.query<{ id: string }>(
+        `select wi.id
+         from work_items wi
+         where wi.status = 'implemented'
+           and not exists (
+             select 1 from release_events re where re.work_item_id = wi.id and re.status = 'shipped'
+           )
+         order by wi.updated_at desc
+         limit 100`,
+      );
+      const failedWithoutPr = await client.query<{ id: string }>(
+        `select id
+         from work_items
+         where status = 'failed' and github_pr_url is null
+         order by updated_at desc
+         limit 100`,
+      );
+
+      const result: ReconciliationResult = {
+        failedWithoutPrIds: failedWithoutPr.rows.map((row) => row.id),
+        implementedAwaitingReleaseIds: implementedAwaitingRelease.rows.map((row) => row.id),
+        staleInProgressRequeuedIds: stale.rows.map((row) => row.id),
+      };
+
+      await client.query(
+        `insert into audit_events (id, actor, event, target_type, target_id, metadata)
+         values ($1, $2, 'reconciliation_completed', 'work_items', 'queue', $3)`,
+        [`audit_${randomUUID()}`, actor, JSON.stringify(result)],
+      );
+      await client.query("commit");
+      return result;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async recordFeatureUsage(input: {
     action: string;
     featureId: string;
@@ -723,6 +818,7 @@ function workItemFromRow(row: Record<string, unknown>): WorkItemRow {
     githubIssueUrl: row.github_issue_url ? String(row.github_issue_url) : null,
     githubPrUrl: row.github_pr_url ? String(row.github_pr_url) : null,
     id: String(row.id),
+    latestActualCost: actualCostFromRow(row.latest_actual_cost),
     riskTier: String(row.risk_tier),
     shouldCreateIssue: Boolean(row.should_create_issue),
     status: String(row.status),
@@ -732,6 +828,11 @@ function workItemFromRow(row: Record<string, unknown>): WorkItemRow {
     updatedAt: (row.updated_at as Date).toISOString(),
     userStatus: String(row.user_status),
   };
+}
+
+function actualCostFromRow(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
 }
 
 async function insertAssumptionRecords(

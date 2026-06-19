@@ -157,6 +157,16 @@ small {
   min-height: 22rem;
 }
 
+.reconciliation-panel {
+  min-height: 12rem;
+}
+
+.reconciliation-actions {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
 .mode-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
