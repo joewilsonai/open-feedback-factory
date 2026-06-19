@@ -65,6 +65,11 @@ describe("control center UI contract", () => {
     expect(source).toContain("Switch modes here");
     expect(source).toContain("Agent credentials");
     expect(source).toContain("Codex auth");
+    expect(source).toContain("Codex subscription");
+    expect(source).toContain("codex login --device-auth");
+    expect(source).toContain("codex login status");
+    expect(source).toContain("trusted host worker");
+    expect(source).toContain("provider-supported delegated token path");
     expect(source).toContain("OpenAI API key");
     expect(source).toContain("Save key");
     expect(source).toContain("Codex API key");

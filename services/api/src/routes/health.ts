@@ -43,6 +43,7 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
       maxSafeDiffLines: mergeGuardrails.maxSafeDiffLines,
       protectedPathFragments: mergeGuardrails.protectedPathFragments,
       publicBaseUrl: deps.config.publicBaseUrl,
+      codexConnection: buildCodexConnectionPlan(codexAuthMode, codexApiKeyStatus),
       runnerInstall: buildRunnerInstallPlan(codexAuthMode),
     };
   });
@@ -53,6 +54,41 @@ function defaultMergeGuardrailPolicy(deps: AppDeps) {
     autoMergePolicyEnabled: true,
     maxSafeDiffLines: deps.config.maxSafeDiffLines,
     protectedPathFragments: deps.config.protectedPathFragments,
+  };
+}
+
+function buildCodexConnectionPlan(
+  codexAuthMode: "api_key" | "cli",
+  codexApiKeyStatus: { configured: boolean; fingerprint: string | null; source: string },
+) {
+  return {
+    activeMode: codexAuthMode,
+    apiKey: {
+      configured: codexApiKeyStatus.configured,
+      fingerprint: codexApiKeyStatus.fingerprint,
+      label: "OpenAI API key",
+      source: codexApiKeyStatus.source,
+      status: codexApiKeyStatus.configured ? "configured" : "missing",
+      summary: codexApiKeyStatus.configured
+        ? "BYO API key is saved for a paid server-side Codex worker."
+        : "Save a BYO OpenAI API key before using the Docker API-key worker.",
+      supported: true,
+    },
+    subscription: {
+      hostedDelegation: {
+        status: "not_supported",
+        summary:
+          "Hosted subscription delegation needs a trusted runner or provider-supported delegated token path before Open Feedback Factory can use a user's Codex subscription from a hosted worker.",
+        supported: false,
+      },
+      label: "Codex subscription",
+      localLoginCommand: "codex login --device-auth",
+      status: "trusted_worker_required",
+      statusCommand: "codex login status",
+      summary: "Uses the signed-in Codex CLI on a trusted host worker machine.",
+      supported: true,
+      workerRequirement: "Install the host worker on the trusted host worker where Codex is signed in.",
+    },
   };
 }
 
