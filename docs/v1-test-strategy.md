@@ -28,7 +28,7 @@ capture, release proof, and agent assumptions.
 | SDK | Feedback submission, status polling, feature usage, privacy-safe metadata |
 | Runner | Disabled mode, manual approval, auto approval, Codex CLI args, `cli` auth, `api_key` auth, host worker installer generation, Docker API-key worker snippet, sanitized prompt, JSONL parsing, usage/cost capture, skipped checks, assumptions |
 | GitHub | App manifest, localhost rejection, webhook reachability, signature validation, sanitized issue body, PR artifact storage, branch cleanup, guarded merge refusal |
-| Control center | Setup states, queue states, demand-memory panel, worker install guidance, human-readable labels, no raw enum leaks, evidence ledger, assumptions panel, cost panel, release state, follow-up state, missing-config explanations |
+| Control center | Setup states, queue states, realtime lifecycle view, demand-memory panel, worker install guidance, human-readable labels, no raw enum leaks, evidence ledger, assumptions panel, cost panel, release state, follow-up state, missing-config explanations |
 | Demo app | Real Daybook workflow, positive request, negative request, status display, feature usage event |
 | Dry-run E2E | Docker stack starts, seeded data labeled, sample reset works, integration tests do not pollute the control center, no fake PRs, no fake costs, no fake agent runs, no fake releases, no fake shipped states |
 | Private dogfood E2E | Real GitHub/Codex issue, branch, PR, usage record, cost or token actual, assumptions, release marker, user status |
@@ -146,6 +146,11 @@ capture, release proof, and agent assumptions.
   runs, estimate and actual cost records, assumptions, GitHub artifacts, review
   decisions, release markers, feature-usage attribution, user notifications, and
   audit events without exposing raw feedback.
+- The control center lifecycle view shows every feature stage from feedback
+  intake through usage measurement, and each visual state is backed by an audit
+  event, run record, cost record, GitHub artifact, release marker, or
+  notification record. It must not show "done", "merged", or "shipped" without
+  the corresponding evidence.
 - Release markers can include a stable feature id, and later SDK usage events
   for that feature id are attributed back to the shipped work item and requester
   cluster using aggregate counts only.

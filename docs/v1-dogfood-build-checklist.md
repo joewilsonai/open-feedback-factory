@@ -86,12 +86,14 @@ Required behavior:
    polling, and feature usage events.
 
 5. Control center:
-   show setup health, queues, demand memory, work item detail, assumptions,
-   agent runs, PRs, release state, cost estimate vs actual, user follow-up,
-   feature usage, and policy blockers using human-readable labels. Each work
-   item should expose an evidence ledger for agent runs, cost records,
-   assumptions, GitHub artifacts, release proof, user notifications, and audit
-   events.
+   show setup health, queues, demand memory, a realtime feature lifecycle view,
+   work item detail, assumptions, agent runs, PRs, release state, cost estimate
+   vs actual, user follow-up, feature usage, and policy blockers using
+   human-readable labels. Each work item should expose an evidence ledger for
+   agent runs, cost records, assumptions, GitHub artifacts, release proof, user
+   notifications, and audit events. The lifecycle view should visually show the
+   path from feedback intake through usage measurement, with every stage backed
+   by append-only evidence.
 
 6. GitHub:
    support GitHub App manifest/install/webhook flow, sanitized issue creation,

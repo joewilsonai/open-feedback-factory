@@ -953,6 +953,7 @@ trackFeatureOutcome({
 <li>incoming feedback;</li>
 <li>clusters and demand count;</li>
 <li>work item status;</li>
+<li>realtime feature lifecycle view;</li>
 <li>agent lanes;</li>
 <li>estimated vs actual cost;</li>
 <li>PR/release state;</li>
@@ -967,6 +968,54 @@ trackFeatureOutcome({
 <p>workers.</p>
 </ul>
 <p>The control center should make the loop easy to demo without exposing private feedback.</p>
+<h4 id="realtime-feature-lifecycle-view"><a class="heading-anchor" href="#realtime-feature-lifecycle-view" aria-label="Link to Realtime Feature Lifecycle View">#</a>Realtime Feature Lifecycle View</h4>
+<p>The control center should include a visual lifecycle view for each feature or feedback cluster. This should not be a static kanban board. It should be a live, evidence-backed map of what is happening now, what already happened, and what is waiting on a human, agent, system, or external integration.</p>
+<p>The view should show the full feature path:</p>
+<pre><code class="language-text">feedback received -&gt; clustered -&gt; threshold/decision -&gt; sanitized work item
+-&gt; cost estimate -&gt; agent queued -&gt; planning -&gt; implementation -&gt; checks
+-&gt; PR opened -&gt; review -&gt; merge -&gt; release proof -&gt; user notified
+-&gt; usage measured</code></pre>
+<p>Every stage should show one of a small set of visible states:</p>
+<ul>
+<li>waiting;</li>
+<li>active;</li>
+<li>passed;</li>
+<li>blocked;</li>
+<li>failed;</li>
+<li>skipped by policy;</li>
+<li>needs human decision;</li>
+<li>not planned;</li>
+<li>shipped.</li>
+</ul>
+<p>Each lifecycle node should be clickable and open the exact log/evidence behind that state:</p>
+<ul>
+<li>feedback count and representative sanitized summaries;</li>
+<li>decision reason and demand threshold;</li>
+<li>policy and guardrail result;</li>
+<li>estimated cost and remaining cap;</li>
+<li>agent claim time, worker identity, model/provider, and run id;</li>
+<li>files inspected, commands run, checks run, skipped checks, and test output;</li>
+<li>assumptions and unresolved questions;</li>
+<li>GitHub issue, branch, PR, changed files, diff size, and check status;</li>
+<li>reviewer decision and merge gate result;</li>
+<li>release/deploy proof;</li>
+<li>user-safe notification text and delivery status;</li>
+<li>feature usage attribution after release.</li>
+</ul>
+<p>The lifecycle view should update in near real time from append-only audit events. If websocket/SSE infrastructure is unavailable in V1, polling is acceptable, but the product behavior should still feel live: new logs appear, nodes change state, blockers become visible, and retries/reviews/release proof show immediately after the backend records them.</p>
+<p>Design requirements:</p>
+<ul>
+<li>show progress visually as a horizontal or vertical pipeline depending on</li>
+<p>viewport;</p>
+<li>show one compact summary row/card for the feature and an expandable detail</li>
+<p>panel for logs;</p>
+<li>keep raw private feedback hidden by default;</li>
+<li>never show optimistic &quot;done&quot; states without corresponding evidence;</li>
+<li>make the next action obvious, such as approve, retry, split, mark not</li>
+<p>planned, resolve assumption, request review, or record release proof;</p>
+<li>preserve a readable chronological log alongside the visual map so developers</li>
+<p>can debug failures without guessing.</p>
+</ul>
 <h3 id="8-4-github-integration"><a class="heading-anchor" href="#8-4-github-integration" aria-label="Link to 8.4 GitHub Integration">#</a>8.4 GitHub Integration</h3>
 <p>V1 is GitHub-first.</p>
 <p>Capabilities:</p>

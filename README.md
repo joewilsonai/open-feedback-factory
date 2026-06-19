@@ -33,7 +33,7 @@ for the exact private dogfood completion gate.
 - User-facing shipped, blocked, not-planned, and needs-more-signal statuses.
 - Demand memory for below-threshold and blocked feedback clusters.
 - Feature usage attribution.
-- Focused operator control center.
+- Focused operator control center with a realtime feature lifecycle view.
 
 ## Local Development
 

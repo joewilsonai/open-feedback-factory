@@ -309,6 +309,7 @@ Primary views:
 - incoming feedback;
 - clusters and demand count;
 - work item status;
+- realtime feature lifecycle view;
 - agent lanes;
 - estimated vs actual cost;
 - PR/release state;
@@ -324,6 +325,69 @@ Primary views:
 
 The control center should make the loop easy to demo without exposing private
 feedback.
+
+#### Realtime Feature Lifecycle View
+
+The control center should include a visual lifecycle view for each feature or
+feedback cluster. This should not be a static kanban board. It should be a live,
+evidence-backed map of what is happening now, what already happened, and what is
+waiting on a human, agent, system, or external integration.
+
+The view should show the full feature path:
+
+```text
+feedback received -> clustered -> threshold/decision -> sanitized work item
+-> cost estimate -> agent queued -> planning -> implementation -> checks
+-> PR opened -> review -> merge -> release proof -> user notified
+-> usage measured
+```
+
+Every stage should show one of a small set of visible states:
+
+- waiting;
+- active;
+- passed;
+- blocked;
+- failed;
+- skipped by policy;
+- needs human decision;
+- not planned;
+- shipped.
+
+Each lifecycle node should be clickable and open the exact log/evidence behind
+that state:
+
+- feedback count and representative sanitized summaries;
+- decision reason and demand threshold;
+- policy and guardrail result;
+- estimated cost and remaining cap;
+- agent claim time, worker identity, model/provider, and run id;
+- files inspected, commands run, checks run, skipped checks, and test output;
+- assumptions and unresolved questions;
+- GitHub issue, branch, PR, changed files, diff size, and check status;
+- reviewer decision and merge gate result;
+- release/deploy proof;
+- user-safe notification text and delivery status;
+- feature usage attribution after release.
+
+The lifecycle view should update in near real time from append-only audit
+events. If websocket/SSE infrastructure is unavailable in V1, polling is
+acceptable, but the product behavior should still feel live: new logs appear,
+nodes change state, blockers become visible, and retries/reviews/release proof
+show immediately after the backend records them.
+
+Design requirements:
+
+- show progress visually as a horizontal or vertical pipeline depending on
+  viewport;
+- show one compact summary row/card for the feature and an expandable detail
+  panel for logs;
+- keep raw private feedback hidden by default;
+- never show optimistic "done" states without corresponding evidence;
+- make the next action obvious, such as approve, retry, split, mark not
+  planned, resolve assumption, request review, or record release proof;
+- preserve a readable chronological log alongside the visual map so developers
+  can debug failures without guessing.
 
 ### 8.4 GitHub Integration
 
