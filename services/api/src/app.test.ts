@@ -175,8 +175,22 @@ test("API exposes GitHub App manifest seam", async () => {
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().default_permissions.pull_requests, "write");
+  assert.deepEqual(response.json().callback_urls, ["http://api.test/github/app/installed"]);
   assert.equal(response.json().hook_attributes.url, "http://api.test/github/webhook");
   assert.equal(response.json().url, "https://github.com/joewilsonai/open-feedback-factory");
+
+  await app.close();
+});
+
+test("API exposes GitHub App setup form for manifest registration", async () => {
+  const app = await buildApp({ config, store: new MemoryStore() });
+  const response = await app.inject({ method: "GET", url: "/github/app/setup" });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(response.headers["content-type"] as string, /text\/html/);
+  assert.match(response.body, /https:\/\/github\.com\/settings\/apps\/new/);
+  assert.match(response.body, /name="manifest"/);
+  assert.match(response.body, /Open Feedback Factory/);
 
   await app.close();
 });

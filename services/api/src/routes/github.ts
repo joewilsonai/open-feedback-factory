@@ -3,7 +3,78 @@ import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
 
 export async function registerGithubRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
-  app.get("/github/app/manifest", async () => ({
+  app.get("/github/app/manifest", async () => buildGithubAppManifest(deps));
+
+  app.get("/github/app/setup", async (request, reply) => {
+    const ownerType = queryString(request.query, "owner_type") === "organization" ? "organization" : "user";
+    const owner = queryString(request.query, "owner") ?? deps.config.githubOwner;
+    const action =
+      ownerType === "organization"
+        ? `https://github.com/organizations/${encodeURIComponent(owner)}/settings/apps/new`
+        : "https://github.com/settings/apps/new";
+    const manifest = JSON.stringify(buildGithubAppManifest(deps));
+
+    return reply.type("text/html").send(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Create Open Feedback Factory GitHub App</title>
+  </head>
+  <body>
+    <main>
+      <h1>Create Open Feedback Factory GitHub App</h1>
+      <p>This posts the V1 GitHub App manifest to GitHub. GitHub will ask you to confirm the app name and permissions.</p>
+      <form method="post" action="${escapeHtml(action)}">
+        <input type="hidden" name="manifest" value="${escapeHtml(manifest)}">
+        <input type="hidden" name="state" value="open-feedback-factory">
+        <button type="submit">Create GitHub App</button>
+      </form>
+    </main>
+  </body>
+</html>`);
+  });
+
+  app.get("/github/app/installed", async (request) => ({
+    code: queryString(request.query, "code"),
+    installationId: queryString(request.query, "installation_id"),
+    ok: true,
+    setupAction: queryString(request.query, "setup_action"),
+    state: queryString(request.query, "state"),
+  }));
+
+  app.post<{ Body: { code?: string } }>("/github/app/manifest/conversions", async (request, reply) => {
+    if (!request.body.code) return reply.code(400).send({ error: "code is required" });
+    const converted = await convertGithubAppManifestCode(request.body.code);
+    return {
+      appId: converted.id,
+      clientId: converted.client_id,
+      pem: converted.pem,
+      webhookSecret: converted.webhook_secret,
+    };
+  });
+
+  app.post("/github/webhook", async (request, reply) => {
+    const rawBody = (request as typeof request & { rawBody?: string }).rawBody ?? JSON.stringify(request.body ?? {});
+    if (!verifyGithubSignature(rawBody, request.headers["x-hub-signature-256"], deps.config.githubWebhookSecret)) {
+      return reply.code(401).send({ error: "invalid github signature" });
+    }
+
+    const event = String(request.headers["x-github-event"] ?? "unknown");
+    const body = request.body as Record<string, unknown>;
+    const result = await handleGithubWebhook(deps, event, body);
+    return {
+      ...result,
+      event,
+      mode: deps.config.githubMode,
+      ok: true,
+    };
+  });
+}
+
+export function buildGithubAppManifest(deps: AppDeps): Record<string, unknown> {
+  return {
+    callback_urls: [`${deps.config.publicBaseUrl}/github/app/installed`],
     default_events: ["check_suite", "issues", "pull_request", "push"],
     default_permissions: {
       checks: "read",
@@ -23,30 +94,7 @@ export async function registerGithubRoutes(app: FastifyInstance, deps: AppDeps):
     redirect_url: `${deps.config.publicBaseUrl}/github/app/installed`,
     setup_url: `${deps.config.publicBaseUrl}/admin/control-room`,
     url: `https://github.com/${deps.config.githubOwner}/${deps.config.githubRepo}`,
-  }));
-
-  app.get("/github/app/installed", async (request) => ({
-    installationId: queryString(request.query, "installation_id"),
-    ok: true,
-    setupAction: queryString(request.query, "setup_action"),
-  }));
-
-  app.post("/github/webhook", async (request, reply) => {
-    const rawBody = (request as typeof request & { rawBody?: string }).rawBody ?? JSON.stringify(request.body ?? {});
-    if (!verifyGithubSignature(rawBody, request.headers["x-hub-signature-256"], deps.config.githubWebhookSecret)) {
-      return reply.code(401).send({ error: "invalid github signature" });
-    }
-
-    const event = String(request.headers["x-github-event"] ?? "unknown");
-    const body = request.body as Record<string, unknown>;
-    const result = await handleGithubWebhook(deps, event, body);
-    return {
-      ...result,
-      event,
-      mode: deps.config.githubMode,
-      ok: true,
-    };
-  });
+  };
 }
 
 export async function handleGithubWebhook(
@@ -136,4 +184,26 @@ function queryString(value: unknown, key: string): string | null {
 function stringFrom(value: Record<string, unknown> | null, key: string): string | null {
   const raw = value?.[key];
   return typeof raw === "string" ? raw : null;
+}
+
+async function convertGithubAppManifestCode(code: string): Promise<Record<string, unknown>> {
+  const response = await fetch(`https://api.github.com/app-manifests/${encodeURIComponent(code)}/conversions`, {
+    headers: {
+      accept: "application/vnd.github+json",
+      "x-github-api-version": "2022-11-28",
+    },
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error(`GitHub App manifest conversion failed ${response.status}: ${await response.text()}`);
+  }
+  return (await response.json()) as Record<string, unknown>;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }

@@ -107,7 +107,9 @@ issues, PR creation, PR comments, branch cleanup, and guarded merges use
 installation tokens instead of a personal GitHub CLI session.
 
 The API exposes `/github/app/manifest`, `/github/app/installed`, and
-`/github/webhook` for the App installation and webhook flow.
+`/github/webhook` for the App installation and webhook flow. Open
+`http://localhost:4100/github/app/setup` to start GitHub's manifest-based App
+registration flow from the local V1 stack.
 
 ## CI And Safe Merge
 
