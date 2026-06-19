@@ -16,7 +16,7 @@ interface Task {
   text: string;
 }
 
-interface PinnedNote {
+export interface PinnedNote {
   createdAt: string;
   id: string;
   text: string;
@@ -50,20 +50,56 @@ function readPinnedNotes(): PinnedNote[] {
   const stored = window.localStorage.getItem(pinnedNotesStorageKey);
   if (!stored) return [];
   try {
-    const parsed = JSON.parse(stored) as PinnedNote[];
-    return Array.isArray(parsed)
-      ? parsed.filter(
-          (item) =>
-            item &&
-            typeof item.createdAt === "string" &&
-            typeof item.id === "string" &&
-            typeof item.text === "string" &&
-            item.text.trim().length > 0,
-        )
-      : [];
+    return normalizePinnedNotes(JSON.parse(stored) as unknown);
   } catch {
     return [];
   }
+}
+
+export function normalizePinnedNotes(value: unknown): PinnedNote[] {
+  if (!Array.isArray(value)) return [];
+
+  const seenTexts = new Set<string>();
+  const pinnedNotes: PinnedNote[] = [];
+
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+
+    const candidate = item as Partial<Record<keyof PinnedNote, unknown>>;
+    if (typeof candidate.createdAt !== "string" || typeof candidate.id !== "string" || typeof candidate.text !== "string") {
+      continue;
+    }
+
+    const text = normalizePinnedNoteText(candidate.text);
+    if (!text || seenTexts.has(text)) continue;
+
+    seenTexts.add(text);
+    pinnedNotes.push({
+      createdAt: candidate.createdAt,
+      id: candidate.id,
+      text,
+    });
+  }
+
+  return pinnedNotes;
+}
+
+export function canPinPinnedNote(pinnedNotes: PinnedNote[], noteText: string): boolean {
+  const text = normalizePinnedNoteText(noteText);
+  return text.length > 0 && !pinnedNotes.some((pinnedNote) => normalizePinnedNoteText(pinnedNote.text) === text);
+}
+
+function createPinnedNote(text: string): PinnedNote {
+  const randomId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}`;
+  return {
+    createdAt: new Date().toISOString(),
+    id: `pinned-note-${randomId}`,
+    text,
+  };
+}
+
+function normalizePinnedNoteText(text: string): string {
+  return text.trim();
 }
 
 function readTasks(): Task[] {
@@ -102,8 +138,7 @@ export function App() {
     [],
   );
   const completedCount = tasks.filter((task) => task.done).length;
-  const trimmedNote = note.trim();
-  const canPinNote = trimmedNote.length > 0 && !pinnedNotes.some((pinnedNote) => pinnedNote.text === trimmedNote);
+  const canPinNote = canPinPinnedNote(pinnedNotes, note);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -136,15 +171,12 @@ export function App() {
   }
 
   function pinCurrentNote() {
-    if (!canPinNote) return;
-    setPinnedNotes([
-      {
-        createdAt: new Date().toISOString(),
-        id: `pinned-note-${Date.now()}`,
-        text: trimmedNote,
-      },
-      ...pinnedNotes,
-    ]);
+    const text = normalizePinnedNoteText(note);
+    if (!canPinPinnedNote(pinnedNotes, text)) return;
+    const nextPinnedNote = createPinnedNote(text);
+    setPinnedNotes((currentPinnedNotes) =>
+      canPinPinnedNote(currentPinnedNotes, text) ? [nextPinnedNote, ...currentPinnedNotes] : currentPinnedNotes,
+    );
     void client.trackFeatureUsage({
       action: "pinned",
       featureId: "pinned-note",
@@ -156,7 +188,7 @@ export function App() {
   }
 
   function unpinNote(id: string) {
-    setPinnedNotes(pinnedNotes.filter((pinnedNote) => pinnedNote.id !== id));
+    setPinnedNotes((currentPinnedNotes) => currentPinnedNotes.filter((pinnedNote) => pinnedNote.id !== id));
     void client.trackFeatureUsage({
       action: "unpinned",
       featureId: "pinned-note",

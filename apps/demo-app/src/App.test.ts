@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { canPinPinnedNote, normalizePinnedNotes } from "./App";
 
 describe("demo app UI contract", () => {
   const source = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
@@ -44,5 +45,26 @@ describe("demo app UI contract", () => {
     expect(styles).toContain(".theme-switch");
     expect(styles).toContain(".pinned-notes");
     expect(styles).toContain(".task-list");
+  });
+
+  it("normalizes pinned notes loaded from storage", () => {
+    expect(
+      normalizePinnedNotes([
+        { createdAt: "2026-06-19T12:00:00.000Z", id: "pinned-note-1", text: "  Keep this visible  " },
+        { createdAt: "2026-06-19T12:01:00.000Z", id: "pinned-note-2", text: "Keep this visible" },
+        { createdAt: "2026-06-19T12:02:00.000Z", id: "pinned-note-3", text: "" },
+        { createdAt: 1, id: "pinned-note-4", text: "Invalid date type" },
+        "legacy string note",
+      ]),
+    ).toEqual([{ createdAt: "2026-06-19T12:00:00.000Z", id: "pinned-note-1", text: "Keep this visible" }]);
+  });
+
+  it("allows only non-empty notes that are not already pinned", () => {
+    const pinnedNotes = [{ createdAt: "2026-06-19T12:00:00.000Z", id: "pinned-note-1", text: "Keep this visible" }];
+
+    expect(canPinPinnedNote(pinnedNotes, "Follow up with beta tester")).toBe(true);
+    expect(canPinPinnedNote(pinnedNotes, "Keep this visible")).toBe(false);
+    expect(canPinPinnedNote(pinnedNotes, "  Keep this visible  ")).toBe(false);
+    expect(canPinPinnedNote(pinnedNotes, "   ")).toBe(false);
   });
 });
