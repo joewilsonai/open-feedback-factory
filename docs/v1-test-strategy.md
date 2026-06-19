@@ -44,6 +44,9 @@ capture, release proof, and agent assumptions.
   audit events.
 - Postgres row-level security policies deny cross-workspace reads and writes
   when enabled, including direct SQL attempts that bypass application helpers.
+- Postgres integration tests must prove RLS with a non-owner app role, not only
+  assert that policy metadata exists. RLS tables should force row security so
+  accidental owner-style connections do not silently bypass tenant policies.
 - Users without raw-feedback permission can see sanitized summaries and
   user-safe status only.
 - Non-owner roles cannot rotate secrets, enable auto-merge, broaden protected

@@ -278,6 +278,8 @@ The default GitHub Actions workflow runs tests, typecheck, build, and the
 Postgres-backed DB integration test on pull requests. Safe auto-merge depends
 on that check lane plus the Open Feedback Factory policy gates; it is disabled
 until `AUTO_MERGE_ENABLED=true` and GitHub mutation mode are explicitly set.
+The DB integration test includes a non-owner app role RLS check that proves one
+workspace cannot read or write another workspace's rows through direct SQL.
 
 Merged or implemented work is not user-facing `shipped` until an explicit
 release marker is recorded. The release endpoint refuses still-planned or

@@ -1224,6 +1224,8 @@ Required test tiers:
   policies when enabled, admin RBAC, raw-feedback permissions, secret storage,
   webhook verification, prompt injection, SSRF/tunnel URL rejection, and
   GitHub App permission boundaries;
+- Postgres RLS tests must use a non-owner app role and prove direct SQL
+  cross-workspace reads and writes are denied, not only inspect policy metadata;
 - abuse and hardening tests for path traversal, command injection, branch-name
   injection, SQL injection, admin CSRF/CORS, rate limiting, webhook replay,
   idempotency, package-script sandboxing, token-scope minimization, audit-log
