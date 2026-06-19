@@ -17,6 +17,7 @@ const { Pool } = pg;
 const SAMPLE_ONLY_FEEDBACK_SOURCES = ["demo_seed", "sample_seed"];
 
 export interface FeedbackIntakeResult {
+  createdWorkItem: boolean;
   feedbackId: string;
   workItemId: string | null;
   status: UserFeedbackStatus;
@@ -250,6 +251,7 @@ export class OpenFeedbackStore {
   }): Promise<FeedbackIntakeResult> {
     const client = await this.pool.connect();
     const feedbackId = `feedback_${randomUUID()}`;
+    let createdWorkItem = false;
     let workItemId: string | null = null;
     let userMessage = input.decision.userMessage;
     let userStatus = input.decision.userStatus;
@@ -281,6 +283,7 @@ export class OpenFeedbackStore {
           userMessage = existingFollowUp.message;
           userStatus = existingFollowUp.status;
         } else {
+          createdWorkItem = true;
           await client.query(
             `insert into work_items
              (id, cluster_key, title, summary, category, risk_tier, status, user_status,
@@ -368,6 +371,7 @@ export class OpenFeedbackStore {
     }
 
     return {
+      createdWorkItem,
       feedbackId,
       status: buildUserStatus({
         clarificationQuestions: input.decision.clarificationQuestions,

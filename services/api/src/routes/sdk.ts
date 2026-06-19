@@ -42,7 +42,7 @@ export async function registerSdkRoutes(app: FastifyInstance, deps: AppDeps): Pr
     const intake = await deps.store.createFeedbackIntake({ decision, feedback, sanitized });
     let githubIssueError: string | null = null;
     let githubIssueUrl: string | null = null;
-    if (intake.workItemId && deps.config.githubMode !== "disabled" && decision.shouldCreateIssue) {
+    if (intake.createdWorkItem && intake.workItemId && deps.config.githubMode !== "disabled" && decision.shouldCreateIssue) {
       try {
         githubIssueUrl = await createSanitizedGithubIssue(deps, {
           category: decision.category,

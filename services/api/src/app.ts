@@ -24,6 +24,7 @@ export interface AppStore {
     feedback: FeedbackInput;
     sanitized: ReturnType<typeof import("@open-feedback-factory/core").sanitizeFeedback>;
   }): Promise<{
+    createdWorkItem?: boolean;
     feedbackId: string;
     status: UserFeedbackStatus;
     workItemId: string | null;

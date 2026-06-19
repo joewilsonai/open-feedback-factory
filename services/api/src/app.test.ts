@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -63,7 +63,21 @@ class MemoryStore implements AppStore {
 
   async createFeedbackIntake(input: Parameters<AppStore["createFeedbackIntake"]>[0]) {
     const feedbackId = `feedback_${this.feedbackStatuses.size + 1}`;
-    const workItemId = input.decision.shouldCreateIssue ? `work_${this.workItems.length + 1}` : null;
+    let createdWorkItem = false;
+    let workItemId: string | null = null;
+    if (input.decision.action === "create_work_item") {
+      const existing = this.workItems.find(
+        (workItem) =>
+          workItem.clusterKey === input.decision.clusterKey &&
+          !["shipped", "closed", "not_planned", "blocked", "failed"].includes(workItem.status),
+      );
+      if (existing) {
+        workItemId = existing.id;
+      } else {
+        createdWorkItem = true;
+        workItemId = `work_${this.workItems.length + 1}`;
+      }
+    }
     const status: UserFeedbackStatus = {
       clarificationQuestions: input.decision.clarificationQuestions,
       feedbackId,
@@ -74,7 +88,7 @@ class MemoryStore implements AppStore {
     };
     this.feedbackStatuses.set(feedbackId, status);
 
-    if (workItemId) {
+    if (createdWorkItem && workItemId) {
       this.workItems.push({
         autoMergeEligible: false,
         category: input.decision.category,
@@ -141,7 +155,7 @@ class MemoryStore implements AppStore {
       targetType: "feedback_signal",
     });
 
-    return { feedbackId, status, workItemId };
+    return { createdWorkItem, feedbackId, status, workItemId };
   }
 
   async getControlRoomSnapshot(): Promise<ControlRoomSnapshot> {
@@ -734,6 +748,67 @@ test("API promotes repeated below-threshold feedback from demand memory", async 
   await app.close();
 });
 
+test("API does not create duplicate GitHub issues for feedback grouped to an active work item", async () => {
+  const tempDir = await mkdtemp(path.join(tmpdir(), "off-fake-gh-"));
+  const fakeGh = path.join(tempDir, "gh");
+  const logPath = path.join(tempDir, "gh.log");
+  await writeFile(
+    fakeGh,
+    [
+      "#!/bin/sh",
+      "printf 'CALL\\n' >> \"$GH_LOG\"",
+      "echo 'https://github.com/joewilsonai/launchbrief-demo/issues/999'",
+    ].join("\n"),
+    { mode: 0o755 },
+  );
+
+  const previousPath = process.env.PATH;
+  const previousGhLog = process.env.GH_LOG;
+  process.env.PATH = `${tempDir}:${previousPath ?? ""}`;
+  process.env.GH_LOG = logPath;
+
+  const store = new MemoryStore();
+  const app = await buildApp({
+    config: { ...config, githubMode: "gh", githubRepo: "launchbrief-demo", runnerWorkspace: tempDir },
+    store,
+  });
+
+  try {
+    const payload = {
+      message: "Add dashboard focus meter",
+      source: "demo",
+    };
+
+    const first = await app.inject({ method: "POST", payload: { ...payload, userId: "user-1" }, url: "/sdk/feedback" });
+    assert.equal(first.statusCode, 201);
+    assert.equal(first.json().workItemId, null);
+    assert.equal(first.json().githubIssueUrl, null);
+
+    const second = await app.inject({ method: "POST", payload: { ...payload, userId: "user-2" }, url: "/sdk/feedback" });
+    assert.equal(second.statusCode, 201);
+    assert.match(second.json().workItemId, /^work_/);
+    assert.equal(second.json().githubIssueUrl, "https://github.com/joewilsonai/launchbrief-demo/issues/999");
+
+    const third = await app.inject({ method: "POST", payload: { ...payload, userId: "user-3" }, url: "/sdk/feedback" });
+    assert.equal(third.statusCode, 201);
+    assert.equal(third.json().workItemId, second.json().workItemId);
+    assert.equal(third.json().githubIssueUrl, null);
+
+    const ghCalls = (await readFile(logPath, "utf8")).trim().split("\n");
+    assert.equal(ghCalls.length, 1);
+    assert.equal(store.githubArtifactRows.length, 1);
+  } finally {
+    await app.close();
+    process.env.PATH = previousPath;
+    if (previousGhLog === undefined) {
+      delete process.env.GH_LOG;
+    } else {
+      process.env.GH_LOG = previousGhLog;
+    }
+    await rm(tempDir, { force: true, recursive: true });
+  }
+});
+
 test("API returns friendly clarification questions for vague feedback", async () => {
   const app = await buildApp({ config, store: new MemoryStore() });
 
@@ -793,36 +868,48 @@ test("admin run endpoint blocks implementation when Codex runner is disabled", a
 });
 
 test("doctor exposes setup wizard links", async () => {
+  const tempDir = await mkdtemp(path.join(tmpdir(), "off-doctor-"));
+  const previousOpenAiKey = process.env.OPENAI_API_KEY;
+  delete process.env.OPENAI_API_KEY;
   const store = new MemoryStore();
   store.approvalMode = "auto";
-  const app = await buildApp({ config, store });
-  const response = await app.inject({ method: "GET", url: "/doctor" });
+  const app = await buildApp({ config: { ...config, codexSecretsPath: path.join(tempDir, "secrets.env") }, store });
 
-  assert.equal(response.statusCode, 200);
-  assert.equal(response.json().adminAuthRequired, false);
-  assert.equal(response.json().controlCenterUrl, "http://control.test");
-  assert.equal(response.json().approvalMode, "auto");
-  assert.equal(response.json().codexAuthMode, "cli");
-  assert.equal(response.json().codexApiKeyConfigured, false);
-  assert.equal(response.json().githubAppSetupUrl, "http://api.test/github/app/setup");
-  assert.equal(response.json().githubWebhookUrl, "http://api.test/github/webhook");
-  assert.equal(response.json().githubWebhooksEnabled, true);
-  assert.equal(response.json().autoMergePolicyEnabled, true);
-  assert.equal(response.json().maxSafeDiffLines, 120);
-  assert.deepEqual(response.json().protectedPathFragments, ["auth", "billing", "privacy"]);
-  assert.equal(response.json().runnerAuthRequired, false);
-  assert.equal(response.json().runnerInstall.recommendedMode, "host_cli");
-  assert.equal(response.json().runnerInstall.hostCli.installCommand, "pnpm worker:install:host");
-  assert.equal(response.json().runnerInstall.hostCli.statusCommand, "pnpm worker:status:host");
-  assert.equal(response.json().runnerInstall.dockerApiKey.startCommand, "docker compose up -d --build worker");
-  assert.deepEqual(response.json().runnerInstall.dockerApiKey.env, [
-    "CODEX_RUNNER_MODE=codex",
-    "CODEX_AUTH_MODE=api_key",
-    "DOCKER_CODEX_CLI=codex",
-    "CODEX_CLI_VERSION=0.141.0",
-  ]);
+  try {
+    const response = await app.inject({ method: "GET", url: "/doctor" });
 
-  await app.close();
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.json().adminAuthRequired, false);
+    assert.equal(response.json().controlCenterUrl, "http://control.test");
+    assert.equal(response.json().approvalMode, "auto");
+    assert.equal(response.json().codexAuthMode, "cli");
+    assert.equal(response.json().codexApiKeyConfigured, false);
+    assert.equal(response.json().githubAppSetupUrl, "http://api.test/github/app/setup");
+    assert.equal(response.json().githubWebhookUrl, "http://api.test/github/webhook");
+    assert.equal(response.json().githubWebhooksEnabled, true);
+    assert.equal(response.json().autoMergePolicyEnabled, true);
+    assert.equal(response.json().maxSafeDiffLines, 120);
+    assert.deepEqual(response.json().protectedPathFragments, ["auth", "billing", "privacy"]);
+    assert.equal(response.json().runnerAuthRequired, false);
+    assert.equal(response.json().runnerInstall.recommendedMode, "host_cli");
+    assert.equal(response.json().runnerInstall.hostCli.installCommand, "pnpm worker:install:host");
+    assert.equal(response.json().runnerInstall.hostCli.statusCommand, "pnpm worker:status:host");
+    assert.equal(response.json().runnerInstall.dockerApiKey.startCommand, "docker compose up -d --build worker");
+    assert.deepEqual(response.json().runnerInstall.dockerApiKey.env, [
+      "CODEX_RUNNER_MODE=codex",
+      "CODEX_AUTH_MODE=api_key",
+      "DOCKER_CODEX_CLI=codex",
+      "CODEX_CLI_VERSION=0.141.0",
+    ]);
+  } finally {
+    await app.close();
+    if (previousOpenAiKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = previousOpenAiKey;
+    }
+    await rm(tempDir, { force: true, recursive: true });
+  }
 });
 
 test("admin routes require the configured admin token without leaking it through doctor", async () => {

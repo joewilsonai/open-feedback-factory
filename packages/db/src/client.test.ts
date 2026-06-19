@@ -28,6 +28,7 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     const intake = await store.createFeedbackIntake({ decision, feedback, sanitized });
 
     assert.match(intake.feedbackId, /^feedback_/);
+    assert.equal(intake.createdWorkItem, true);
     assert.match(intake.workItemId ?? "", /^work_/);
     assert.equal(intake.status.state, "planned");
 
@@ -35,6 +36,7 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(status?.state, "planned");
 
     const duplicateBeforeRun = await store.createFeedbackIntake({ decision, feedback, sanitized });
+    assert.equal(duplicateBeforeRun.createdWorkItem, false);
     assert.equal(duplicateBeforeRun.workItemId, intake.workItemId);
     assert.equal(duplicateBeforeRun.status.state, "grouped");
     assert.match(duplicateBeforeRun.status.message, /matching request/);
