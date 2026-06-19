@@ -122,7 +122,7 @@ docker compose up -d --build</pre>
   -d '{"code":"${escapeHtml(code)}"}'</pre>`
           : "<p>No temporary code was present in the callback. Start again from the setup wizard.</p>"
       }
-      <p><a href="${escapeHtml(deps.config.controlCenterUrl)}">Return to the control center</a></p>
+      <p><a href="${escapeHtml(controlCenterSetupUrl(deps.config.controlCenterUrl))}">Return to the control center</a></p>
     </main>
     ${
       code
@@ -222,7 +222,7 @@ export function buildGithubAppManifest(deps: AppDeps): Record<string, unknown> {
   };
 
   if (githubWebhooksEnabledForBaseUrl(deps.config.controlCenterUrl)) {
-    manifest.setup_url = deps.config.controlCenterUrl;
+    manifest.setup_url = controlCenterSetupUrl(deps.config.controlCenterUrl);
   }
 
   if (githubWebhooksEnabledForBaseUrl(deps.config.publicBaseUrl)) {
@@ -354,6 +354,10 @@ function escapeHtml(value: string): string {
 
 function jsonForScript(value: string): string {
   return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
+function controlCenterSetupUrl(value: string): string {
+  return value.endsWith("/") ? value : `${value}/`;
 }
 
 export function buildGithubAppEnvSnippet(converted: Record<string, unknown>): string {

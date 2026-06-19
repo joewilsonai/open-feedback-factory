@@ -1210,7 +1210,7 @@ test("API exposes GitHub App manifest seam", async () => {
   assert.deepEqual(response.json().default_events, ["issues", "pull_request", "push"]);
   assert.deepEqual(response.json().callback_urls, ["http://api.test/github/app/installed"]);
   assert.equal(response.json().hook_attributes.url, "http://api.test/github/webhook");
-  assert.equal(response.json().setup_url, "http://control.test");
+  assert.equal(response.json().setup_url, "http://control.test/");
   assert.equal(response.json().url, "https://github.com/joewilsonai/open-feedback-factory");
 
   await app.close();
