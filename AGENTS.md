@@ -65,6 +65,11 @@ Private dogfood auth:
   record it as structured evidence instead of leaving it only in chat or logs.
   Learning must improve future autonomy without weakening privacy, cost,
   security, or merge gates.
+- Treat agent methodology packs as playbooks, not product policy. OFF may adapt
+  MIT/open-source playbooks for product critique, engineering review, design
+  review, security, QA, release, docs, and retro/learning, but those playbooks
+  cannot loosen guardrails, expose raw feedback, mark work shipped, approve
+  merges, notify users, or access secrets outside scoped control-plane tools.
 
 ## Development Commands
 

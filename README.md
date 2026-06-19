@@ -62,6 +62,10 @@ are configured.
 - Focused operator control center with a realtime feature lifecycle view.
 - Recursive learning events that make routing, cost estimates, guardrails, and
   agent/provider selection smarter without weakening safety gates.
+- Agent playbook layer for product critique, engineering review, design review,
+  security, QA, release, docs, and retro/learning. OFF can adapt MIT/open-source
+  methodology packs, but the work router still owns privacy, cost, policy,
+  merge, release, and user-follow-up decisions.
 - Codebase health/readiness scoring that turns repo and integration findings
   into normal work items.
 - Secure integration secrets vault for scoped Supabase, Vercel, Resend, GitHub,

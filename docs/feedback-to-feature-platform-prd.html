@@ -667,7 +667,7 @@
 
   <div class="layout">
     <aside class="toc" aria-label="Table of contents">
-      <p class="toc-title">Contents <span>79</span></p>
+      <p class="toc-title">Contents <span>80</span></p>
       <a class="toc-link level-2" href="#1-product-thesis" data-for="1-product-thesis">1. Product Thesis</a>
 <a class="toc-link level-2" href="#2-positioning" data-for="2-positioning">2. Positioning</a>
 <a class="toc-link level-2" href="#3-target-users" data-for="3-target-users">3. Target Users</a>
@@ -692,6 +692,7 @@
 <a class="toc-link level-3" href="#8-6-review-gates" data-for="8-6-review-gates">8.6 Review Gates</a>
 <a class="toc-link level-3" href="#8-7-user-follow-up" data-for="8-7-user-follow-up">8.7 User Follow-Up</a>
 <a class="toc-link level-3" href="#8-8-codex-integration-strategy" data-for="8-8-codex-integration-strategy">8.8 Codex Integration Strategy</a>
+<a class="toc-link level-3" href="#8-9-agent-playbook-layer" data-for="8-9-agent-playbook-layer">8.9 Agent Playbook Layer</a>
 <a class="toc-link level-2" href="#9-cost-model" data-for="9-cost-model">9. Cost Model</a>
 <a class="toc-link level-2" href="#10-two-router-architecture" data-for="10-two-router-architecture">10. Two-Router Architecture</a>
 <a class="toc-link level-3" href="#10-1-work-router" data-for="10-1-work-router">10.1 Work Router</a>
@@ -839,6 +840,8 @@
 <li>Let developers define their own guardrails, approval rules, and cost limits.</li>
 <li>Let developers securely store scoped integration credentials for systems such</li>
 <p>as Supabase, Vercel, Resend, Railway, GitHub, feature flags, and model providers without exposing raw keys to prompts, plans, PRs, or logs.</p>
+<li>Provide an agent playbook layer so proven role/methodology packs can be used</li>
+<p>for product critique, engineering review, design review, security, QA, release, and retros without moving product policy out of the work router.</p>
 <li>Always create PRs, never push directly to <code>main</code>.</li>
 <li>Run checks and review lanes before merge.</li>
 <li>Track estimated and actual agent cost per feature.</li>
@@ -1250,6 +1253,58 @@ trackFeatureOutcome({
 <li><a href="https://developers.openai.com/codex/mcp">MCP</a></li>
 <li><a href="https://developers.openai.com/cookbook/examples/agents_sdk/agent_improvement_loop">Agent improvement loop cookbook</a></li>
 </ul>
+<h3 id="8-9-agent-playbook-layer"><a class="heading-anchor" href="#8-9-agent-playbook-layer" aria-label="Link to 8.9 Agent Playbook Layer">#</a>8.9 Agent Playbook Layer</h3>
+<p>OFF should borrow the strongest pattern from opinionated agent stacks: do not send every job to one generic &quot;coding agent.&quot; Break work into named, repeatable playbooks with clear roles, inputs, tools, outputs, and review responsibilities.</p>
+<p>This layer is not a separate product and not a replacement for the work router. It is a library of execution and review methods that the work router may invoke after feedback has already passed privacy, demand, cost, and guardrail gates.</p>
+<p>V1 should support an OFF-native playbook registry. Each playbook record should define:</p>
+<ul>
+<li>playbook id, version, source, license, and attribution;</li>
+<li>supported hosts, such as Codex CLI, Codex Cloud, Claude Code, GitHub Actions,</li>
+<p>or future runners;</p>
+<li>allowed risk tiers and required approval modes;</li>
+<li>required tools and forbidden tools;</li>
+<li>required input schema and redaction rules;</li>
+<li>required output schema;</li>
+<li>estimated cost profile;</li>
+<li>whether the playbook can implement, review, test, release, or only advise;</li>
+<li>which lifecycle events and audit records it must emit;</li>
+<li>contract tests that prove the playbook returns the required artifacts.</li>
+</ul>
+<p>The first playbook set should be native to OFF but intentionally model the useful shape of open-source role packs such as <code>garrytan/gstack</code>:</p>
+<ul>
+<li>feedback interviewer: clarify vague user requests in plain end-user language;</li>
+<li>product critic: challenge whether the request should be built now;</li>
+<li>product planner: convert approved demand into a PR-sized plan;</li>
+<li>engineering reviewer: inspect architecture, state flow, tests, failure modes,</li>
+<p>migration risk, and operational risk;</p>
+<li>design reviewer: inspect UI quality, accessibility, density, responsive</li>
+<p>behavior, and product fit;</p>
+<li>security/privacy reviewer: inspect OWASP-style app risks, STRIDE-style threat</li>
+<p>paths, secret handling, data exposure, RLS, webhook auth, rate limits, and sensitive-file edits;</p>
+<li>QA browser runner: use a real browser or simulator against a real URL and</li>
+<p>record evidence;</p>
+<li>release manager: verify branch, PR, checks, merge policy, release marker,</li>
+<p>rollback path, and user-safe notification;</p>
+<li>docs/release-notes writer: update install docs, PRD, changelog, SDK docs, and</li>
+<p>operator notes when relevant;</p>
+<li>retro/learning writer: record assumptions, misses, cost deltas, eval gaps,</li>
+<p>recurring failures, and router-rule suggestions.</p>
+</ul>
+<p>Open-source playbook packs may be vendored or adapted when their license allows it. If OFF incorporates MIT-licensed playbooks, the repo must preserve the license and attribution and prefer a pinned, reviewed copy over dynamic installation from a user's global agent directory. The product should not rely on a user's <code>~/.claude</code>, <code>~/.codex</code>, or other local skill install to determine product behavior.</p>
+<p>Imported playbooks must be wrapped behind the same interface as native playbooks. They should not be treated as trusted product policy. They can recommend, critique, implement, test, or review, but they cannot independently:</p>
+<ul>
+<li>decide that raw feedback may leave the private database;</li>
+<li>loosen a guardrail;</li>
+<li>raise a cost cap;</li>
+<li>approve protected-file edits;</li>
+<li>mark work shipped;</li>
+<li>auto-merge a PR;</li>
+<li>notify a user;</li>
+<li>access integration credentials directly.</li>
+</ul>
+<p>The work router remains responsible for all state transitions and merge/release decisions. A playbook can provide evidence; the policy engine decides what that evidence unlocks.</p>
+<p>The control center should show playbooks as visible agents inside the lifecycle view. A developer should be able to see that a work item passed through Product Critic, Engineering Review, Security Review, QA Browser, Release Manager, and Retro/Learning, including the exact evidence each playbook produced.</p>
+<p>This is also the path for custom user guardrails. A repo should eventually be able to define local playbooks such as &quot;SaaS billing reviewer,&quot; &quot;iOS release reviewer,&quot; &quot;Supabase migration reviewer,&quot; or &quot;brand voice reviewer&quot; without forking OFF.</p>
 <h2 id="9-cost-model"><a class="heading-anchor" href="#9-cost-model" aria-label="Link to 9. Cost Model">#</a>9. Cost Model</h2>
 <p>Each work item should store both estimate and actual.</p>
 <p>Estimate inputs:</p>
@@ -2518,6 +2573,8 @@ feedback-factory demo</code></pre>
 <p>release-proof, and integration gaps, with recommendations that can become work items.</p>
 <li>Secure integration secrets vault for scoped provider credentials and audited</li>
 <p>credential-backed actions.</p>
+<li>Agent playbook registry with native product, engineering, design, security,</li>
+<p>QA, release, docs, and retro/learning playbooks.</p>
 <li>Real Daybook demo app and seed scenario with no fake PRs, fake costs, fake</li>
 <p>releases, or fake shipped states.</p>
 <li>Sample seed/reset path that keeps dry-run installs honest and prevents</li>
@@ -2550,6 +2607,8 @@ feedback-factory demo</code></pre>
 <li>Requesty gateway/provider adapter.</li>
 <li>MCP tool surface for agent-safe access to work items.</li>
 <li>Codex capability health panel.</li>
+<li>Optional import/adaptation path for MIT/open-source agent methodology packs</li>
+<p>such as gstack, with license attribution, pinned versions, and contract tests.</p>
 <li>Feature flag/rollout hooks.</li>
 <li>Agent quality reporting.</li>
 <li>OpenTelemetry or similar trace export.</li>
@@ -2812,6 +2871,8 @@ feedback-factory demo</code></pre>
 <li>Cost defaults: <code>$5</code> per work item, <code>$25</code> per day, <code>$100</code> per month.</li>
 <li>Guardrail templates: web app and open-source library in V1; iOS and SaaS</li>
 <p>templates later.</p>
+<li>Agent playbook layer: native OFF playbooks for product, engineering, design,</li>
+<p>security, QA, release, docs, and retro/learning in V1, with an optional pinned/imported path for MIT/open-source methodology packs after contract tests exist.</p>
 <li>Mobile SDK: deferred; web SDK ships first.</li>
 <li>Feature flag providers: generic release marker/webhook hooks first, native</li>
 <p>provider integrations later.</p>
