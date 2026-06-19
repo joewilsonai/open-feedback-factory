@@ -80,6 +80,7 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     const completed = await store.getWorkItem(claimed?.id ?? "");
     assert.equal(completed?.status, "implemented");
     assert.equal(completed?.githubPrUrl, "https://github.com/joewilsonai/open-feedback-factory/pull/123");
+    assert.equal(completed?.latestActualCost?.amountUsd, 1.25);
     assert.equal(completed?.unresolvedAssumptions.length, 1);
     assert.deepEqual(completed?.unresolvedAssumptions[0]?.impactAreas, ["release_status"]);
 
@@ -93,6 +94,36 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(duplicateAfterRun.workItemId, intake.workItemId);
     assert.equal(duplicateAfterRun.status.state, "implemented");
     assert.match(duplicateAfterRun.status.message, /waiting for review or release/);
+
+    const staleFeedback = {
+      message: `Please add pinned notes stale ${uniqueSuffix}`,
+      metadata: { route: "/daybook", surface: "notes" },
+      source: "test",
+      userId: "user-2",
+    };
+    const staleSanitized = sanitizeFeedback(staleFeedback);
+    const staleDecision = routeFeedback({ sanitized: staleSanitized, signalCount: 2 });
+    const staleIntake = await store.createFeedbackIntake({
+      decision: staleDecision,
+      feedback: staleFeedback,
+      sanitized: staleSanitized,
+    });
+    const staleClaimed = await store.claimNextWorkItem("db-test-worker", staleIntake.workItemId ?? undefined);
+    assert.equal(staleClaimed?.status, "in_progress");
+
+    const pool = new Pool({ connectionString: databaseUrl });
+    try {
+      await pool.query("update work_items set updated_at = now() - interval '2 hours' where id = $1", [
+        staleClaimed?.id,
+      ]);
+    } finally {
+      await pool.end();
+    }
+
+    const reconciliation = await store.reconcileWorkItems({ staleAfterMinutes: 30 });
+    assert.deepEqual(reconciliation.staleInProgressRequeuedIds, [staleClaimed?.id]);
+    const requeued = await store.getWorkItem(staleClaimed?.id ?? "");
+    assert.equal(requeued?.status, "planned");
   } finally {
     await store.close();
   }

@@ -185,6 +185,23 @@ If a request receives `429 rate_limited`, report the route group and retry
 window. Do not raise limits to hide a test failure unless the user is explicitly
 testing a higher-capacity install.
 
+## Reconciliation And Release Proof
+
+The control center has a **Run reconciliation** action. It calls
+`/admin/reconciliation/run`, requeues stale in-progress work, and reports
+implemented items that still need release proof.
+
+Use the release marker only after implementation exists:
+
+```bash
+curl -s -X POST http://localhost:4100/admin/work-items/work_.../release \
+  -H 'content-type: application/json' \
+  -d '{"message":"This request has shipped."}'
+```
+
+If the work item is still queued or in progress, the API should return a
+blocked response instead of marking it shipped.
+
 ## What To Report Back
 
 After installation, report:

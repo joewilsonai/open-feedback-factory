@@ -148,6 +148,10 @@ need an estimate before work starts and actual cost after it finishes.
 9. Release tracking watches for deployment or TestFlight availability.
 10. The original users are notified with a clear outcome.
 
+Implementation or merge is not the same as shipped. V1 should require an
+explicit release marker before user-facing status becomes shipped, and it should
+refuse release markers for work that has not reached an implemented state.
+
 ## 8. V1 Product Surface
 
 ### 8.1 SDK
@@ -254,6 +258,8 @@ Primary views:
 - feature usage and impact attribution;
 - decisions not to build;
 - guardrail and cost-control configuration;
+- latest actual cost and token evidence after runner completion;
+- reconciliation actions for stale in-progress work and missing release proof;
 - reconsideration candidates;
 - user follow-up status.
 
@@ -311,6 +317,11 @@ Required runner behavior:
 - open a PR;
 - never merge unless gates allow it;
 - clean up temporary workspace state.
+
+V1 should include an operator-triggered reconciliation pass that requeues stale
+in-progress work and reports implemented items still waiting for release proof.
+This is not a full production scheduler yet; it is the minimum honest recovery
+lane for local dogfood and demos.
 
 ### 8.6 Review Gates
 

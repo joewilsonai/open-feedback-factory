@@ -22,6 +22,7 @@ const job: WorkItemRow = {
   githubIssueUrl: null,
   githubPrUrl: null,
   id: "work_test",
+  latestActualCost: null,
   riskTier: "safe_auto_merge",
   shouldCreateIssue: true,
   status: "planned",

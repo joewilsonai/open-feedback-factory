@@ -133,6 +133,11 @@ actual token/cost data when available, and a user-safe message. Any unresolved
 assumption that affects privacy, cost, merge safety, or release status blocks
 safe auto-merge until a reviewer lane or human operator resolves it.
 
+The control center shows estimated cost before work starts and latest actual
+cost after a runner reports completion. It also exposes a reconciliation action
+that requeues stale in-progress work and identifies implemented work still
+waiting for release proof.
+
 ## Rate Limits
 
 V1 includes local fixed-window HTTP rate limits. Defaults are intentionally high
@@ -191,6 +196,10 @@ The default GitHub Actions workflow runs tests, typecheck, build, and the
 Postgres-backed DB integration test on pull requests. Safe auto-merge depends
 on that check lane plus the Open Feedback Factory policy gates; it is disabled
 until `AUTO_MERGE_ENABLED=true` and GitHub mutation mode are explicitly set.
+
+Merged or implemented work is not user-facing `shipped` until an explicit
+release marker is recorded. The release endpoint refuses still-planned or
+in-progress work.
 
 ## Docs
 

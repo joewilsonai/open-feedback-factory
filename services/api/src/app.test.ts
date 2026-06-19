@@ -63,6 +63,7 @@ class MemoryStore implements AppStore {
         githubIssueUrl: null,
         githubPrUrl: null,
         id: workItemId,
+        latestActualCost: null,
         riskTier: input.decision.riskTier,
         shouldCreateIssue: input.decision.shouldCreateIssue,
         status: "planned",
@@ -124,6 +125,7 @@ class MemoryStore implements AppStore {
     if (item) {
       item.status = input.status === "succeeded" ? "implemented" : input.status;
       item.userStatus = input.status === "succeeded" ? "implemented" : "blocked";
+      item.latestActualCost = input.costActual ?? null;
       item.unresolvedAssumptions = (input.assumptions ?? []).filter((assumption) => assumption.unresolved);
     }
     this.recentAssumptions.unshift(...(input.assumptions ?? []));
@@ -142,7 +144,46 @@ class MemoryStore implements AppStore {
     return this.workItems;
   }
 
-  async markWorkItemReleased() {}
+  async markWorkItemReleased(workItemId: string, message = "This request has shipped.") {
+    const item = this.workItems.find((workItem) => workItem.id === workItemId);
+    if (item) {
+      item.status = "shipped";
+      item.userStatus = "shipped";
+      item.updatedAt = new Date().toISOString();
+    }
+    for (const [feedbackId] of this.feedbackStatuses) {
+      this.feedbackStatuses.set(feedbackId, {
+        feedbackId,
+        label: "Shipped",
+        message,
+        state: "shipped",
+        timeline: [],
+      });
+    }
+  }
+
+  async reconcileWorkItems(input?: Parameters<AppStore["reconcileWorkItems"]>[0]) {
+    const staleAfterMinutes = input?.staleAfterMinutes ?? 60;
+    const cutoff = Date.now() - staleAfterMinutes * 60_000;
+    const staleInProgressRequeuedIds: string[] = [];
+    for (const item of this.workItems) {
+      if (item.status === "in_progress" && new Date(item.updatedAt).getTime() < cutoff) {
+        item.status = "planned";
+        item.userStatus = "planned";
+        item.updatedAt = new Date().toISOString();
+        staleInProgressRequeuedIds.push(item.id);
+      }
+    }
+    return {
+      failedWithoutPrIds: this.workItems
+        .filter((item) => item.status === "failed" && !item.githubPrUrl)
+        .map((item) => item.id),
+      implementedAwaitingReleaseIds: this.workItems
+        .filter((item) => item.status === "implemented")
+        .map((item) => item.id),
+      staleInProgressRequeuedIds,
+    };
+  }
 
   async recordAgentRun(input?: Parameters<AppStore["recordAgentRun"]>[0]) {
     if (input?.assumptions?.length) {
@@ -541,6 +582,7 @@ test("GitHub webhook verifies signature and records PR artifact", async () => {
     githubIssueUrl: null,
     githubPrUrl: null,
     id: "work_123",
+    latestActualCost: null,
     riskTier: "safe_auto_merge",
     shouldCreateIssue: true,
     status: "implemented",
@@ -656,6 +698,112 @@ test("runner claims planned work in auto approval mode and completes it with act
   assert.equal(complete.statusCode, 200);
   assert.equal(complete.json().runId, "run_1");
   assert.equal(store.workItems[0]?.status, "implemented");
+  assert.equal(store.workItems[0]?.latestActualCost?.amountUsd, 1.25);
+
+  await app.close();
+});
+
+test("release marker requires implemented work and updates user status after implementation", async () => {
+  const store = new MemoryStore();
+  store.approvalMode = "auto";
+  const app = await buildApp({ config, store });
+
+  const feedback = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add search so I can find older notes",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+  const feedbackId = feedback.json().feedbackId;
+  const workItemId = feedback.json().workItemId;
+
+  const earlyRelease = await app.inject({
+    method: "POST",
+    payload: { message: "This request has shipped." },
+    url: `/admin/work-items/${workItemId}/release`,
+  });
+  assert.equal(earlyRelease.statusCode, 409);
+  assert.equal(earlyRelease.json().error, "release marker requires implemented work");
+
+  await app.inject({
+    method: "POST",
+    payload: {
+      agentName: "worker-test",
+      costActual: { amountUsd: 0.75, confidence: "high", model: "gpt-5.5" },
+      status: "succeeded",
+      summary: "Implemented by worker.",
+    },
+    url: `/runner/jobs/${workItemId}/complete`,
+  });
+
+  const release = await app.inject({
+    method: "POST",
+    payload: { message: "Note search has shipped." },
+    url: `/admin/work-items/${workItemId}/release`,
+  });
+  assert.equal(release.statusCode, 202);
+
+  const status = await app.inject({ method: "GET", url: `/sdk/feedback/${feedbackId}/status` });
+  assert.equal(status.json().state, "shipped");
+  assert.equal(status.json().message, "Note search has shipped.");
+
+  await app.close();
+});
+
+test("reconciliation requeues stale in-progress work and reports release gaps", async () => {
+  const store = new MemoryStore();
+  store.workItems.push({
+    autoMergeEligible: false,
+    category: "feature_request",
+    clusterKey: "feature.daybook.search",
+    costEstimate: { amountUsd: 1.5, confidence: "low", currency: "USD", model: "gpt-5.5", reason: "test" },
+    createdAt: new Date(Date.now() - 120 * 60_000).toISOString(),
+    githubIssueUrl: null,
+    githubPrUrl: null,
+    id: "work_stale",
+    latestActualCost: null,
+    riskTier: "safe_auto_merge",
+    shouldCreateIssue: true,
+    status: "in_progress",
+    summary: "Please add note search",
+    title: "Add note search",
+    updatedAt: new Date(Date.now() - 120 * 60_000).toISOString(),
+    unresolvedAssumptions: [],
+    userStatus: "in_progress",
+  });
+  store.workItems.push({
+    autoMergeEligible: false,
+    category: "copy",
+    clusterKey: "copy.save",
+    costEstimate: { amountUsd: 0.5, confidence: "low", currency: "USD", model: "gpt-5.5", reason: "test" },
+    createdAt: new Date().toISOString(),
+    githubIssueUrl: null,
+    githubPrUrl: "https://github.com/joewilsonai/open-feedback-factory/pull/77",
+    id: "work_waiting_release",
+    latestActualCost: { amountUsd: 0.25, confidence: "high", model: "gpt-5.5" },
+    riskTier: "safe_auto_merge",
+    shouldCreateIssue: true,
+    status: "implemented",
+    summary: "Improve save copy",
+    title: "Improve product copy",
+    updatedAt: new Date().toISOString(),
+    unresolvedAssumptions: [],
+    userStatus: "implemented",
+  });
+  const app = await buildApp({ config, store });
+
+  const response = await app.inject({
+    method: "POST",
+    payload: { staleAfterMinutes: 30 },
+    url: "/admin/reconciliation/run",
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json().result.staleInProgressRequeuedIds, ["work_stale"]);
+  assert.deepEqual(response.json().result.implementedAwaitingReleaseIds, ["work_waiting_release"]);
+  assert.equal(store.workItems[0]?.status, "planned");
 
   await app.close();
 });
