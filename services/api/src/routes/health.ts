@@ -59,7 +59,7 @@ function defaultMergeGuardrailPolicy(deps: AppDeps) {
 function buildRunnerInstallPlan(codexAuthMode: "api_key" | "cli") {
   return {
     dockerApiKey: {
-      env: ["CODEX_RUNNER_MODE=codex", "CODEX_AUTH_MODE=api_key"],
+      env: ["CODEX_RUNNER_MODE=codex", "CODEX_AUTH_MODE=api_key", "DOCKER_CODEX_CLI=codex", "CODEX_CLI_VERSION=0.141.0"],
       requirement: "Save an OpenAI API key in the control center before starting the Docker worker.",
       startCommand: "docker compose up -d --build worker",
       title: "Docker API-key worker",

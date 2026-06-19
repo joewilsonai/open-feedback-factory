@@ -112,6 +112,8 @@ server-side OpenAI API key.
 ```bash
 CODEX_RUNNER_MODE=codex
 CODEX_AUTH_MODE=api_key
+DOCKER_CODEX_CLI=codex
+CODEX_CLI_VERSION=0.141.0
 ```
 
 3. Restart the worker:
@@ -125,6 +127,14 @@ To print the exact helper snippet:
 ```bash
 pnpm worker:print:docker-api
 ```
+
+Compose installs `@openai/codex` inside the API and worker containers when
+runner mode is `codex`. `CODEX_CLI_VERSION` pins that container install.
+`DOCKER_CODEX_CLI` is the container executable path; leave host-only Codex paths
+in `CODEX_CLI` for the host worker lane.
+Docker workers intentionally leave work queued in `cli` auth mode because they
+cannot access host Codex subscription auth. Use the host worker for `cli` auth,
+or switch the Docker worker to `api_key` auth.
 
 ## Auto Worker
 

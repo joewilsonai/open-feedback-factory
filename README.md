@@ -67,6 +67,8 @@ real feature-usage event. It does not create fake PRs, fake costs, fake agent
 runs, fake release events, or fake shipped states. Use `pnpm demo:reset` to clear
 sample seed and local integration-test rows from the Docker database without
 touching real `daybook_demo_app` submissions.
+Live workers leave sample-only seed work queued so dry-run data does not burn
+real agent runs.
 
 The Docker stack starts Postgres, the API, the worker, the control center, and
 the Daybook notepad/todo demo app. The worker polls `/runner/jobs/claim`, runs the configured runner,
@@ -144,7 +146,13 @@ file. Remove it with `pnpm worker:uninstall:host`.
 For Docker API-key installs, save the API key in the control center, set
 `CODEX_RUNNER_MODE=codex` and `CODEX_AUTH_MODE=api_key`, then restart the worker
 service with `docker compose up -d --build worker`. Print the helper snippet
-with `pnpm worker:print:docker-api`.
+with `pnpm worker:print:docker-api`. Docker installs `@openai/codex` in the API
+and worker containers when runner mode is `codex`; use `CODEX_CLI_VERSION` to
+pin that container CLI version and `DOCKER_CODEX_CLI` for the in-container
+binary path. Host workers can keep using `CODEX_CLI` for a host-specific path.
+The Docker worker intentionally leaves work queued in `cli` auth mode because it
+cannot use your host Codex subscription auth; switch it to `api_key` or use the
+host worker.
 
 The worker reads live approval/auth settings from `/doctor` before each claim,
 so changing Codex auth mode in the control center is picked up by an attached

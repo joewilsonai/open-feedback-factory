@@ -61,6 +61,8 @@ test("Docker API-key mode prints a compose lane instead of a host service", () =
 
   assert.match(instructions, /CODEX_AUTH_MODE=api_key/);
   assert.match(instructions, /CODEX_RUNNER_MODE=codex/);
+  assert.match(instructions, /DOCKER_CODEX_CLI=codex/);
+  assert.match(instructions, /CODEX_CLI_VERSION=0\.141\.0/);
   assert.match(instructions, /docker compose up -d --build worker/);
 });
 

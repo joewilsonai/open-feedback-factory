@@ -993,6 +993,7 @@ trackFeatureOutcome({
 <p>the control center and keep the worker inside Docker;</p>
 <li>manual one-item worker command for targeted review, retries, and demos.</li>
 </ul>
+<p>Docker workers must install and use their own Codex CLI inside the container when <code>CODEX_RUNNER_MODE=codex</code>; they must not inherit host-only paths such as <code>/opt/homebrew/bin/codex</code>. Expose separate <code>DOCKER_CODEX_CLI</code> and <code>CODEX_CLI_VERSION</code> settings for the container lane. Docker workers should leave work queued in <code>cli</code> auth mode because host subscription auth is not available inside the container; use the host worker for <code>cli</code> auth or the Docker worker with <code>api_key</code> auth.</p>
 <p>The generated host service should source the ignored <code>.env</code> file at startup and set only worker-specific defaults such as <code>CODEX_RUNNER_MODE=codex</code>, <code>WORKER_RUN_ONCE=false</code>, <code>WORKER_API_BASE_URL</code>, <code>RUNNER_WORKSPACE</code>, and <code>CODEX_SECRETS_PATH</code>. It must not copy API keys, GitHub App private keys, or tokens into generated service files. It should also translate the Docker-only <code>WORKER_API_BASE_URL=http://api:4100</code> default to the host-reachable <code>http://localhost:4100</code> when generating local host worker services.</p>
 <h3 id="8-6-review-gates"><a class="heading-anchor" href="#8-6-review-gates" aria-label="Link to 8.6 Review Gates">#</a>8.6 Review Gates</h3>
 <p>V1 risk tiers:</p>
@@ -1800,6 +1801,8 @@ pnpm demo</code></pre>
 <li>clearly seeded sample feedback, labeled as sample input;</li>
 <li>sample reset command that removes seed/test rows without touching real app</li>
 <p>submissions;</p>
+<li>live workers leave sample-only seed work queued so dry-run data does not burn</li>
+<p>real agent runs;</p>
 <li>queued or blocked agent lane unless a real runner is configured;</li>
 <li>no fake PR URLs, fake costs, fake agent runs, fake releases, or fake shipped</li>
 <p>state;</p>
@@ -2362,7 +2365,7 @@ feedback-factory demo</code></pre>
 <p>Configuration should be versioned, validated, migratable, and safe to upgrade.</p>
 <p>The local demo setup needs to be excellent: one command, sample app, sample feedback, GitHub flow, control center, and visible PR.</p>
 <p>The admin UI should be wizard-driven, start in dry-run, and make security, permissions, cost caps, connected repos, agent access, blocked work, and maintenance health obvious.</p>
-<p>The setup UI must make worker attachment explicit. Auto approval allows a live worker to claim queued work, but does not itself create a worker. The UI and docs must show the exact command or deployment path for manual one-item workers, host CLI auto-polling workers, and Docker API-key workers, including <code>CODEX_RUNNER_MODE</code>, <code>CODEX_AUTH_MODE</code>, <code>CODEX_SECRETS_PATH</code>, GitHub PR settings, model, effort, timeout, and workspace. The host install helper should generate macOS LaunchAgent and Linux user systemd files, provide status and uninstall commands, write logs under <code>.off/logs</code>, and avoid embedding secrets directly in generated service files.</p>
+<p>The setup UI must make worker attachment explicit. Auto approval allows a live worker to claim queued work, but does not itself create a worker. The UI and docs must show the exact command or deployment path for manual one-item workers, host CLI auto-polling workers, and Docker API-key workers, including <code>CODEX_RUNNER_MODE</code>, <code>CODEX_AUTH_MODE</code>, <code>CODEX_SECRETS_PATH</code>, <code>CODEX_CLI</code> for host workers, <code>DOCKER_CODEX_CLI</code> and <code>CODEX_CLI_VERSION</code> for Docker workers, GitHub PR settings, model, effort, timeout, and workspace. The host install helper should generate macOS LaunchAgent and Linux user systemd files, provide status and uninstall commands, write logs under <code>.off/logs</code>, and avoid embedding secrets directly in generated service files.</p>
 <p>Admin and beta-user surfaces must not leak raw internal enum names. Labels such as <code>planned</code>, <code>safe_auto_merge</code>, <code>guarded_review</code>, and <code>not_planned</code> should be rendered as human-readable product states such as &quot;Queued&quot;, &quot;Low-risk auto lane&quot;, &quot;Needs review&quot;, and &quot;Not planned&quot;. Raw enum values can remain in APIs and audit logs, but not as the primary visible control-center language.</p>
 <p>The hosted version later needs multi-tenant auth, billing, hosted workers, team roles, managed secrets, managed backups, and webhook delivery monitoring.</p>
 <h3 id="20-4-trust-safety-and-control-requirements"><a class="heading-anchor" href="#20-4-trust-safety-and-control-requirements" aria-label="Link to 20.4 Trust, Safety, and Control Requirements">#</a>20.4 Trust, Safety, and Control Requirements</h3>

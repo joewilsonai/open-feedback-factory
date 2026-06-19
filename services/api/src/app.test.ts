@@ -39,6 +39,7 @@ const config: ApiConfig = {
   publicBaseUrl: "http://api.test",
   runnerWorkspace: "/tmp/open-feedback-factory-test",
 };
+const sampleOnlyFeedbackSources = new Set(["demo_seed", "sample_seed"]);
 
 class MemoryStore implements AppStore {
   approvalMode: ApiConfig["approvalMode"] | null = null;
@@ -204,6 +205,7 @@ class MemoryStore implements AppStore {
       (workItem) =>
         workItem.status === "planned" &&
         (!workItemId || workItem.id === workItemId) &&
+        workItem.signalSources.some((source) => !sampleOnlyFeedbackSources.has(source)) &&
         (maxFeatureCostUsd === undefined || workItem.costEstimate.amountUsd <= maxFeatureCostUsd),
     );
     if (!item) return null;
@@ -750,6 +752,12 @@ test("doctor exposes setup wizard links", async () => {
   assert.equal(response.json().runnerInstall.hostCli.installCommand, "pnpm worker:install:host");
   assert.equal(response.json().runnerInstall.hostCli.statusCommand, "pnpm worker:status:host");
   assert.equal(response.json().runnerInstall.dockerApiKey.startCommand, "docker compose up -d --build worker");
+  assert.deepEqual(response.json().runnerInstall.dockerApiKey.env, [
+    "CODEX_RUNNER_MODE=codex",
+    "CODEX_AUTH_MODE=api_key",
+    "DOCKER_CODEX_CLI=codex",
+    "CODEX_CLI_VERSION=0.141.0",
+  ]);
 
   await app.close();
 });
@@ -917,6 +925,45 @@ test("admin can set cost cap and runner claims respect it", async () => {
   const manualRun = await app.inject({ method: "POST", url: `/admin/work-items/${workItemId}/run` });
   assert.equal(manualRun.statusCode, 409);
   assert.equal(manualRun.json().error, "cost cap exceeded");
+
+  await app.close();
+});
+
+test("runner leaves sample seed work queued", async () => {
+  const store = new MemoryStore();
+  store.approvalMode = "auto";
+  store.workItems.push({
+    autoMergeEligible: false,
+    category: "feature_request",
+    clusterKey: "feature.sample.search",
+    costEstimate: { amountUsd: 1.5, confidence: "low", currency: "USD", model: "gpt-5.5", reason: "test" },
+    createdAt: new Date().toISOString(),
+    githubIssueUrl: null,
+    githubPrUrl: null,
+    id: "work_sample",
+    latestActualCost: null,
+    latestBranchName: null,
+    riskTier: "safe_auto_merge",
+    shouldCreateIssue: true,
+    signalSources: ["sample_seed"],
+    status: "planned",
+    summary: "Please add sample note search",
+    title: "Add sample note search",
+    updatedAt: new Date().toISOString(),
+    unresolvedAssumptions: [],
+    userStatus: "planned",
+  });
+  const app = await buildApp({ config, store });
+
+  const claim = await app.inject({
+    method: "POST",
+    payload: { workerName: "worker-test" },
+    url: "/runner/jobs/claim",
+  });
+
+  assert.equal(claim.statusCode, 200);
+  assert.equal(claim.json().job, null);
+  assert.equal(store.workItems[0]?.status, "planned");
 
   await app.close();
 });
