@@ -14,8 +14,12 @@ const checks = [];
 checks.push(commandCheck("node", ["--version"], "Node.js"));
 checks.push(commandCheck("pnpm", ["--version"], "pnpm"));
 checks.push(commandCheck("docker", ["--version"], "Docker"));
-checks.push(commandCheck("codex", ["--version"], "Codex CLI"));
-checks.push(commandCheck("gh", ["auth", "status"], "GitHub CLI auth"));
+checks.push(commandCheck("codex", ["--version"], "Codex CLI", { required: env.CODEX_RUNNER_MODE === "codex" }));
+checks.push(
+  commandCheck("gh", ["auth", "status"], "GitHub CLI auth", {
+    required: env.GITHUB_MODE === "gh" || env.GITHUB_CREATE_PR === "true",
+  }),
+);
 
 checks.push(await portCheck(Number(env.API_PORT ?? 4100), "API port"));
 checks.push(await portCheck(Number(env.CONTROL_CENTER_PORT ?? 5173), "Control center port"));
@@ -90,20 +94,25 @@ if (failed.length > 0) {
   process.exitCode = 1;
 }
 
-function commandCheck(command, args, label) {
+function commandCheck(command, args, label, options = { required: true }) {
   const result = spawnSync(command, args, {
     cwd: root,
     encoding: "utf8",
+    timeout: 10000,
   });
+  const commandError =
+    result.error?.code === "ETIMEDOUT" ? `${command} timed out` : result.error?.message;
+  const output = firstLine(result.stdout || result.stderr || commandError || "");
+  const detail = output || (options.required ? "missing" : "not configured");
   return {
-    detail: result.status === 0 ? firstLine(result.stdout || result.stderr) : firstLine(result.stderr || result.stdout),
+    detail: result.status === 0 ? detail : options.required ? detail : `optional; ${detail}`,
     label,
-    ok: result.status === 0,
+    ok: result.status === 0 || !options.required,
   };
 }
 
 function firstLine(value) {
-  return value.trim().split("\n")[0] || "ok";
+  return value.trim().split("\n")[0] || "";
 }
 
 function githubAppConfigured(env) {
