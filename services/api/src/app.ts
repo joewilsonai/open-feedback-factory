@@ -62,6 +62,11 @@ export interface AppStore {
     url: string;
     workItemId: string;
   }): Promise<string>;
+  recordGithubWebhookDelivery(input: {
+    deliveryId?: string | null;
+    event: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<boolean>;
   setApprovalMode(mode: ApiConfig["approvalMode"], actor?: string): Promise<void>;
   setCodexAuthMode(mode: ApiConfig["codexAuthMode"], actor?: string): Promise<void>;
 }

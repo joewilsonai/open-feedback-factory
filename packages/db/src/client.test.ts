@@ -81,8 +81,30 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(completed?.status, "implemented");
     assert.equal(completed?.githubPrUrl, "https://github.com/joewilsonai/open-feedback-factory/pull/123");
     assert.equal(completed?.latestActualCost?.amountUsd, 1.25);
+    assert.equal(completed?.latestBranchName, null);
     assert.equal(completed?.unresolvedAssumptions.length, 1);
     assert.deepEqual(completed?.unresolvedAssumptions[0]?.impactAreas, ["release_status"]);
+
+    const artifactOne = await store.recordGithubArtifact({
+      artifactType: "pull_request",
+      url: "https://github.com/joewilsonai/open-feedback-factory/pull/123",
+      workItemId: claimed?.id ?? "",
+    });
+    const artifactTwo = await store.recordGithubArtifact({
+      artifactType: "pull_request",
+      url: "https://github.com/joewilsonai/open-feedback-factory/pull/123",
+      workItemId: claimed?.id ?? "",
+    });
+    assert.equal(artifactTwo, artifactOne);
+
+    assert.equal(
+      await store.recordGithubWebhookDelivery({ deliveryId: `delivery_${uniqueSuffix}`, event: "pull_request" }),
+      true,
+    );
+    assert.equal(
+      await store.recordGithubWebhookDelivery({ deliveryId: `delivery_${uniqueSuffix}`, event: "pull_request" }),
+      false,
+    );
 
     const completedSnapshot = await store.getControlRoomSnapshot();
     assert.equal(completedSnapshot.recentAssumptions.length > 0, true);

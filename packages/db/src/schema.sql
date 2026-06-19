@@ -233,4 +233,6 @@ create index if not exists work_items_cluster_key_idx on work_items(cluster_key)
 create index if not exists agent_runs_work_item_id_idx on agent_runs(work_item_id);
 create index if not exists agent_assumptions_work_item_id_idx on agent_assumptions(work_item_id);
 create index if not exists agent_assumptions_agent_run_id_idx on agent_assumptions(agent_run_id);
+create unique index if not exists github_artifacts_work_item_type_url_idx on github_artifacts(work_item_id, artifact_type, url);
 create index if not exists feature_usage_events_feature_id_idx on feature_usage_events(feature_id);
+create unique index if not exists audit_events_github_delivery_idx on audit_events(target_id) where event = 'github_webhook_delivery';

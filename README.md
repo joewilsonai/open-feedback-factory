@@ -190,6 +190,11 @@ The API also exposes `/github/app/manifest`, `/github/app/setup`,
 `/github/app/installed`, and `/github/webhook` for the App installation and
 webhook flow.
 
+GitHub webhook deliveries are recorded by delivery id so redelivered events are
+acknowledged without duplicating artifacts or agent-run records. GitHub
+artifacts are idempotent per work item/type/URL, and generated runner branches
+are eligible for cleanup after a guarded merge.
+
 ## CI And Safe Merge
 
 The default GitHub Actions workflow runs tests, typecheck, build, and the

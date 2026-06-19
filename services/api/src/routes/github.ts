@@ -173,6 +173,23 @@ docker compose up -d --build</pre>
     }
 
     const event = String(request.headers["x-github-event"] ?? "unknown");
+    const deliveryId = headerString(request.headers["x-github-delivery"]);
+    const firstDelivery = await deps.store.recordGithubWebhookDelivery({
+      deliveryId,
+      event,
+      metadata: {
+        source: "github_webhook",
+      },
+    });
+    if (!firstDelivery) {
+      return {
+        duplicate: true,
+        event,
+        mode: deps.config.githubMode,
+        ok: true,
+      };
+    }
+
     const body = request.body as Record<string, unknown>;
     const result = await handleGithubWebhook(deps, event, body);
     return {
@@ -306,6 +323,11 @@ function queryString(value: unknown, key: string): string | null {
 function stringFrom(value: Record<string, unknown> | null, key: string): string | null {
   const raw = value?.[key];
   return typeof raw === "string" ? raw : null;
+}
+
+function headerString(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
 }
 
 async function convertGithubAppManifestCode(code: string): Promise<Record<string, unknown>> {

@@ -31,6 +31,7 @@ export interface WorkItemRow {
   userStatus: string;
   costEstimate: FeatureCostEstimate;
   latestActualCost: Record<string, unknown> | null;
+  latestBranchName: string | null;
   shouldCreateIssue: boolean;
   unresolvedAssumptions: AgentAssumptionRecord[];
   githubIssueUrl: string | null;
@@ -61,6 +62,12 @@ export interface GithubArtifactInput {
   metadata?: Record<string, unknown>;
   url: string;
   workItemId: string;
+}
+
+export interface GithubWebhookDeliveryInput {
+  deliveryId?: string | null;
+  event: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ControlRoomSnapshot {
@@ -270,6 +277,14 @@ export class OpenFeedbackStore {
                 order by coalesce(ar.completed_at, ar.created_at) desc
                 limit 1
               ) as latest_actual_cost,
+              (
+                select ar.metadata ->> 'branchName'
+                from agent_runs ar
+                where ar.work_item_id = wi.id
+                  and ar.metadata ? 'branchName'
+                order by coalesce(ar.completed_at, ar.created_at) desc
+                limit 1
+              ) as latest_branch_name,
               coalesce(
                 (
                   select jsonb_agg(assumption_record_json(aa) order by aa.created_at desc)
@@ -299,6 +314,14 @@ export class OpenFeedbackStore {
                 order by coalesce(ar.completed_at, ar.created_at) desc
                 limit 1
               ) as latest_actual_cost,
+              (
+                select ar.metadata ->> 'branchName'
+                from agent_runs ar
+                where ar.work_item_id = wi.id
+                  and ar.metadata ? 'branchName'
+                order by coalesce(ar.completed_at, ar.created_at) desc
+                limit 1
+              ) as latest_branch_name,
               coalesce(
                 (
                   select jsonb_agg(assumption_record_json(aa) order by aa.created_at desc)
@@ -337,6 +360,7 @@ export class OpenFeedbackStore {
                    wi.status, wi.user_status, wi.cost_estimate, wi.should_create_issue,
                    wi.github_issue_url, wi.github_pr_url, wi.auto_merge_eligible,
                    null::jsonb as latest_actual_cost,
+                   null::text as latest_branch_name,
                    wi.created_at, wi.updated_at`,
         [workItemId ?? null],
       );
@@ -514,9 +538,18 @@ export class OpenFeedbackStore {
     const client = await this.pool.connect();
     try {
       await client.query("begin");
-      await client.query(
-        `insert into github_artifacts (id, work_item_id, artifact_type, url, artifact_number, metadata)
-         values ($1, $2, $3, $4, $5, $6)`,
+      const artifact = await client.query<{ id: string }>(
+        `with inserted as (
+           insert into github_artifacts (id, work_item_id, artifact_type, url, artifact_number, metadata)
+           values ($1, $2, $3, $4, $5, $6)
+           on conflict (work_item_id, artifact_type, url) do nothing
+           returning id
+         )
+         select id from inserted
+         union all
+         select id from github_artifacts
+         where work_item_id = $2 and artifact_type = $3 and url = $4
+         limit 1`,
         [
           id,
           input.workItemId,
@@ -526,6 +559,7 @@ export class OpenFeedbackStore {
           JSON.stringify(input.metadata ?? {}),
         ],
       );
+      const artifactId = artifact.rows[0]?.id ?? id;
 
       if (input.artifactType === "issue") {
         await client.query(
@@ -546,20 +580,38 @@ export class OpenFeedbackStore {
           `audit_${randomUUID()}`,
           input.workItemId,
           JSON.stringify({
-            artifactId: id,
+            artifactId,
             artifactType: input.artifactType,
             url: input.url,
           }),
         ],
       );
       await client.query("commit");
-      return id;
+      return artifactId;
     } catch (error) {
       await client.query("rollback");
       throw error;
     } finally {
       client.release();
     }
+  }
+
+  async recordGithubWebhookDelivery(input: GithubWebhookDeliveryInput): Promise<boolean> {
+    if (!input.deliveryId) return true;
+    const result = await this.pool.query(
+      `insert into audit_events (id, actor, event, target_type, target_id, metadata)
+       values ($1, 'github', 'github_webhook_delivery', 'github_delivery', $2, $3)
+       on conflict do nothing`,
+      [
+        `audit_${randomUUID()}`,
+        input.deliveryId,
+        JSON.stringify({
+          event: input.event,
+          ...(input.metadata ?? {}),
+        }),
+      ],
+    );
+    return (result.rowCount ?? 0) > 0;
   }
 
   async markWorkItemReleased(workItemId: string, message = "This request has shipped."): Promise<void> {
@@ -819,6 +871,7 @@ function workItemFromRow(row: Record<string, unknown>): WorkItemRow {
     githubPrUrl: row.github_pr_url ? String(row.github_pr_url) : null,
     id: String(row.id),
     latestActualCost: actualCostFromRow(row.latest_actual_cost),
+    latestBranchName: stringOrNull(row.latest_branch_name),
     riskTier: String(row.risk_tier),
     shouldCreateIssue: Boolean(row.should_create_issue),
     status: String(row.status),
@@ -833,6 +886,10 @@ function workItemFromRow(row: Record<string, unknown>): WorkItemRow {
 function actualCostFromRow(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
+}
+
+function stringOrNull(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 async function insertAssumptionRecords(
