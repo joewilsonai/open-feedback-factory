@@ -167,6 +167,24 @@ The key is masked in the UI and is never returned to the browser. See
 [`docs/agent-runner-setup.md`](./agent-runner-setup.md) for the exact manual
 and auto worker commands.
 
+## Rate Limits And Abuse Controls
+
+Local V1 uses fixed-window in-memory limits so SDK, admin, runner, and GitHub
+paths fail in a visible way instead of accepting unlimited traffic. Defaults
+live in `.env.example`:
+
+```bash
+RATE_LIMIT_WINDOW_MS=60000
+SDK_RATE_LIMIT_MAX=120
+ADMIN_RATE_LIMIT_MAX=120
+RUNNER_RATE_LIMIT_MAX=300
+GITHUB_RATE_LIMIT_MAX=300
+```
+
+If a request receives `429 rate_limited`, report the route group and retry
+window. Do not raise limits to hide a test failure unless the user is explicitly
+testing a higher-capacity install.
+
 ## What To Report Back
 
 After installation, report:

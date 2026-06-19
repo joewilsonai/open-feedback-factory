@@ -12,6 +12,8 @@ describe("control center UI contract", () => {
     expect(source).toContain("Work items");
     expect(source).toContain("Work item");
     expect(source).toContain("Agent runs");
+    expect(source).toContain("Agent assumptions");
+    expect(source).toContain("Unresolved assumptions");
     expect(source).toContain("Feature usage");
     expect(source).toContain("Cost");
     expect(source).toContain("Auto-merge");

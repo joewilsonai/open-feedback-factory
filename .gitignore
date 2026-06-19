@@ -10,4 +10,5 @@ coverage/
 .cache/
 .pnpm-store/
 .off/
+.superpowers/
 *.log

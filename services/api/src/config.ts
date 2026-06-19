@@ -21,7 +21,12 @@ export interface ApiConfig {
   maxSafeDiffLines: number;
   protectedPathFragments: string[];
   publicBaseUrl: string;
+  adminRateLimitMax?: number;
+  githubRateLimitMax?: number;
+  rateLimitWindowMs?: number;
+  runnerRateLimitMax?: number;
   runnerWorkspace: string;
+  sdkRateLimitMax?: number;
 }
 
 export function readConfig(env = process.env): ApiConfig {
@@ -51,7 +56,12 @@ export function readConfig(env = process.env): ApiConfig {
       .map((item) => item.trim())
       .filter(Boolean),
     publicBaseUrl: stripTrailingSlash(env.PUBLIC_BASE_URL ?? `http://localhost:${env.API_PORT ?? 4100}`),
+    adminRateLimitMax: Number(env.ADMIN_RATE_LIMIT_MAX ?? 120),
+    githubRateLimitMax: Number(env.GITHUB_RATE_LIMIT_MAX ?? 300),
+    rateLimitWindowMs: Number(env.RATE_LIMIT_WINDOW_MS ?? 60_000),
+    runnerRateLimitMax: Number(env.RUNNER_RATE_LIMIT_MAX ?? 300),
     runnerWorkspace: env.RUNNER_WORKSPACE ?? process.cwd(),
+    sdkRateLimitMax: Number(env.SDK_RATE_LIMIT_MAX ?? 120),
   };
 }
 

@@ -1,5 +1,5 @@
 import cors from "@fastify/cors";
-import { type FeedbackInput, type UserFeedbackStatus } from "@open-feedback-factory/core";
+import { type AgentAssumptionRecord, type FeedbackInput, type UserFeedbackStatus } from "@open-feedback-factory/core";
 import type { ControlRoomSnapshot, WorkItemRow } from "@open-feedback-factory/db";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { ApiConfig } from "./config.js";
@@ -8,6 +8,7 @@ import { registerGithubRoutes } from "./routes/github.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerRunnerRoutes } from "./routes/runner.js";
 import { registerSdkRoutes } from "./routes/sdk.js";
+import { registerRateLimits } from "./rateLimit.js";
 
 export interface AppStore {
   createFeedbackIntake(input: {
@@ -22,6 +23,7 @@ export interface AppStore {
   claimNextWorkItem(workerName?: string, workItemId?: string): Promise<WorkItemRow | null>;
   completeWorkItemRun(input: {
     agentName: string;
+    assumptions?: AgentAssumptionRecord[];
     costActual?: Record<string, unknown>;
     metadata?: Record<string, unknown>;
     runType: string;
@@ -38,6 +40,7 @@ export interface AppStore {
   markWorkItemReleased(workItemId: string, message?: string): Promise<void>;
   recordAgentRun(input: {
     agentName: string;
+    assumptions?: AgentAssumptionRecord[];
     costActual?: Record<string, unknown>;
     metadata?: Record<string, unknown>;
     runType: string;
@@ -87,6 +90,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     origin: true,
   });
 
+  await registerRateLimits(app, deps.config);
   await registerHealthRoutes(app, deps);
   await registerSdkRoutes(app, deps);
   await registerAdminRoutes(app, deps);

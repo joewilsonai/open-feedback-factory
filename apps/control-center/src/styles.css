@@ -411,6 +411,46 @@ dd {
   text-underline-offset: 3px;
 }
 
+.mini-label {
+  color: #65706c;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.assumption-note {
+  margin-bottom: 1rem;
+  color: #65706c;
+  font-weight: 700;
+}
+
+.assumption-box {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(22, 26, 31, 0.13);
+  padding: 0.85rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.assumption-box article {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.assumption-box strong {
+  color: #8a4f00;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+}
+
+.assumption-box span,
+.assumption-box small {
+  color: #52605a;
+  line-height: 1.45;
+}
+
 .activity ul {
   display: grid;
   gap: 0.65rem;

@@ -36,6 +36,7 @@ const workItem: WorkItemRow = {
   title: "Add a dark mode option",
   updatedAt: new Date(0).toISOString(),
   userStatus: "planned",
+  unresolvedAssumptions: [],
 };
 
 test("buildCodexExecArgs uses local codex exec json mode with output schema", () => {
@@ -84,6 +85,7 @@ test("buildCodexPrompt contains sanitized work item context only", () => {
 
   assert.match(prompt, /Please add dark mode to settings/);
   assert.match(prompt, /make only the requested file\/content change/i);
+  assert.match(prompt, /Return structured output with assumptions/);
   assert.match(prompt, /Do not commit, push, or open a pull request/);
   assert.match(prompt, /Do not inspect or request raw private feedback/);
   assert.doesNotMatch(prompt, /joe@example.com|sk-/i);
@@ -93,16 +95,21 @@ test("parseCodexJsonlOutput extracts final structured result and usage", () => {
   const output = [
     '{"type":"thread.started","thread_id":"thread_1"}',
     '{"type":"item.completed","item":{"id":"item_1","type":"error","message":"non-fatal warning"}}',
-    '{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"{\\"outcome\\":\\"implemented\\",\\"summary\\":\\"parser smoke\\",\\"changedFiles\\":[\\"apps/demo-app/src/App.tsx\\"]}"}}',
+    '{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"{\\"outcome\\":\\"implemented\\",\\"summary\\":\\"parser smoke\\",\\"changedFiles\\":[\\"apps/demo-app/src/App.tsx\\"],\\"assumptions\\":[\\"Assumed Daybook demo app is the target\\"],\\"checksRun\\":[\\"pnpm test\\"],\\"checksSkipped\\":[\\"No browser smoke in parser test\\"],\\"costSummary\\":\\"usage captured\\",\\"userMessage\\":\\"The requested change is ready for review.\\"}"}}',
     '{"type":"turn.completed","usage":{"input_tokens":22823,"cached_input_tokens":2432,"output_tokens":120,"reasoning_output_tokens":93}}',
   ].join("\n");
 
   const parsed = parseCodexJsonlOutput(output);
 
   assert.deepEqual(parsed.result, {
+    assumptions: ["Assumed Daybook demo app is the target"],
     changedFiles: ["apps/demo-app/src/App.tsx"],
+    checksRun: ["pnpm test"],
+    checksSkipped: ["No browser smoke in parser test"],
+    costSummary: "usage captured",
     outcome: "implemented",
     summary: "parser smoke",
+    userMessage: "The requested change is ready for review.",
   });
   assert.deepEqual(parsed.usage, {
     cachedInputTokens: 2432,

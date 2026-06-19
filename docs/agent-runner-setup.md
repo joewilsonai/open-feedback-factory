@@ -90,6 +90,22 @@ changes when `CODEX_MANAGE_GIT=true`, optionally opens a PR, records actual
 token usage, records cost when pricing rates are configured, records assumptions
 and skipped checks, and posts the run result back to the API.
 
+The runner's final structured result must include:
+
+- `outcome`;
+- `summary`;
+- `changedFiles`;
+- `assumptions`;
+- `checksRun`;
+- `checksSkipped`;
+- `costSummary`;
+- `userMessage`.
+
+If Codex fails before returning that shape, the worker records a failed run with
+an unresolved merge-safety assumption and skipped-check note. If implementation
+succeeds but PR publication fails, the work is also marked failed rather than
+pretending a PR exists.
+
 ## Cost Capture
 
 The runner captures Codex JSON usage totals. To convert usage into actual

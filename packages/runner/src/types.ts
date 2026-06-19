@@ -1,8 +1,11 @@
 import type { WorkItemRow } from "@open-feedback-factory/db";
 
 export interface RunnerResult {
+  assumptions: string[];
   branchName: string | null;
   changedFiles: string[];
+  checksRun: string[];
+  checksSkipped: string[];
   costActual: {
     amountUsd: number;
     confidence: "high" | "medium" | "low";
@@ -12,6 +15,7 @@ export interface RunnerResult {
   output: string;
   status: "blocked" | "failed" | "succeeded";
   summary: string;
+  userMessage: string;
 }
 
 export interface CodexUsage {
@@ -22,9 +26,14 @@ export interface CodexUsage {
 }
 
 export interface CodexStructuredResult {
+  assumptions: string[];
   changedFiles: string[];
+  checksRun: string[];
+  checksSkipped: string[];
+  costSummary: string;
   outcome: "blocked" | "failed" | "implemented";
   summary: string;
+  userMessage: string;
 }
 
 export interface CodexPricing {

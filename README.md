@@ -73,6 +73,8 @@ Safety defaults:
 - runner mode defaults to disabled, so feedback is queued until a real runner is attached;
 - Codex auth can use either the local Codex CLI subscription path or a
   server-side OpenAI API key saved outside git.
+- SDK, admin, runner, and GitHub endpoints have separate fixed-window rate-limit
+  defaults that can be tuned from `.env`.
 
 ## Approval And Credential Modes
 
@@ -125,6 +127,26 @@ tests where another worker should not claim the oldest queue item.
 Live demos must be real. If Codex, GitHub, or release proof is not configured,
 the product should show queued/blocked states and the exact missing requirement,
 not simulated implementation.
+
+Runner completions store structured assumptions, checks run, skipped checks,
+actual token/cost data when available, and a user-safe message. Any unresolved
+assumption that affects privacy, cost, merge safety, or release status blocks
+safe auto-merge until a reviewer lane or human operator resolves it.
+
+## Rate Limits
+
+V1 includes local fixed-window HTTP rate limits. Defaults are intentionally high
+for private dogfood, but visible and configurable:
+
+- `SDK_RATE_LIMIT_MAX=120`
+- `ADMIN_RATE_LIMIT_MAX=120`
+- `RUNNER_RATE_LIMIT_MAX=300`
+- `GITHUB_RATE_LIMIT_MAX=300`
+- `RATE_LIMIT_WINDOW_MS=60000`
+
+Hosted installs should back these with shared storage such as Redis; the V1
+in-memory limiter exists so local and Docker installs exercise the same failure
+shape instead of silently accepting abuse.
 
 ## GitHub Modes
 

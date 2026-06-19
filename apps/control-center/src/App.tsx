@@ -11,6 +11,7 @@ interface Snapshot {
     openWorkItems: number;
   };
   recentAgentRuns: Array<Record<string, unknown>>;
+  recentAssumptions: Array<Record<string, unknown>>;
   recentFeedback: Array<Record<string, unknown>>;
   recentUsage: Array<Record<string, unknown>>;
   workItems: WorkItem[];
@@ -31,7 +32,17 @@ interface WorkItem {
   status: string;
   summary: string;
   title: string;
+  unresolvedAssumptions: AgentAssumption[];
   userStatus: string;
+}
+
+interface AgentAssumption {
+  assumptions: string[];
+  checksRun: string[];
+  checksSkipped: string[];
+  impactAreas: string[];
+  notes: string;
+  unresolved: boolean;
 }
 
 interface Doctor {
@@ -64,6 +75,7 @@ const emptySnapshot: Snapshot = {
     openWorkItems: 0,
   },
   recentAgentRuns: [],
+  recentAssumptions: [],
   recentFeedback: [],
   recentUsage: [],
   workItems: [],
@@ -293,6 +305,7 @@ export function App() {
                 {selected.githubIssueUrl ? <a href={selected.githubIssueUrl}>GitHub issue</a> : <span>No issue yet</span>}
                 {selected.githubPrUrl ? <a href={selected.githubPrUrl}>Pull request</a> : <span>No PR yet</span>}
               </div>
+              <AssumptionList assumptions={selected.unresolvedAssumptions ?? []} />
               <div className="action-row">
                 <button
                   type="button"
@@ -327,6 +340,7 @@ export function App() {
         <SetupWizard doctor={doctor} />
         <ActivityPanel title="Recent feedback" rows={snapshot.recentFeedback} />
         <SetupPanel doctor={doctor} />
+        <AssumptionsPanel rows={snapshot.recentAssumptions} />
         <ActivityPanel title="Agent runs" rows={snapshot.recentAgentRuns} />
         <ActivityPanel title="Feature usage" rows={snapshot.recentUsage} />
       </section>
@@ -586,6 +600,56 @@ function SetupPanel(props: { doctor: Doctor | null }) {
   );
 }
 
+function AssumptionList(props: { assumptions: AgentAssumption[] }) {
+  if (!props.assumptions.length) {
+    return <p className="assumption-note">No unresolved agent assumptions on this work item.</p>;
+  }
+
+  return (
+    <div className="assumption-box">
+      <p className="mini-label">Unresolved assumptions</p>
+      {props.assumptions.map((assumption, index) => (
+        <article key={`${assumption.notes}-${index}`}>
+          <strong>{assumption.impactAreas.join(", ") || "review"}</strong>
+          <span>{assumption.notes}</span>
+          {assumption.assumptions.length ? <small>{assumption.assumptions.join(" ")}</small> : null}
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function AssumptionsPanel(props: { rows: Array<Record<string, unknown>> }) {
+  return (
+    <div className="panel activity assumptions-panel">
+      <div className="panel-heading">
+        <p className="eyebrow">Guardrails</p>
+        <h2>Agent assumptions</h2>
+      </div>
+      {props.rows.length ? (
+        <ul>
+          {props.rows.slice(0, 5).map((row, index) => {
+            const assumptions = stringList(row.assumptions);
+            const checksSkipped = stringList(row.checks_skipped ?? row.checksSkipped);
+            const impactAreas = stringList(row.impact_areas ?? row.impactAreas);
+            return (
+              <li key={String(row.id ?? index)}>
+                <code>{String(row.work_item_id ?? row.workItemId ?? row.id ?? index)}</code>
+                <small>{String(row.unresolved ?? false) === "true" ? "Unresolved" : "Recorded"}</small>
+                <span>{String(row.notes ?? assumptions[0] ?? "Assumption recorded")}</span>
+                {impactAreas.length ? <small>{impactAreas.join(", ")}</small> : null}
+                {checksSkipped.length ? <span>Skipped: {checksSkipped.join(" ")}</span> : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="empty">No agent assumptions recorded yet.</p>
+      )}
+    </div>
+  );
+}
+
 function Metric(props: { label: string; value: number | string }) {
   return (
     <article className="metric">
@@ -694,6 +758,11 @@ function titleCase(value: string): string {
     .filter(Boolean)
     .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`)
     .join(" ");
+}
+
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 }
 
 function ActivityPanel(props: { rows: Array<Record<string, unknown>>; title: string }) {

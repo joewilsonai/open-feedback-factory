@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { evaluateAutoMerge } from "./automerge.js";
+import { buildAssumptionRecord } from "./assumptions.js";
 import type { AutoMergeInput } from "./types.js";
 
 const safeInput: AutoMergeInput = {
@@ -36,4 +37,20 @@ test("evaluateAutoMerge blocks protected paths and failed checks", () => {
   assert.equal(result.eligible, false);
   assert.equal(result.reasons.includes("protected_path_changed"), true);
   assert.equal(result.reasons.includes("checks_not_passing"), true);
+});
+
+test("evaluateAutoMerge blocks unresolved assumptions that affect release or safety", () => {
+  const result = evaluateAutoMerge({
+    ...safeInput,
+    unresolvedAssumptions: [
+      buildAssumptionRecord({
+        assumptions: ["Assumed merged means released."],
+        checksSkipped: ["No release marker was provided."],
+        impactAreas: ["release_status"],
+      }),
+    ],
+  });
+
+  assert.equal(result.eligible, false);
+  assert.equal(result.reasons.includes("unresolved_assumption_blocks_automerge"), true);
 });

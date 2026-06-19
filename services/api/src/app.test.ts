@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import type { UserFeedbackStatus } from "@open-feedback-factory/core";
+import type { AgentAssumptionRecord, UserFeedbackStatus } from "@open-feedback-factory/core";
 import type { ControlRoomSnapshot, WorkItemRow } from "@open-feedback-factory/db";
 import { buildApp, type AppStore } from "./app.js";
 import type { ApiConfig } from "./config.js";
@@ -37,6 +37,7 @@ class MemoryStore implements AppStore {
   approvalMode: ApiConfig["approvalMode"] | null = null;
   codexAuthMode: ApiConfig["codexAuthMode"] | null = null;
   feedbackStatuses = new Map<string, UserFeedbackStatus>();
+  recentAssumptions: AgentAssumptionRecord[] = [];
   usageCount = 0;
   workItems: WorkItemRow[] = [];
 
@@ -69,6 +70,7 @@ class MemoryStore implements AppStore {
         title: input.decision.title,
         updatedAt: new Date().toISOString(),
         userStatus: input.decision.userStatus,
+        unresolvedAssumptions: [],
       });
     }
 
@@ -84,6 +86,7 @@ class MemoryStore implements AppStore {
         openWorkItems: this.workItems.length,
       },
       recentAgentRuns: [],
+      recentAssumptions: this.recentAssumptions.map((assumption) => ({ ...assumption })),
       recentFeedback: [],
       recentUsage: [],
       workItems: this.workItems,
@@ -121,7 +124,9 @@ class MemoryStore implements AppStore {
     if (item) {
       item.status = input.status === "succeeded" ? "implemented" : input.status;
       item.userStatus = input.status === "succeeded" ? "implemented" : "blocked";
+      item.unresolvedAssumptions = (input.assumptions ?? []).filter((assumption) => assumption.unresolved);
     }
+    this.recentAssumptions.unshift(...(input.assumptions ?? []));
     return "run_1";
   }
 
@@ -139,7 +144,12 @@ class MemoryStore implements AppStore {
 
   async markWorkItemReleased() {}
 
-  async recordAgentRun() {
+  async recordAgentRun(input?: Parameters<AppStore["recordAgentRun"]>[0]) {
+    if (input?.assumptions?.length) {
+      const item = this.workItems.find((workItem) => workItem.id === input.workItemId);
+      if (item) item.unresolvedAssumptions = input.assumptions.filter((assumption) => assumption.unresolved);
+      this.recentAssumptions.unshift(...input.assumptions);
+    }
     return "run_1";
   }
 
@@ -174,6 +184,42 @@ test("API accepts SDK feedback and returns user-safe status", async () => {
   assert.match(body.feedbackId, /^feedback_/);
   assert.match(body.workItemId, /^work_/);
   assert.equal(body.status.state, "planned");
+
+  await app.close();
+});
+
+test("API rate limits repeated SDK feedback intake by actor", async () => {
+  const app = await buildApp({
+    config: { ...config, rateLimitWindowMs: 60_000, sdkRateLimitMax: 2 },
+    store: new MemoryStore(),
+  });
+
+  for (let index = 0; index < 2; index += 1) {
+    const response = await app.inject({
+      method: "POST",
+      payload: {
+        message: `Please add note search ${index}`,
+        source: "demo",
+        userId: "user-rate-test",
+      },
+      url: "/sdk/feedback",
+    });
+    assert.equal(response.statusCode, 201);
+  }
+
+  const limited = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add note search again",
+      source: "demo",
+      userId: "user-rate-test",
+    },
+    url: "/sdk/feedback",
+  });
+
+  assert.equal(limited.statusCode, 429);
+  assert.equal(limited.json().error, "rate_limited");
+  assert.equal(limited.headers["retry-after"], "60");
 
   await app.close();
 });
@@ -502,6 +548,7 @@ test("GitHub webhook verifies signature and records PR artifact", async () => {
     title: "Improve product copy",
     updatedAt: new Date().toISOString(),
     userStatus: "implemented",
+    unresolvedAssumptions: [],
   });
 
   const app = await buildApp({ config, store });
@@ -609,6 +656,77 @@ test("runner claims planned work in auto approval mode and completes it with act
   assert.equal(complete.statusCode, 200);
   assert.equal(complete.json().runId, "run_1");
   assert.equal(store.workItems[0]?.status, "implemented");
+
+  await app.close();
+});
+
+test("auto merge blocks when an agent left unresolved assumptions", async () => {
+  const store = new MemoryStore();
+  store.approvalMode = "auto";
+  const app = await buildApp({
+    config: { ...config, autoMergeEnabled: true, githubMode: "gh" },
+    store,
+  });
+
+  const feedback = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add a calmer button label",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+  const workItemId = feedback.json().workItemId;
+
+  await store.recordGithubArtifact({
+    artifactType: "pull_request",
+    url: "https://github.com/joewilsonai/open-feedback-factory/pull/42",
+    workItemId,
+  });
+
+  const completion = await app.inject({
+    method: "POST",
+    payload: {
+      agentName: "worker-test",
+      assumptions: [
+        {
+          alternativesSkipped: [],
+          assumptions: ["Release health was inferred from local checks only."],
+          checksRun: ["pnpm test"],
+          checksSkipped: ["Live release health check was not available."],
+          confidence: "low",
+          defaultsUsed: ["model=gpt-5.5"],
+          humanQuestions: [],
+          impactAreas: ["release_status"],
+          notes: "Needs a release-health confirmation before merge.",
+          unresolved: true,
+        },
+      ],
+      costActual: { amountUsd: 1.25, confidence: "low", model: "gpt-5.5" },
+      status: "succeeded",
+      summary: "Implemented by worker.",
+    },
+    url: `/runner/jobs/${workItemId}/complete`,
+  });
+  assert.equal(completion.statusCode, 200);
+
+  const merge = await app.inject({
+    method: "POST",
+    payload: {
+      branchTrusted: true,
+      changedFiles: ["apps/demo-app/src/App.tsx"],
+      checksPassed: true,
+      costActualUsd: 1.25,
+      diffLineCount: 12,
+      redactionWarnings: 0,
+      releaseHealthy: true,
+      reviewerApproved: true,
+    },
+    url: `/admin/work-items/${workItemId}/automerge`,
+  });
+
+  assert.equal(merge.statusCode, 409);
+  assert.deepEqual(merge.json().evaluation.reasons, ["unresolved_assumption_blocks_automerge"]);
 
   await app.close();
 });

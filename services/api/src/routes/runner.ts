@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import type { AgentAssumptionRecord } from "@open-feedback-factory/core";
 import type { AppDeps } from "../app.js";
 
 export async function registerRunnerRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
@@ -15,6 +16,7 @@ export async function registerRunnerRoutes(app: FastifyInstance, deps: AppDeps):
   app.post<{
     Body: {
       agentName?: string;
+      assumptions?: AgentAssumptionRecord[];
       costActual?: Record<string, unknown>;
       metadata?: Record<string, unknown>;
       status?: "blocked" | "failed" | "succeeded";
@@ -27,6 +29,7 @@ export async function registerRunnerRoutes(app: FastifyInstance, deps: AppDeps):
 
     const runId = await deps.store.completeWorkItemRun({
       agentName: request.body.agentName ?? "runner",
+      assumptions: request.body.assumptions,
       costActual: request.body.costActual,
       metadata: request.body.metadata ?? {},
       runType: "implementation",

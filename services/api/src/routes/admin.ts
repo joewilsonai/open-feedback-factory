@@ -87,6 +87,20 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
 
     const runId = await deps.store.completeWorkItemRun({
       agentName: "codex-cli",
+      assumptions: [
+        {
+          alternativesSkipped: [],
+          assumptions: result.assumptions,
+          checksRun: result.checksRun,
+          checksSkipped: result.checksSkipped,
+          confidence: result.status === "succeeded" ? "medium" : "low",
+          defaultsUsed: [`model=${workItem.costEstimate.model}`, `auth=${codexAuthMode}`],
+          humanQuestions: [],
+          impactAreas: result.checksSkipped.length > 0 ? ["merge_safety"] : ["none"],
+          notes: result.userMessage,
+          unresolved: result.checksSkipped.length > 0,
+        },
+      ],
       costActual: result.costActual,
       metadata: {
         branchName: result.branchName,
@@ -146,6 +160,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
       releaseHealthy: request.body.releaseHealthy === true,
       reviewerApproved: request.body.reviewerApproved === true,
       riskTier: workItem.riskTier as WorkRiskTier,
+      unresolvedAssumptions: workItem.unresolvedAssumptions,
     });
 
     const prUrl = workItem.githubPrUrl;
