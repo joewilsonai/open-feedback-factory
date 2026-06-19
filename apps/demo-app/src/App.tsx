@@ -59,8 +59,7 @@ function readPinnedNotes(): PinnedNote[] {
 export function normalizePinnedNotes(value: unknown): PinnedNote[] {
   if (!Array.isArray(value)) return [];
 
-  const seenTexts = new Set<string>();
-  const pinnedNotes: PinnedNote[] = [];
+  const candidates: Array<{ note: PinnedNote; pinnedAtTime: number }> = [];
 
   for (const item of value) {
     if (!item || typeof item !== "object") continue;
@@ -70,15 +69,29 @@ export function normalizePinnedNotes(value: unknown): PinnedNote[] {
       continue;
     }
 
-    const text = normalizePinnedNoteText(candidate.text);
-    if (!text || seenTexts.has(text)) continue;
+    const pinnedAtTime = Date.parse(candidate.createdAt);
+    if (!Number.isFinite(pinnedAtTime)) continue;
 
-    seenTexts.add(text);
-    pinnedNotes.push({
-      createdAt: candidate.createdAt,
-      id: candidate.id,
-      text,
+    const text = normalizePinnedNoteText(candidate.text);
+    if (!text) continue;
+
+    candidates.push({
+      note: {
+        createdAt: candidate.createdAt,
+        id: candidate.id,
+        text,
+      },
+      pinnedAtTime,
     });
+  }
+
+  const seenTexts = new Set<string>();
+  const pinnedNotes: PinnedNote[] = [];
+
+  for (const candidate of candidates.sort((first, second) => second.pinnedAtTime - first.pinnedAtTime)) {
+    if (seenTexts.has(candidate.note.text)) continue;
+    seenTexts.add(candidate.note.text);
+    pinnedNotes.push(candidate.note);
   }
 
   return pinnedNotes;

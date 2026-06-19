@@ -55,11 +55,16 @@ describe("demo app UI contract", () => {
       normalizePinnedNotes([
         { createdAt: "2026-06-19T12:00:00.000Z", id: "pinned-note-1", text: "  Keep this visible  " },
         { createdAt: "2026-06-19T12:01:00.000Z", id: "pinned-note-2", text: "Keep this visible" },
+        { createdAt: "2026-06-19T12:02:00.000Z", id: "pinned-note-5", text: "Newest visible note" },
         { createdAt: "2026-06-19T12:02:00.000Z", id: "pinned-note-3", text: "" },
         { createdAt: 1, id: "pinned-note-4", text: "Invalid date type" },
+        { createdAt: "not-a-date", id: "pinned-note-6", text: "Invalid date value" },
         "legacy string note",
       ]),
-    ).toEqual([{ createdAt: "2026-06-19T12:00:00.000Z", id: "pinned-note-1", text: "Keep this visible" }]);
+    ).toEqual([
+      { createdAt: "2026-06-19T12:02:00.000Z", id: "pinned-note-5", text: "Newest visible note" },
+      { createdAt: "2026-06-19T12:01:00.000Z", id: "pinned-note-2", text: "Keep this visible" },
+    ]);
   });
 
   it("allows only non-empty notes that are not already pinned", () => {
