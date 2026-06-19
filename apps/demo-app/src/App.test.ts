@@ -31,13 +31,18 @@ describe("demo app UI contract", () => {
   it("has persistent notes, todos, and dark mode", () => {
     expect(source).toContain("open-feedback-factory-daybook-theme");
     expect(source).toContain("open-feedback-factory-daybook-note");
+    expect(source).toContain("open-feedback-factory-daybook-pinned-notes");
     expect(source).toContain("open-feedback-factory-daybook-tasks");
     expect(source).toContain("window.localStorage.getItem");
     expect(source).toContain("window.localStorage.setItem");
     expect(source).toContain('role="switch"');
+    expect(source).toContain("pinned-note");
+    expect(source).toContain("Pin note");
+    expect(source).toContain("Unpin");
     expect(source).toContain("todo-item");
     expect(source).toContain("Notes and todos");
     expect(styles).toContain(".theme-switch");
+    expect(styles).toContain(".pinned-notes");
     expect(styles).toContain(".task-list");
   });
 });

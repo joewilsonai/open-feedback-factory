@@ -103,6 +103,15 @@ button:hover {
   transform: translateY(-1px);
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+button:disabled:hover {
+  transform: none;
+}
+
 :root[data-theme="dark"] button {
   border-color: rgba(244, 240, 232, 0.2);
   background: rgba(255, 255, 255, 0.08);
@@ -204,6 +213,25 @@ small {
   margin-bottom: 1rem;
 }
 
+.note-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pin-note-action {
+  border-color: rgba(15, 112, 84, 0.42);
+  color: #0f7054;
+  background: rgba(15, 112, 84, 0.1);
+}
+
+:root[data-theme="dark"] .pin-note-action {
+  border-color: rgba(117, 217, 180, 0.45);
+  color: #75d9b4;
+  background: rgba(117, 217, 180, 0.12);
+}
+
 label {
   display: block;
   margin-bottom: 0.45rem;
@@ -229,6 +257,61 @@ textarea {
   min-height: 19rem;
   font-size: 1.1rem;
   line-height: 1.6;
+}
+
+.pinned-notes {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.pinned-notes-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pinned-notes-heading .mini-label {
+  margin-bottom: 0;
+}
+
+.pinned-notes-heading span {
+  color: #69736f;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.pinned-note {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid rgba(15, 112, 84, 0.26);
+  border-left: 4px solid #0f7054;
+  border-radius: 8px;
+  padding: 0.85rem;
+  background: rgba(15, 112, 84, 0.08);
+}
+
+.pinned-note p {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.pinned-note button {
+  justify-self: start;
+  min-height: 36px;
+  padding: 0.42rem 0.7rem;
+}
+
+:root[data-theme="dark"] .pinned-notes-heading span {
+  color: #a7b3ae;
+}
+
+:root[data-theme="dark"] .pinned-note {
+  border-color: rgba(117, 217, 180, 0.28);
+  border-left-color: #75d9b4;
+  background: rgba(117, 217, 180, 0.09);
 }
 
 :root[data-theme="dark"] input,
@@ -345,6 +428,11 @@ dd {
 
   .feedback-panel {
     grid-column: span 1;
+  }
+
+  .note-heading {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .task-entry > div {

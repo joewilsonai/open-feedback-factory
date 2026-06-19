@@ -5,12 +5,19 @@ import "./styles.css";
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 const themeStorageKey = "open-feedback-factory-daybook-theme";
 const noteStorageKey = "open-feedback-factory-daybook-note";
+const pinnedNotesStorageKey = "open-feedback-factory-daybook-pinned-notes";
 const tasksStorageKey = "open-feedback-factory-daybook-tasks";
 
 type Theme = "dark" | "light";
 
 interface Task {
   done: boolean;
+  id: string;
+  text: string;
+}
+
+interface PinnedNote {
+  createdAt: string;
   id: string;
   text: string;
 }
@@ -38,6 +45,27 @@ function readNote(): string {
   return window.localStorage.getItem(noteStorageKey) ?? "Today I need one quiet place for ideas, follow-ups, and small tasks.";
 }
 
+function readPinnedNotes(): PinnedNote[] {
+  if (typeof window === "undefined") return [];
+  const stored = window.localStorage.getItem(pinnedNotesStorageKey);
+  if (!stored) return [];
+  try {
+    const parsed = JSON.parse(stored) as PinnedNote[];
+    return Array.isArray(parsed)
+      ? parsed.filter(
+          (item) =>
+            item &&
+            typeof item.createdAt === "string" &&
+            typeof item.id === "string" &&
+            typeof item.text === "string" &&
+            item.text.trim().length > 0,
+        )
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 function readTasks(): Task[] {
   if (typeof window === "undefined") return defaultTasks;
   const stored = window.localStorage.getItem(tasksStorageKey);
@@ -53,6 +81,7 @@ function readTasks(): Task[] {
 export function App() {
   const [message, setMessage] = useState(feedbackPresets[0]?.message ?? "");
   const [note, setNote] = useState(readNote);
+  const [pinnedNotes, setPinnedNotes] = useState<PinnedNote[]>(readPinnedNotes);
   const [result, setResult] = useState<SubmitFeedbackResult | null>(null);
   const [status, setStatus] = useState("Ready");
   const [taskDraft, setTaskDraft] = useState("");
@@ -73,6 +102,8 @@ export function App() {
     [],
   );
   const completedCount = tasks.filter((task) => task.done).length;
+  const trimmedNote = note.trim();
+  const canPinNote = trimmedNote.length > 0 && !pinnedNotes.some((pinnedNote) => pinnedNote.text === trimmedNote);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -84,6 +115,10 @@ export function App() {
   }, [note]);
 
   useEffect(() => {
+    window.localStorage.setItem(pinnedNotesStorageKey, JSON.stringify(pinnedNotes));
+  }, [pinnedNotes]);
+
+  useEffect(() => {
     window.localStorage.setItem(tasksStorageKey, JSON.stringify(tasks));
   }, [tasks]);
 
@@ -93,6 +128,38 @@ export function App() {
     void client.trackFeatureUsage({
       action: nextTheme === "dark" ? "enabled" : "disabled",
       featureId: "dark-mode",
+      metadata: {
+        appName: "Daybook",
+        source: "notepad-todo",
+      },
+    });
+  }
+
+  function pinCurrentNote() {
+    if (!canPinNote) return;
+    setPinnedNotes([
+      {
+        createdAt: new Date().toISOString(),
+        id: `pinned-note-${Date.now()}`,
+        text: trimmedNote,
+      },
+      ...pinnedNotes,
+    ]);
+    void client.trackFeatureUsage({
+      action: "pinned",
+      featureId: "pinned-note",
+      metadata: {
+        appName: "Daybook",
+        source: "notepad-todo",
+      },
+    });
+  }
+
+  function unpinNote(id: string) {
+    setPinnedNotes(pinnedNotes.filter((pinnedNote) => pinnedNote.id !== id));
+    void client.trackFeatureUsage({
+      action: "unpinned",
+      featureId: "pinned-note",
       metadata: {
         appName: "Daybook",
         source: "notepad-todo",
@@ -162,16 +229,37 @@ export function App() {
       <section className="metric-strip" aria-label="Workspace metrics">
         <Metric label="Todos" value={String(tasks.length)} detail="total" />
         <Metric label="Done" value={`${completedCount}/${tasks.length}`} detail="completed" />
-        <Metric label="Note" value={`${note.length}`} detail="characters" />
+        <Metric label="Pinned" value={String(pinnedNotes.length)} detail="notes" />
         <Metric label="Requests" value={result?.workItemId ? "1" : "0"} detail="current session" />
       </section>
 
       <section className="workspace-grid">
         <div className="panel note-panel">
-          <div className="panel-heading">
-            <p className="eyebrow">Notebook</p>
-            <h2>Scratchpad</h2>
+          <div className="panel-heading note-heading">
+            <div>
+              <p className="eyebrow">Notebook</p>
+              <h2>Scratchpad</h2>
+            </div>
+            <button className="pin-note-action" type="button" disabled={!canPinNote} onClick={pinCurrentNote}>
+              Pin note
+            </button>
           </div>
+          {pinnedNotes.length > 0 ? (
+            <section className="pinned-notes" aria-label="Pinned notes">
+              <div className="pinned-notes-heading">
+                <p className="mini-label">Pinned notes</p>
+                <span>{pinnedNotes.length}</span>
+              </div>
+              {pinnedNotes.map((pinnedNote) => (
+                <article className="pinned-note" key={pinnedNote.id}>
+                  <p>{pinnedNote.text}</p>
+                  <button type="button" onClick={() => unpinNote(pinnedNote.id)}>
+                    Unpin
+                  </button>
+                </article>
+              ))}
+            </section>
+          ) : null}
           <label htmlFor="note">Today</label>
           <textarea id="note" value={note} onChange={(event) => setNote(event.target.value)} rows={12} />
         </div>
