@@ -1,4 +1,40 @@
-import type { FeedbackSeverity, UserFeedbackStatus } from "@open-feedback-factory/core";
+export type FeedbackSeverity = "info" | "low" | "medium" | "high" | "critical";
+
+export type UserFeedbackState =
+  | "already_available"
+  | "blocked"
+  | "grouped"
+  | "implemented"
+  | "in_progress"
+  | "needs_clarification"
+  | "needs_more_signal"
+  | "not_planned"
+  | "planned"
+  | "received"
+  | "shipped";
+
+export interface UserClarificationQuestion {
+  id: string;
+  placeholder?: string;
+  question: string;
+}
+
+export interface FeedbackTimelineEvent {
+  body: string;
+  createdAt: string;
+  event: string;
+  label: string;
+  proof?: string;
+}
+
+export interface UserFeedbackStatus {
+  clarificationQuestions: UserClarificationQuestion[];
+  feedbackId: string;
+  label: string;
+  message: string;
+  state: UserFeedbackState;
+  timeline: FeedbackTimelineEvent[];
+}
 
 export interface OpenFeedbackClientOptions {
   apiBaseUrl: string;

@@ -10,7 +10,5 @@
     "test": "node --import tsx --test src/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "dependencies": {
-    "@open-feedback-factory/core": "workspace:*"
-  }
+  "dependencies": {}
 }

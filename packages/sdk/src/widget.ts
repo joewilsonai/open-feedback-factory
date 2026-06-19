@@ -1,6 +1,7 @@
 import type { SubmitFeedbackInput, SubmitFeedbackResult, OpenFeedbackClient } from "./client.js";
 
 type ClarificationQuestion = SubmitFeedbackResult["status"]["clarificationQuestions"][number];
+type FeedbackState = SubmitFeedbackResult["status"]["state"];
 
 export interface FeedbackSuggestion {
   label: string;
@@ -71,14 +72,25 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
         </form>
         <div class="off-launcher-status" role="status" aria-live="polite">Ready</div>
         <div class="off-launcher-tracker" hidden>
-          <div>
-            <p class="off-launcher-kicker">Your latest request</p>
-            <strong class="off-launcher-tracker-label">Checking status...</strong>
+          <div class="off-launcher-tracker-top">
+            <div>
+              <p class="off-launcher-kicker">Your latest request</p>
+              <strong class="off-launcher-tracker-label">Checking status...</strong>
+            </div>
+            <span class="off-launcher-tracker-state">Tracking</span>
           </div>
           <p class="off-launcher-tracker-message"></p>
+          <div class="off-launcher-next-step">
+            <span>What happens next</span>
+            <p class="off-launcher-next-message"></p>
+          </div>
+          <div class="off-launcher-tracker-meta">
+            <p class="off-launcher-kicker">Tracking</p>
+            <p class="off-launcher-tracker-id"></p>
+          </div>
           <div class="off-launcher-questions" hidden></div>
           <button class="off-launcher-answer" type="button" hidden>Add more detail</button>
-          <p class="off-launcher-tracker-id"></p>
+          <p class="off-launcher-tracker-help">Reopen this button anytime to check the latest status. You do not need access to the operator control center.</p>
         </div>
       </div>
     </section>
@@ -97,7 +109,9 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
   const suggestions = requireElement<HTMLDivElement>(root, ".off-launcher-suggestions");
   const tracker = requireElement<HTMLDivElement>(root, ".off-launcher-tracker");
   const trackerLabel = requireElement<HTMLElement>(root, ".off-launcher-tracker-label");
+  const trackerState = requireElement<HTMLSpanElement>(root, ".off-launcher-tracker-state");
   const trackerMessage = requireElement<HTMLParagraphElement>(root, ".off-launcher-tracker-message");
+  const nextMessage = requireElement<HTMLParagraphElement>(root, ".off-launcher-next-message");
   const questions = requireElement<HTMLDivElement>(root, ".off-launcher-questions");
   const answerButton = requireElement<HTMLButtonElement>(root, ".off-launcher-answer");
   const trackerId = requireElement<HTMLParagraphElement>(root, ".off-launcher-tracker-id");
@@ -163,6 +177,7 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
       feedbackId: trackedFeedbackId,
       label: "Checking status...",
       message: "Open the panel to load the latest update.",
+      state: "received",
     });
   }
 
@@ -187,7 +202,7 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
     void options.client
       .submitFeedback(input)
       .then((result) => {
-        status.textContent = `${result.status.label}: ${result.status.message}`;
+        status.textContent = "Sent. Your answer and tracking status are below.";
         trackedFeedbackId = result.feedbackId;
         if (trackStatus) writeTrackedFeedbackId(statusStorageKey, result.feedbackId);
         showTracker({
@@ -195,6 +210,7 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
           feedbackId: result.feedbackId,
           label: result.status.label,
           message: result.status.message,
+          state: result.status.state,
         });
         startStatusPolling();
         pendingFollowUpForFeedbackId = null;
@@ -222,6 +238,7 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
         feedbackId: trackedFeedbackId,
         label: "Checking status...",
         message: "Fetching the latest update.",
+        state: "received",
       });
     }
 
@@ -232,12 +249,14 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
         feedbackId: trackedFeedbackId,
         label: next.label,
         message: next.message,
+        state: next.state,
       });
     } catch (error: unknown) {
       showTracker({
         feedbackId: trackedFeedbackId,
         label: "Status unavailable",
         message: error instanceof Error ? error.message : "Could not refresh this request.",
+        state: "blocked",
       });
     }
   }
@@ -247,13 +266,17 @@ export function mountFeedbackLauncher(options: FeedbackLauncherOptions): Feedbac
     feedbackId: string;
     label: string;
     message: string;
+    state: FeedbackState;
   }) {
     if (!trackStatus) return;
     tracker.hidden = false;
     trackerLabel.textContent = input.label;
+    trackerState.textContent = statePillLabel(input.state);
+    trackerState.dataset.state = input.state;
     trackerMessage.textContent = input.message;
-    trackerId.textContent = `Request ${input.feedbackId}`;
+    trackerId.textContent = `Tracking ID ${input.feedbackId}`;
     latestQuestions = input.clarificationQuestions ?? [];
+    nextMessage.textContent = nextStepForState(input.state, latestQuestions.length > 0);
     questions.replaceChildren();
     questions.hidden = latestQuestions.length === 0;
     answerButton.hidden = latestQuestions.length === 0;
@@ -373,15 +396,58 @@ function ensureLauncherStyles() {
     .off-launcher-tracker[hidden] {
       display: none;
     }
+    .off-launcher-tracker-top {
+      display: flex;
+      gap: 0.75rem;
+      align-items: start;
+      justify-content: space-between;
+    }
     .off-launcher-tracker-label {
       display: block;
       color: #17201d;
       font-size: 0.98rem;
     }
-    .off-launcher-tracker-message, .off-launcher-tracker-id {
+    .off-launcher-tracker-state {
+      flex: 0 0 auto;
+      border: 1px solid rgba(24, 32, 29, 0.14);
+      border-radius: 999px;
+      padding: 0.3rem 0.55rem;
+      color: #17201d;
+      background: rgba(132, 204, 22, 0.2);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+    .off-launcher-tracker-state[data-state="blocked"],
+    .off-launcher-tracker-state[data-state="not_planned"] {
+      background: rgba(180, 83, 9, 0.13);
+    }
+    .off-launcher-tracker-state[data-state="shipped"] {
+      background: rgba(22, 163, 74, 0.16);
+    }
+    .off-launcher-tracker-message, .off-launcher-tracker-id, .off-launcher-tracker-help, .off-launcher-next-message {
       margin: 0;
       color: #59645f;
       font-size: 0.9rem;
+    }
+    .off-launcher-next-step {
+      display: grid;
+      gap: 0.18rem;
+      border: 1px solid rgba(24, 32, 29, 0.1);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.58);
+      padding: 0.65rem;
+    }
+    .off-launcher-next-step span {
+      color: #17201d;
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .off-launcher-tracker-meta {
+      display: grid;
+      gap: 0.1rem;
     }
     .off-launcher-questions {
       display: grid;
@@ -404,6 +470,9 @@ function ensureLauncherStyles() {
     .off-launcher-tracker-id {
       font-size: 0.78rem;
       word-break: break-word;
+    }
+    .off-launcher-tracker-help {
+      font-size: 0.78rem;
     }
     .off-launcher-form {
       display: grid;
@@ -482,6 +551,53 @@ function writeTrackedFeedbackId(key: string, feedbackId: string) {
   } catch {
     // Status tracking still works for the current session when storage is blocked.
   }
+}
+
+function statePillLabel(state: FeedbackState): string {
+  if (state === "needs_more_signal") return "Saved";
+  if (state === "needs_clarification") return "Needs reply";
+  if (state === "planned" || state === "grouped") return "Queued";
+  if (state === "in_progress") return "Building";
+  if (state === "implemented") return "Reviewing";
+  if (state === "shipped") return "Shipped";
+  if (state === "not_planned") return "Not planned";
+  if (state === "already_available") return "Available";
+  if (state === "blocked") return "Blocked";
+  return "Received";
+}
+
+function nextStepForState(state: FeedbackState, hasQuestions: boolean): string {
+  if (hasQuestions || state === "needs_clarification") {
+    return "Answer the questions below so the team can understand what would help.";
+  }
+  if (state === "needs_more_signal") {
+    return "We are not building it yet. We will count it with similar requests and revisit it when more users ask.";
+  }
+  if (state === "planned") {
+    return "It is queued for review and possible agent work. It is not shipped yet.";
+  }
+  if (state === "grouped") {
+    return "We grouped it with matching feedback that is already in the queue. It is not shipped yet.";
+  }
+  if (state === "in_progress") {
+    return "An agent is working on a matching request. We will update this status when there is review or release proof.";
+  }
+  if (state === "implemented") {
+    return "The change has been implemented and is waiting for review or release proof.";
+  }
+  if (state === "shipped") {
+    return "The change has shipped. The team can now watch usage to see whether it helped.";
+  }
+  if (state === "not_planned") {
+    return "The team reviewed it and is not planning to build it right now.";
+  }
+  if (state === "already_available") {
+    return "This appears to already be available. The team can follow up if that answer is wrong.";
+  }
+  if (state === "blocked") {
+    return "This cannot move forward without human review. Nothing is being sent to an agent from this request.";
+  }
+  return "We received it and saved a tracking record.";
 }
 
 function escapeHtml(value: string): string {

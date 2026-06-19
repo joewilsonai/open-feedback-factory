@@ -3,6 +3,14 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createOpenFeedbackClient } from "./client.js";
 
+test("sdk package can be installed outside the monorepo", () => {
+  const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
+    dependencies?: Record<string, string>;
+  };
+
+  assert.deepEqual(packageJson.dependencies ?? {}, {});
+});
+
 test("submitFeedback sends privacy-safe metadata", async () => {
   const requests: Array<{ body: unknown; url: string }> = [];
   const client = createOpenFeedbackClient({
@@ -90,6 +98,10 @@ test("feedback launcher exposes a floating suggestion UI contract", () => {
   assert.match(widgetSource, /getFeedbackStatus/);
   assert.match(widgetSource, /off-launcher-tracker/);
   assert.match(widgetSource, /Your latest request/);
+  assert.match(widgetSource, /What happens next/);
+  assert.match(widgetSource, /You do not need access to the operator control center/);
+  assert.match(widgetSource, /not building it yet/);
+  assert.match(widgetSource, /Tracking ID/);
   assert.match(widgetSource, /Add more detail/);
   assert.match(widgetSource, /clarificationQuestions/);
   assert.match(widgetSource, /My answer:/);

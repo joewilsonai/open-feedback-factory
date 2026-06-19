@@ -124,11 +124,7 @@ importers:
         specifier: workspace:*
         version: link:../db
 
-  packages/sdk:
-    dependencies:
-      '@open-feedback-factory/core':
-        specifier: workspace:*
-        version: link:../core
+  packages/sdk: {}
 
   services/api:
     dependencies:
