@@ -561,6 +561,58 @@ dd {
   line-height: 1.45;
 }
 
+.ledger-panel {
+  min-height: 28rem;
+}
+
+.ledger-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: rgba(22, 26, 31, 0.13);
+}
+
+.ledger-section {
+  min-height: 12rem;
+  padding: 0.9rem;
+  background: #ffffff;
+}
+
+.ledger-section h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  letter-spacing: 0;
+}
+
+.ledger-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.ledger-item {
+  display: grid;
+  gap: 0.2rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid rgba(22, 26, 31, 0.1);
+}
+
+.ledger-item strong {
+  font-size: 0.83rem;
+}
+
+.ledger-item span,
+.ledger-item a {
+  overflow-wrap: anywhere;
+  color: #52605a;
+  line-height: 1.35;
+}
+
+.ledger-item a {
+  color: #255bc7;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
 .activity ul {
   display: grid;
   gap: 0.65rem;
@@ -613,6 +665,10 @@ code {
   }
 
   .install-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ledger-grid {
     grid-template-columns: 1fr;
   }
 }

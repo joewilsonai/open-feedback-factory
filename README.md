@@ -178,6 +178,12 @@ cost after a runner reports completion. It also exposes a reconciliation action
 that requeues stale in-progress work and identifies implemented work still
 waiting for release proof.
 
+Each selected work item also has an evidence ledger. The ledger shows agent
+runs, estimate and actual cost records, all recorded assumptions, GitHub
+artifacts, release markers, user-facing follow-up notifications, and audit
+events. This is the operator proof trail for "what happened, what did it cost,
+what assumptions were made, what PR exists, and has it actually shipped?"
+
 ## Rate Limits
 
 V1 includes local fixed-window HTTP rate limits. Defaults are intentionally high

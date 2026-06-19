@@ -2337,7 +2337,7 @@ feedback-factory demo</code></pre>
 <p>An iOS SDK or example should follow because the story is especially strong for beta mobile apps.</p>
 <p>An API server owns ingestion, auth, sanitization, status reads, control center data, and webhooks.</p>
 <p>The database needs tables for feedback signals, sanitized summaries, clusters, work items, decisions, agent runs, cost estimates, actual cost, policies, GitHub links, release status, agent assumptions, unresolved questions, feature usage events, impact attribution, and notifications.</p>
-<p>The control center is the developer UI. It shows the queue, clusters, statuses, PRs, agents, costs, guardrails, blocked items, and reconsideration candidates.</p>
+<p>The control center is the developer UI. It shows the queue, clusters, statuses, PRs, agents, costs, guardrails, blocked items, and reconsideration candidates. Each work item should expose an evidence ledger with agent runs, cost records, assumption records, GitHub artifacts, release markers, user notifications, and audit events so an operator can prove whether a feature was merely queued, implemented, waiting for release, shipped, blocked, or rejected.</p>
 <p>The queue system should support immediate jobs, scheduled batches, threshold queues, manual approval queues, and per-category cadence rules.</p>
 <p>The promotion system should support user-base-size presets and custom thresholds for backlog, planning, and implementation eligibility.</p>
 <p>The GitHub integration should create issues, apply labels, comment status, open PRs, read checks, close resolved issues, and clean up generated branches.</p>
@@ -2366,6 +2366,7 @@ feedback-factory demo</code></pre>
 <p>Certain categories should be blocked or review-only by default: auth, billing, privacy, legal, data deletion, encryption, infrastructure, permissions, and production release logic.</p>
 <p>Cost caps must be enforced before and during work. If a feature is estimated above budget, it waits. If actual cost exceeds the configured limit, the system stops or escalates.</p>
 <p>There needs to be an audit trail for every decision: why it was built, blocked, not planned, merged, reopened, or reconsidered.</p>
+<p>The evidence ledger should be the operator-facing version of that audit trail. It must avoid raw feedback leakage while still showing sanitized summaries, agent run results, estimate-vs-actual cost, unresolved assumptions, release proof, and user-safe follow-up status.</p>
 <p>Admin auth and roles are required so raw feedback, secrets, policy changes, approvals, deletion, billing, and kill-switch access are not all controlled by one undifferentiated admin permission.</p>
 <p>Data retention and deletion are required so developers can purge raw feedback, delete users/workspaces, and keep aggregate demand history where appropriate.</p>
 <p>The developer needs a kill switch. One control should pause agent execution while still allowing feedback intake.</p>

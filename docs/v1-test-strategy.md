@@ -22,13 +22,13 @@ capture, release proof, and agent assumptions.
 | Area | Required coverage |
 | --- | --- |
 | Core policy | Sanitization, clustering, routing, demand thresholds, cost estimates, status copy, auto-merge gates, assumption blocking |
-| API | SDK feedback, user-safe status, feature usage, admin config, control-room snapshots, runner claims, release markers, GitHub webhooks |
-| Database | Migrations, feedback, clusters, work items, agent runs, assumptions, costs, GitHub artifacts, releases, notifications, usage, audit events, workspace scope, RLS policies when enabled |
+| API | SDK feedback, user-safe status, feature usage, admin config, control-room snapshots, work-item evidence ledger, runner claims, release markers, GitHub webhooks |
+| Database | Migrations, feedback, clusters, work items, work-item evidence detail, agent runs, assumptions, costs, GitHub artifacts, releases, notifications, usage, audit events, workspace scope, RLS policies when enabled |
 | Security | Workspace/tenant isolation, RBAC, raw-feedback permissions, admin token gate, runner token gate, secret masking/storage, webhook signatures, prompt injection, SSRF/tunnel URL rejection, GitHub App installation boundaries, path traversal, command injection, branch-name injection, SQL injection, CSRF/CORS, rate limits, replay/idempotency, package-script sandboxing, token scope, audit tamper resistance, retention/delete |
 | SDK | Feedback submission, status polling, feature usage, privacy-safe metadata |
 | Runner | Disabled mode, manual approval, auto approval, Codex CLI args, `cli` auth, `api_key` auth, host worker installer generation, Docker API-key worker snippet, sanitized prompt, JSONL parsing, usage/cost capture, skipped checks, assumptions |
 | GitHub | App manifest, localhost rejection, webhook reachability, signature validation, sanitized issue body, PR artifact storage, branch cleanup, guarded merge refusal |
-| Control center | Setup states, queue states, worker install guidance, human-readable labels, no raw enum leaks, assumptions panel, cost panel, release state, follow-up state, missing-config explanations |
+| Control center | Setup states, queue states, worker install guidance, human-readable labels, no raw enum leaks, evidence ledger, assumptions panel, cost panel, release state, follow-up state, missing-config explanations |
 | Demo app | Real Daybook workflow, positive request, negative request, status display, feature usage event |
 | Dry-run E2E | Docker stack starts, seeded data labeled, sample reset works, integration tests do not pollute the control center, no fake PRs, no fake costs, no fake agent runs, no fake releases, no fake shipped states |
 | Private dogfood E2E | Real GitHub/Codex issue, branch, PR, usage record, cost or token actual, assumptions, release marker, user status |
@@ -124,6 +124,9 @@ capture, release proof, and agent assumptions.
   decisions produce user-safe explanations and decision categories.
 - Assumptions affecting privacy, cost, merge safety, or release status prevent
   auto-merge.
+- The admin evidence endpoint and control center work-item ledger show agent
+  runs, estimate and actual cost records, assumptions, GitHub artifacts, release
+  markers, user notifications, and audit events without exposing raw feedback.
 
 ## Local Verification Commands
 

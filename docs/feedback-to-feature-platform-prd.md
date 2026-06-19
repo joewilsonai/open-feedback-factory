@@ -2144,6 +2144,10 @@ usage events, impact attribution, and notifications.
 
 The control center is the developer UI. It shows the queue, clusters, statuses,
 PRs, agents, costs, guardrails, blocked items, and reconsideration candidates.
+Each work item should expose an evidence ledger with agent runs, cost records,
+assumption records, GitHub artifacts, release markers, user notifications, and
+audit events so an operator can prove whether a feature was merely queued,
+implemented, waiting for release, shipped, blocked, or rejected.
 
 The queue system should support immediate jobs, scheduled batches, threshold
 queues, manual approval queues, and per-category cadence rules.
@@ -2243,6 +2247,11 @@ stops or escalates.
 
 There needs to be an audit trail for every decision: why it was built, blocked,
 not planned, merged, reopened, or reconsidered.
+
+The evidence ledger should be the operator-facing version of that audit trail.
+It must avoid raw feedback leakage while still showing sanitized summaries,
+agent run results, estimate-vs-actual cost, unresolved assumptions, release
+proof, and user-safe follow-up status.
 
 Admin auth and roles are required so raw feedback, secrets, policy changes,
 approvals, deletion, billing, and kill-switch access are not all controlled by

@@ -1,6 +1,6 @@
 import cors from "@fastify/cors";
 import { type AgentAssumptionRecord, type FeedbackInput, type UserFeedbackStatus } from "@open-feedback-factory/core";
-import type { ControlRoomSnapshot, ReconciliationResult, WorkItemRow } from "@open-feedback-factory/db";
+import type { ControlRoomSnapshot, ReconciliationResult, WorkItemDetail, WorkItemRow } from "@open-feedback-factory/db";
 import Fastify, { type FastifyInstance } from "fastify";
 import { registerAccessControls } from "./auth.js";
 import type { ApiConfig } from "./config.js";
@@ -37,6 +37,7 @@ export interface AppStore {
   getCodexAuthMode(defaultMode: ApiConfig["codexAuthMode"]): Promise<ApiConfig["codexAuthMode"]>;
   getUserFeedbackStatus(feedbackId: string): Promise<UserFeedbackStatus | null>;
   getWorkItem(id: string): Promise<WorkItemRow | null>;
+  getWorkItemDetail(id: string): Promise<WorkItemDetail | null>;
   listWorkItems(): Promise<WorkItemRow[]>;
   markWorkItemReleased(workItemId: string, message?: string): Promise<void>;
   reconcileWorkItems(input?: { actor?: string; staleAfterMinutes?: number }): Promise<ReconciliationResult>;

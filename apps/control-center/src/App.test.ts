@@ -20,6 +20,13 @@ describe("control center UI contract", () => {
     expect(source).toContain("Agent runs");
     expect(source).toContain("Agent assumptions");
     expect(source).toContain("Unresolved assumptions");
+    expect(source).toContain("Evidence ledger");
+    expect(source).toContain("Feature trail");
+    expect(source).toContain("Cost ledger");
+    expect(source).toContain("Release proof");
+    expect(source).toContain("GitHub artifacts");
+    expect(source).toContain("User follow-up");
+    expect(source).toContain("Audit events");
     expect(source).toContain("Feature usage");
     expect(source).toContain("Cost");
     expect(source).toContain("Actual cost");
@@ -59,6 +66,7 @@ describe("control center UI contract", () => {
     expect(source).toContain("/github/app/setup");
     expect(source).toContain("/github/app/manifest");
     expect(source).toContain("runnerInstall");
+    expect(source).toContain("/evidence");
     expect(source).toContain("/run");
     expect(source).toContain("/automerge");
     expect(source).toContain("/release");

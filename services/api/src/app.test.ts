@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import type { AgentAssumptionRecord, UserFeedbackStatus } from "@open-feedback-factory/core";
-import type { ControlRoomSnapshot, WorkItemRow } from "@open-feedback-factory/db";
+import type { ControlRoomSnapshot, WorkItemDetail, WorkItemRow } from "@open-feedback-factory/db";
 import { buildApp, type AppStore } from "./app.js";
 import type { ApiConfig } from "./config.js";
 import { buildGithubAppEnvSnippet, githubWebhooksEnabledForBaseUrl } from "./routes/github.js";
@@ -35,11 +35,17 @@ const config: ApiConfig = {
 
 class MemoryStore implements AppStore {
   approvalMode: ApiConfig["approvalMode"] | null = null;
+  agentRuns: WorkItemDetail["agentRuns"] = [];
+  auditEvents: WorkItemDetail["auditEvents"] = [];
   codexAuthMode: ApiConfig["codexAuthMode"] | null = null;
+  costRecords: WorkItemDetail["costRecords"] = [];
   deliveries = new Set<string>();
   feedbackStatuses = new Map<string, UserFeedbackStatus>();
   githubArtifacts = new Map<string, string>();
+  githubArtifactRows: WorkItemDetail["githubArtifacts"] = [];
   recentAssumptions: AgentAssumptionRecord[] = [];
+  releaseEvents: WorkItemDetail["releaseEvents"] = [];
+  userNotifications: WorkItemDetail["userNotifications"] = [];
   usageCount = 0;
   workItems: WorkItemRow[] = [];
 
@@ -77,7 +83,35 @@ class MemoryStore implements AppStore {
         userStatus: input.decision.userStatus,
         unresolvedAssumptions: [],
       });
+      this.costRecords.unshift({
+        amountUsd: input.decision.costEstimate.amountUsd,
+        confidence: input.decision.costEstimate.confidence,
+        createdAt: new Date().toISOString(),
+        id: `cost_${this.costRecords.length + 1}`,
+        metadata: { reason: input.decision.costEstimate.reason },
+        model: input.decision.costEstimate.model,
+        phase: "estimate",
+        workItemId,
+      });
     }
+
+    this.userNotifications.unshift({
+      createdAt: new Date().toISOString(),
+      feedbackId,
+      id: `note_${this.userNotifications.length + 1}`,
+      message: status.message,
+      status: status.state,
+      workItemId,
+    });
+    this.auditEvents.unshift({
+      actor: "system",
+      createdAt: new Date().toISOString(),
+      event: "feedback_intake_created",
+      id: `audit_${this.auditEvents.length + 1}`,
+      metadata: { action: input.decision.action, clusterKey: input.decision.clusterKey, workItemId },
+      targetId: feedbackId,
+      targetType: "feedback_signal",
+    });
 
     return { feedbackId, status, workItemId };
   }
@@ -125,6 +159,7 @@ class MemoryStore implements AppStore {
   }
 
   async completeWorkItemRun(input: Parameters<AppStore["completeWorkItemRun"]>[0]) {
+    const runId = `run_${this.agentRuns.length + 1}`;
     const item = this.workItems.find((workItem) => workItem.id === input.workItemId);
     if (item) {
       item.status = input.status === "succeeded" ? "implemented" : input.status;
@@ -133,8 +168,43 @@ class MemoryStore implements AppStore {
       item.latestBranchName = typeof input.metadata?.branchName === "string" ? input.metadata.branchName : item.latestBranchName;
       item.unresolvedAssumptions = (input.assumptions ?? []).filter((assumption) => assumption.unresolved);
     }
+    this.agentRuns.unshift({
+      agentName: input.agentName,
+      completedAt: new Date().toISOString(),
+      costActual: input.costActual ?? null,
+      createdAt: new Date().toISOString(),
+      id: runId,
+      metadata: input.metadata ?? {},
+      runType: input.runType,
+      status: input.status,
+      summary: input.summary,
+      workItemId: input.workItemId,
+    });
+    if (input.costActual && typeof input.costActual.amountUsd === "number" && typeof input.costActual.model === "string") {
+      this.costRecords.unshift({
+        amountUsd: input.costActual.amountUsd,
+        confidence: typeof input.costActual.confidence === "string" ? input.costActual.confidence : "low",
+        createdAt: new Date().toISOString(),
+        id: `cost_${this.costRecords.length + 1}`,
+        metadata: { agentRunId: runId },
+        model: input.costActual.model,
+        phase: "actual",
+        workItemId: input.workItemId,
+      });
+    }
+    if (typeof input.metadata?.githubPrUrl === "string") {
+      this.githubArtifactRows.unshift({
+        artifactNumber: null,
+        artifactType: "pull_request",
+        createdAt: new Date().toISOString(),
+        id: `gh_${this.githubArtifactRows.length + 1}`,
+        metadata: { agentRunId: runId, source: "runner_completion" },
+        url: input.metadata.githubPrUrl,
+        workItemId: input.workItemId,
+      });
+    }
     this.recentAssumptions.unshift(...(input.assumptions ?? []));
-    return "run_1";
+    return runId;
   }
 
   async getUserFeedbackStatus(feedbackId: string) {
@@ -143,6 +213,27 @@ class MemoryStore implements AppStore {
 
   async getWorkItem(id: string) {
     return this.workItems.find((item) => item.id === id) ?? null;
+  }
+
+  async getWorkItemDetail(id: string) {
+    const workItem = await this.getWorkItem(id);
+    if (!workItem) return null;
+    return {
+      agentRuns: this.agentRuns.filter((row) => row.workItemId === id),
+      assumptions: this.recentAssumptions.map((assumption, index) => ({
+        ...assumption,
+        agentRunId: this.agentRuns.find((row) => row.workItemId === id)?.id ?? null,
+        createdAt: new Date().toISOString(),
+        id: `assumption_${index + 1}`,
+        workItemId: id,
+      })),
+      auditEvents: this.auditEvents.filter((row) => row.targetId === id || row.metadata.workItemId === id),
+      costRecords: this.costRecords.filter((row) => row.workItemId === id),
+      githubArtifacts: this.githubArtifactRows.filter((row) => row.workItemId === id),
+      releaseEvents: this.releaseEvents.filter((row) => row.workItemId === id),
+      userNotifications: this.userNotifications.filter((row) => row.workItemId === id),
+      workItem,
+    };
   }
 
   async listWorkItems() {
@@ -156,6 +247,13 @@ class MemoryStore implements AppStore {
       item.userStatus = "shipped";
       item.updatedAt = new Date().toISOString();
     }
+    this.releaseEvents.unshift({
+      createdAt: new Date().toISOString(),
+      id: `release_${this.releaseEvents.length + 1}`,
+      metadata: {},
+      status: "shipped",
+      workItemId,
+    });
     for (const [feedbackId] of this.feedbackStatuses) {
       this.feedbackStatuses.set(feedbackId, {
         feedbackId,
@@ -163,6 +261,14 @@ class MemoryStore implements AppStore {
         message,
         state: "shipped",
         timeline: [],
+      });
+      this.userNotifications.unshift({
+        createdAt: new Date().toISOString(),
+        feedbackId,
+        id: `note_${this.userNotifications.length + 1}`,
+        message,
+        status: "shipped",
+        workItemId,
       });
     }
   }
@@ -191,12 +297,27 @@ class MemoryStore implements AppStore {
   }
 
   async recordAgentRun(input?: Parameters<AppStore["recordAgentRun"]>[0]) {
+    const runId = `run_${this.agentRuns.length + 1}`;
     if (input?.assumptions?.length) {
       const item = this.workItems.find((workItem) => workItem.id === input.workItemId);
       if (item) item.unresolvedAssumptions = input.assumptions.filter((assumption) => assumption.unresolved);
       this.recentAssumptions.unshift(...input.assumptions);
     }
-    return "run_1";
+    if (input) {
+      this.agentRuns.unshift({
+        agentName: input.agentName,
+        completedAt: input.status === "succeeded" || input.status === "failed" || input.status === "blocked" ? new Date().toISOString() : null,
+        costActual: input.costActual ?? null,
+        createdAt: new Date().toISOString(),
+        id: runId,
+        metadata: input.metadata ?? {},
+        runType: input.runType,
+        status: input.status,
+        summary: input.summary,
+        workItemId: input.workItemId,
+      });
+    }
+    return runId;
   }
 
   async recordFeatureUsage() {
@@ -214,6 +335,15 @@ class MemoryStore implements AppStore {
     if (item && input.artifactType === "pull_request") item.githubPrUrl = input.url;
     const id = `gh_${this.githubArtifacts.size + 1}`;
     this.githubArtifacts.set(artifactKey, id);
+    this.githubArtifactRows.unshift({
+      artifactNumber: input.artifactNumber ?? null,
+      artifactType: input.artifactType,
+      createdAt: new Date().toISOString(),
+      id,
+      metadata: input.metadata ?? {},
+      url: input.url,
+      workItemId: input.workItemId,
+    });
     return id;
   }
 
@@ -829,6 +959,20 @@ test("runner claims planned work in auto approval mode and completes it with act
     method: "POST",
     payload: {
       agentName: "worker-test",
+      assumptions: [
+        {
+          alternativesSkipped: [],
+          assumptions: ["Assumed the Daybook test app is the target app."],
+          checksRun: ["pnpm test"],
+          checksSkipped: [],
+          confidence: "medium",
+          defaultsUsed: ["model=gpt-5.5"],
+          humanQuestions: [],
+          impactAreas: ["none"],
+          notes: "No blocking assumptions.",
+          unresolved: false,
+        },
+      ],
       costActual: { amountUsd: 1.25, confidence: "low", model: "gpt-5.5" },
       status: "succeeded",
       summary: "Implemented by worker.",
@@ -839,6 +983,14 @@ test("runner claims planned work in auto approval mode and completes it with act
   assert.equal(complete.json().runId, "run_1");
   assert.equal(store.workItems[0]?.status, "implemented");
   assert.equal(store.workItems[0]?.latestActualCost?.amountUsd, 1.25);
+
+  const evidence = await app.inject({ method: "GET", url: `/admin/work-items/${workItemId}/evidence` });
+  assert.equal(evidence.statusCode, 200);
+  assert.equal(evidence.json().workItem.id, workItemId);
+  assert.equal(evidence.json().agentRuns[0].status, "succeeded");
+  assert.equal(evidence.json().costRecords[0].phase, "actual");
+  assert.equal(evidence.json().costRecords[0].amountUsd, 1.25);
+  assert.equal(evidence.json().assumptions[0].notes, "No blocking assumptions.");
 
   await app.close();
 });
