@@ -164,6 +164,37 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
   );
 
   app.post<{
+    Body: { approved?: unknown; reviewer?: unknown; reviewType?: unknown; summary?: unknown };
+    Params: { id: string };
+  }>("/admin/work-items/:id/review", async (request, reply) => {
+    const workItem = await deps.store.getWorkItem(request.params.id);
+    if (!workItem) return reply.code(404).send({ error: "work item not found" });
+    if (typeof request.body.approved !== "boolean") {
+      return reply.code(400).send({ error: "approved must be a boolean" });
+    }
+    const reviewType = request.body.reviewType === "agent" ? "agent" : "human";
+    const actor =
+      typeof request.body.reviewer === "string" && request.body.reviewer.trim().length > 0
+        ? request.body.reviewer.trim()
+        : "control-center";
+    const summary =
+      typeof request.body.summary === "string" && request.body.summary.trim().length > 0
+        ? request.body.summary.trim()
+        : request.body.approved
+          ? "Reviewer approved this work for merge consideration."
+          : "Reviewer rejected this work; it cannot auto-merge until another approval is recorded.";
+
+    const reviewDecision = await deps.store.recordWorkItemReview({
+      actor,
+      approved: request.body.approved,
+      reviewType,
+      summary,
+      workItemId: request.params.id,
+    });
+    return reply.code(202).send({ reviewDecision, status: request.body.approved ? "approved" : "rejected" });
+  });
+
+  app.post<{
     Body: { decisionCategory?: unknown; message?: unknown; status?: unknown };
     Params: { id: string };
   }>("/admin/work-items/:id/decision", async (request, reply) => {
@@ -224,6 +255,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
     const workItem = await deps.store.getWorkItem(request.params.id);
     if (!workItem) return reply.code(404).send({ error: "work item not found" });
     const maxFeatureCostUsd = await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd);
+    const reviewDecision = await deps.store.getWorkItemReviewDecision(workItem.id);
 
     const evaluation = evaluateAutoMerge({
       autoMergeEnabled: deps.config.autoMergeEnabled,
@@ -237,7 +269,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
       protectedPathFragments: deps.config.protectedPathFragments,
       redactionWarnings: request.body.redactionWarnings ?? 0,
       releaseHealthy: request.body.releaseHealthy === true,
-      reviewerApproved: request.body.reviewerApproved === true,
+      reviewerApproved: reviewDecision?.approved === true,
       riskTier: workItem.riskTier as WorkRiskTier,
       unresolvedAssumptions: workItem.unresolvedAssumptions,
     });
@@ -266,6 +298,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
         mergeOutput,
         prUrl,
         branchName: workItem.latestBranchName,
+        reviewDecision,
       },
       runType: "automerge",
       status: "succeeded",

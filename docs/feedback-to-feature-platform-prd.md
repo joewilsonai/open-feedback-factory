@@ -396,6 +396,9 @@ Approval to run and approval to merge are separate controls. `auto` approval
 allows an attached worker to claim eligible queued work. It does not mean the PR
 can merge. Auto-merge requires separate reviewer agents, passing checks,
 guardrail evaluation, provenance checks, and cost/release policy compliance.
+Reviewer approval must be persisted as a work-item review decision before it can
+unlock any merge path. A transient API request flag or UI assumption is not
+enough evidence for auto-merge.
 
 Agent-reviewed auto-merge requires at minimum:
 
@@ -409,6 +412,11 @@ Agent-reviewed auto-merge requires at minimum:
 - branch and PR provenance tied to the work item;
 - generated runner branch cleanup after a guarded merge;
 - release/deploy health checks when configured.
+
+The evidence ledger must show the latest reviewer decision, reviewer identity,
+review type, summary, timestamp, and whether the decision was approving or
+rejecting. A later rejection overrides an earlier approval until another valid
+approval is recorded.
 
 ### 8.7 User Follow-Up
 
@@ -1962,6 +1970,8 @@ should win on setup, reliability, observability, and scale.
 - Audit log.
 - PR creation.
 - Agent reviewer gate.
+- Durable review-decision ledger that safe auto-merge reads instead of trusting
+  a one-off request flag.
 - Policy-governed merge modes: implement-only, agent-reviewed auto-merge, and
   human-exception-required.
 - Estimated and actual cost capture.
@@ -2256,8 +2266,8 @@ not planned, merged, reopened, or reconsidered.
 
 The evidence ledger should be the operator-facing version of that audit trail.
 It must avoid raw feedback leakage while still showing sanitized summaries,
-agent run results, estimate-vs-actual cost, unresolved assumptions, release
-proof, and user-safe follow-up status.
+agent run results, estimate-vs-actual cost, unresolved assumptions, persisted
+review decisions, release proof, and user-safe follow-up status.
 
 When an operator decides not to build something, the system should provide an
 explicit decision action. That action must update the work item, notify matching

@@ -119,6 +119,9 @@ capture, release proof, and agent assumptions.
 - Auto approval lets an attached worker claim eligible work but does not merge.
 - Auto-merge is denied unless reviewer, check, policy, provenance, cost, and
   release gates pass.
+- Reviewer approval is not accepted as a transient request flag. A reviewer
+  agent or human must record an approval decision in the work-item ledger, and
+  auto-merge must read that persisted latest decision.
 - Merged work is not called shipped until release proof exists.
 - Missing pricing rates store real token usage and low-confidence estimated
   dollars instead of fake actual spend.
@@ -131,8 +134,9 @@ capture, release proof, and agent assumptions.
 - Assumptions affecting privacy, cost, merge safety, or release status prevent
   auto-merge.
 - The admin evidence endpoint and control center work-item ledger show agent
-  runs, estimate and actual cost records, assumptions, GitHub artifacts, release
-  markers, user notifications, and audit events without exposing raw feedback.
+  runs, estimate and actual cost records, assumptions, GitHub artifacts, review
+  decisions, release markers, user notifications, and audit events without
+  exposing raw feedback.
 
 ## Local Verification Commands
 

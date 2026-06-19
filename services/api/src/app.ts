@@ -1,6 +1,12 @@
 import cors from "@fastify/cors";
 import { type AgentAssumptionRecord, type FeedbackInput, type UserFeedbackStatus } from "@open-feedback-factory/core";
-import type { ControlRoomSnapshot, ReconciliationResult, WorkItemDetail, WorkItemRow } from "@open-feedback-factory/db";
+import type {
+  ControlRoomSnapshot,
+  ReconciliationResult,
+  WorkItemDetail,
+  WorkItemReviewDecision,
+  WorkItemRow,
+} from "@open-feedback-factory/db";
 import Fastify, { type FastifyInstance } from "fastify";
 import { registerAccessControls } from "./auth.js";
 import type { ApiConfig } from "./config.js";
@@ -40,6 +46,7 @@ export interface AppStore {
   getUserFeedbackStatus(feedbackId: string): Promise<UserFeedbackStatus | null>;
   getWorkItem(id: string): Promise<WorkItemRow | null>;
   getWorkItemDetail(id: string): Promise<WorkItemDetail | null>;
+  getWorkItemReviewDecision(workItemId: string): Promise<WorkItemReviewDecision | null>;
   listWorkItems(): Promise<WorkItemRow[]>;
   markWorkItemDecision(input: {
     actor?: string;
@@ -78,6 +85,13 @@ export interface AppStore {
     event: string;
     metadata?: Record<string, unknown>;
   }): Promise<boolean>;
+  recordWorkItemReview(input: {
+    actor?: string;
+    approved: boolean;
+    reviewType?: "agent" | "human";
+    summary: string;
+    workItemId: string;
+  }): Promise<WorkItemReviewDecision>;
   setApprovalMode(mode: ApiConfig["approvalMode"], actor?: string): Promise<void>;
   setCodexAuthMode(mode: ApiConfig["codexAuthMode"], actor?: string): Promise<void>;
   setMaxFeatureCostUsd(amountUsd: number, actor?: string): Promise<void>;

@@ -5,7 +5,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import type { AgentAssumptionRecord, UserFeedbackStatus } from "@open-feedback-factory/core";
-import type { ControlRoomSnapshot, FeedbackClusterRow, WorkItemDetail, WorkItemRow } from "@open-feedback-factory/db";
+import type {
+  ControlRoomSnapshot,
+  FeedbackClusterRow,
+  WorkItemDetail,
+  WorkItemReviewDecision,
+  WorkItemRow,
+} from "@open-feedback-factory/db";
 import { buildApp, type AppStore } from "./app.js";
 import type { ApiConfig } from "./config.js";
 import { buildGithubAppEnvSnippet, githubWebhooksEnabledForBaseUrl } from "./routes/github.js";
@@ -429,6 +435,37 @@ class MemoryStore implements AppStore {
     if (this.deliveries.has(input.deliveryId)) return false;
     this.deliveries.add(input.deliveryId);
     return true;
+  }
+
+  async recordWorkItemReview(input: Parameters<AppStore["recordWorkItemReview"]>[0]) {
+    const decision: WorkItemReviewDecision = {
+      actor: input.actor ?? "operator",
+      approved: input.approved,
+      createdAt: new Date().toISOString(),
+      id: `audit_${this.auditEvents.length + 1}`,
+      reviewType: input.reviewType ?? "human",
+      summary: input.summary,
+    };
+    const item = this.workItems.find((workItem) => workItem.id === input.workItemId);
+    if (item) item.reviewDecision = decision;
+    this.auditEvents.unshift({
+      actor: decision.actor,
+      createdAt: decision.createdAt,
+      event: "work_item_review_recorded",
+      id: decision.id,
+      metadata: {
+        approved: decision.approved,
+        reviewType: decision.reviewType,
+        summary: decision.summary,
+      },
+      targetId: input.workItemId,
+      targetType: "work_item",
+    });
+    return decision;
+  }
+
+  async getWorkItemReviewDecision(workItemId: string) {
+    return this.workItems.find((workItem) => workItem.id === workItemId)?.reviewDecision ?? null;
   }
 }
 
@@ -1249,6 +1286,83 @@ test("admin can mark work not planned and update requester status", async () => 
   await app.close();
 });
 
+test("admin review decisions are durable auto-merge gates", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({
+    config: { ...config, autoMergeEnabled: true },
+    store,
+  });
+
+  const feedback = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add a calmer save button label",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+  const workItemId = feedback.json().workItemId;
+
+  await store.recordGithubArtifact({
+    artifactType: "pull_request",
+    url: "https://github.com/joewilsonai/open-feedback-factory/pull/42",
+    workItemId,
+  });
+
+  const beforeReview = await app.inject({
+    method: "POST",
+    payload: {
+      branchTrusted: true,
+      changedFiles: ["apps/demo-app/src/App.tsx"],
+      checksPassed: true,
+      costActualUsd: 1.25,
+      diffLineCount: 12,
+      redactionWarnings: 0,
+      releaseHealthy: true,
+      reviewerApproved: true,
+    },
+    url: `/admin/work-items/${workItemId}/automerge`,
+  });
+  assert.equal(beforeReview.statusCode, 409);
+  assert.equal(beforeReview.json().evaluation.reasons.includes("reviewer_not_approved"), true);
+
+  const review = await app.inject({
+    method: "POST",
+    payload: {
+      approved: true,
+      reviewer: "reviewer-agent",
+      reviewType: "agent",
+      summary: "Reviewed diff, checks, assumptions, and merge policy.",
+    },
+    url: `/admin/work-items/${workItemId}/review`,
+  });
+  assert.equal(review.statusCode, 202);
+  assert.equal(review.json().reviewDecision.approved, true);
+
+  const afterReview = await app.inject({
+    method: "POST",
+    payload: {
+      branchTrusted: true,
+      changedFiles: ["apps/demo-app/src/App.tsx"],
+      checksPassed: true,
+      costActualUsd: 1.25,
+      diffLineCount: 12,
+      redactionWarnings: 0,
+      releaseHealthy: true,
+    },
+    url: `/admin/work-items/${workItemId}/automerge`,
+  });
+  assert.equal(afterReview.statusCode, 409);
+  assert.equal(afterReview.json().evaluation.reasons.includes("reviewer_not_approved"), false);
+  assert.deepEqual(afterReview.json().evaluation.reasons, ["github_merge_mode_not_enabled"]);
+
+  const evidence = await app.inject({ method: "GET", url: `/admin/work-items/${workItemId}/evidence` });
+  assert.equal(evidence.json().auditEvents[0].event, "work_item_review_recorded");
+  assert.equal(evidence.json().auditEvents[0].metadata.summary, "Reviewed diff, checks, assumptions, and merge policy.");
+
+  await app.close();
+});
+
 test("reconciliation requeues stale in-progress work and reports release gaps", async () => {
   const store = new MemoryStore();
   store.workItems.push({
@@ -1330,6 +1444,13 @@ test("auto merge blocks when an agent left unresolved assumptions", async () => 
   await store.recordGithubArtifact({
     artifactType: "pull_request",
     url: "https://github.com/joewilsonai/open-feedback-factory/pull/42",
+    workItemId,
+  });
+  await store.recordWorkItemReview({
+    actor: "reviewer-agent",
+    approved: true,
+    reviewType: "agent",
+    summary: "Reviewer approved the implementation, pending assumption gates.",
     workItemId,
   });
 

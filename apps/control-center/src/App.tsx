@@ -49,6 +49,7 @@ interface WorkItem {
     model?: string;
     tokens?: number;
   } | null;
+  reviewDecision?: WorkItemReviewDecision | null;
   riskTier: string;
   signalSources: string[];
   status: string;
@@ -56,6 +57,15 @@ interface WorkItem {
   title: string;
   unresolvedAssumptions: AgentAssumption[];
   userStatus: string;
+}
+
+interface WorkItemReviewDecision {
+  actor: string;
+  approved: boolean;
+  createdAt: string;
+  id: string;
+  reviewType: "agent" | "human";
+  summary: string;
 }
 
 interface AgentAssumption {
@@ -412,6 +422,25 @@ export function App() {
     setStatus(response.ok ? "Decision recorded" : `Decision blocked: ${String(body.error ?? "not recorded")}`);
   }
 
+  async function reviewWorkItem(id: string, approved: boolean) {
+    setStatus(approved ? "Recording review approval" : "Recording review rejection");
+    const response = await adminFetch(`/admin/work-items/${id}/review`, {
+      body: JSON.stringify({
+        approved,
+        reviewer: "control-center",
+        reviewType: "human",
+        summary: approved
+          ? "Human reviewer approved this work for merge consideration."
+          : "Human reviewer rejected this work; it cannot auto-merge until another approval is recorded.",
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const body = await response.json().catch(() => ({}));
+    await refresh();
+    setStatus(response.ok ? "Review decision recorded" : `Review blocked: ${String(body.error ?? "not recorded")}`);
+  }
+
   async function runReconciliation() {
     setStatus("Running reconciliation");
     const response = await adminFetch("/admin/reconciliation/run", {
@@ -447,7 +476,6 @@ export function App() {
         diffLineCount: 40,
         redactionWarnings: 0,
         releaseHealthy: true,
-        reviewerApproved: true,
       }),
       headers: { "content-type": "application/json" },
       method: "POST",
@@ -559,6 +587,7 @@ export function App() {
                 <Detail label="User status" value={userStatusLabel(selected.userStatus)} />
                 <Detail label="Risk" value={riskTierLabel(selected.riskTier)} />
                 <Detail label="Auto-merge" value={selected.autoMergeEligible ? "Eligible" : "Guarded"} />
+                <Detail label="Review" value={reviewDecisionLabel(selected.reviewDecision)} />
                 <Detail label="Cost estimate" value={`$${selected.costEstimate.amountUsd.toFixed(2)}`} />
                 <Detail label="Actual cost" value={actualCostLabel(selected)} />
                 <Detail label="Model" value={selected.costEstimate.model} />
@@ -580,6 +609,12 @@ export function App() {
                 </button>
                 <button type="button" onClick={() => attemptAutoMerge(selected.id)}>
                   Check auto-merge
+                </button>
+                <button type="button" onClick={() => reviewWorkItem(selected.id, true)}>
+                  Approve review
+                </button>
+                <button type="button" onClick={() => reviewWorkItem(selected.id, false)}>
+                  Reject review
                 </button>
                 <button type="button" onClick={() => releaseWorkItem(selected.id)}>
                   Mark shipped
@@ -1133,6 +1168,22 @@ function EvidenceLedgerPanel(props: {
               <p className="empty">No assumptions recorded yet.</p>
             )}
           </LedgerSection>
+          <LedgerSection title="Review decisions">
+            {reviewAuditEvents(evidence).length ? (
+              reviewAuditEvents(evidence)
+                .slice(0, 4)
+                .map((event) => (
+                  <LedgerItem
+                    key={event.id}
+                    label={reviewAuditLabel(event)}
+                    meta={`${event.actor} / ${dateLabel(event.createdAt)}`}
+                    text={String(event.metadata.summary ?? "Review decision recorded.")}
+                  />
+                ))
+            ) : (
+              <p className="empty">No reviewer approval recorded yet.</p>
+            )}
+          </LedgerSection>
           <LedgerSection title="Release proof">
             {evidence.releaseEvents.length ? (
               evidence.releaseEvents.slice(0, 4).map((release) => (
@@ -1318,6 +1369,20 @@ function workStatusLabel(status: string): string {
   if (status === "failed") return "Needs human review";
   if (status === "not_planned") return "Not planned";
   return titleCase(status);
+}
+
+function reviewDecisionLabel(reviewDecision: WorkItemReviewDecision | null | undefined): string {
+  if (!reviewDecision) return "Waiting for review";
+  return reviewDecision.approved ? `Approved by ${reviewDecision.actor}` : `Rejected by ${reviewDecision.actor}`;
+}
+
+function reviewAuditEvents(evidence: WorkItemEvidence) {
+  return evidence.auditEvents.filter((event) => event.event === "work_item_review_recorded");
+}
+
+function reviewAuditLabel(event: WorkItemEvidence["auditEvents"][number]): string {
+  const approved = event.metadata.approved === true || event.metadata.approved === "true";
+  return approved ? "Review approved" : "Review rejected";
 }
 
 function demandDecisionLabel(cluster: FeedbackCluster): string {

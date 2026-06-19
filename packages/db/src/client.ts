@@ -32,6 +32,7 @@ export interface WorkItemRow {
   costEstimate: FeatureCostEstimate;
   latestActualCost: Record<string, unknown> | null;
   latestBranchName: string | null;
+  reviewDecision?: WorkItemReviewDecision | null;
   shouldCreateIssue: boolean;
   signalSources: string[];
   unresolvedAssumptions: AgentAssumptionRecord[];
@@ -123,6 +124,15 @@ export interface AuditLedgerRow {
   targetType: string;
 }
 
+export interface WorkItemReviewDecision {
+  actor: string;
+  approved: boolean;
+  createdAt: string;
+  id: string;
+  reviewType: "agent" | "human";
+  summary: string;
+}
+
 export interface WorkItemDetail {
   agentRuns: AgentRunLedgerRow[];
   assumptions: AssumptionLedgerRow[];
@@ -154,6 +164,14 @@ export interface WorkItemDecisionInput {
   decisionCategory?: string;
   message: string;
   status: "blocked" | "not_planned";
+  workItemId: string;
+}
+
+export interface WorkItemReviewInput {
+  actor?: string;
+  approved: boolean;
+  reviewType?: "agent" | "human";
+  summary: string;
   workItemId: string;
 }
 
@@ -432,6 +450,12 @@ export class OpenFeedbackStore {
                 order by coalesce(ar.completed_at, ar.created_at) desc
                 limit 1
               ) as latest_branch_name,
+              review.id as review_id,
+              review.actor as review_actor,
+              review.created_at as review_created_at,
+              review.metadata ->> 'summary' as review_summary,
+              review.metadata ->> 'reviewType' as review_type,
+              review.metadata ->> 'approved' as review_approved,
               coalesce(
                 (
                   select jsonb_agg(assumption_record_json(aa) order by aa.created_at desc)
@@ -441,6 +465,13 @@ export class OpenFeedbackStore {
                 '[]'::jsonb
               ) as unresolved_assumptions
        from work_items wi
+       left join lateral (
+         select id, actor, metadata, created_at
+         from audit_events ae
+         where ae.target_id = wi.id and ae.event = 'work_item_review_recorded'
+         order by ae.created_at desc
+         limit 1
+       ) review on true
        order by created_at desc
        limit 50`,
     );
@@ -474,6 +505,12 @@ export class OpenFeedbackStore {
                 order by coalesce(ar.completed_at, ar.created_at) desc
                 limit 1
               ) as latest_branch_name,
+              review.id as review_id,
+              review.actor as review_actor,
+              review.created_at as review_created_at,
+              review.metadata ->> 'summary' as review_summary,
+              review.metadata ->> 'reviewType' as review_type,
+              review.metadata ->> 'approved' as review_approved,
               coalesce(
                 (
                   select jsonb_agg(assumption_record_json(aa) order by aa.created_at desc)
@@ -483,6 +520,13 @@ export class OpenFeedbackStore {
                 '[]'::jsonb
               ) as unresolved_assumptions
        from work_items wi
+       left join lateral (
+         select id, actor, metadata, created_at
+         from audit_events ae
+         where ae.target_id = wi.id and ae.event = 'work_item_review_recorded'
+         order by ae.created_at desc
+         limit 1
+       ) review on true
        where wi.id = $1`,
       [id],
     );
@@ -944,6 +988,55 @@ export class OpenFeedbackStore {
     }
   }
 
+  async recordWorkItemReview(input: WorkItemReviewInput): Promise<WorkItemReviewDecision> {
+    const actor = input.actor?.trim() || "operator";
+    const reviewType = input.reviewType ?? "human";
+    const summary =
+      input.summary.trim() ||
+      (input.approved ? "Reviewer approved this work for merge consideration." : "Reviewer rejected this work.");
+    const id = `audit_${randomUUID()}`;
+    const createdAt = new Date();
+
+    await this.pool.query(
+      `insert into audit_events (id, actor, event, target_type, target_id, metadata, created_at)
+       values ($1, $2, 'work_item_review_recorded', 'work_item', $3, $4, $5)`,
+      [
+        id,
+        actor,
+        input.workItemId,
+        JSON.stringify({
+          approved: input.approved,
+          reviewType,
+          summary,
+        }),
+        createdAt,
+      ],
+    );
+
+    return {
+      actor,
+      approved: input.approved,
+      createdAt: createdAt.toISOString(),
+      id,
+      reviewType,
+      summary,
+    };
+  }
+
+  async getWorkItemReviewDecision(workItemId: string): Promise<WorkItemReviewDecision | null> {
+    const result = await this.pool.query(
+      `select id, actor, created_at, metadata ->> 'summary' as summary,
+              metadata ->> 'reviewType' as review_type,
+              metadata ->> 'approved' as approved
+       from audit_events
+       where target_id = $1 and event = 'work_item_review_recorded'
+       order by created_at desc
+       limit 1`,
+      [workItemId],
+    );
+    return reviewDecisionFromRow(result.rows[0]);
+  }
+
   async reconcileWorkItems(input: {
     actor?: string;
     staleAfterMinutes?: number;
@@ -1204,6 +1297,7 @@ function workItemFromRow(row: Record<string, unknown>): WorkItemRow {
     id: String(row.id),
     latestActualCost: actualCostFromRow(row.latest_actual_cost),
     latestBranchName: stringOrNull(row.latest_branch_name),
+    reviewDecision: reviewDecisionFromRow(row, "review_id"),
     riskTier: String(row.risk_tier),
     shouldCreateIssue: Boolean(row.should_create_issue),
     signalSources: stringArrayFromRow(row.signal_sources),
@@ -1213,6 +1307,23 @@ function workItemFromRow(row: Record<string, unknown>): WorkItemRow {
     unresolvedAssumptions: assumptionRecordsFromRow(row.unresolved_assumptions),
     updatedAt: (row.updated_at as Date).toISOString(),
     userStatus: String(row.user_status),
+  };
+}
+
+function reviewDecisionFromRow(
+  row: Record<string, unknown> | undefined,
+  idField: "id" | "review_id" = "id",
+): WorkItemReviewDecision | null {
+  if (!row?.[idField]) return null;
+  const approved = row.review_approved ?? row.approved;
+  const reviewType = row.review_type === "agent" ? "agent" : "human";
+  return {
+    actor: String(row.review_actor ?? row.actor ?? "operator"),
+    approved: approved === true || approved === "true",
+    createdAt: dateString(row.review_created_at ?? row.created_at),
+    id: String(row[idField]),
+    reviewType,
+    summary: String(row.review_summary ?? row.summary ?? "Review decision recorded."),
   };
 }
 
