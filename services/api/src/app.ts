@@ -2,6 +2,7 @@ import cors from "@fastify/cors";
 import { type AgentAssumptionRecord, type FeedbackInput, type UserFeedbackStatus } from "@open-feedback-factory/core";
 import type {
   ControlRoomSnapshot,
+  MergeGuardrailPolicy,
   ReconciliationResult,
   WorkItemDetail,
   WorkItemReviewDecision,
@@ -43,6 +44,7 @@ export interface AppStore {
   getCodexAuthMode(defaultMode: ApiConfig["codexAuthMode"]): Promise<ApiConfig["codexAuthMode"]>;
   getFeedbackClusterSignalCount(clusterKey: string): Promise<number>;
   getMaxFeatureCostUsd(defaultCap: number): Promise<number>;
+  getMergeGuardrailPolicy(defaultPolicy: MergeGuardrailPolicy): Promise<MergeGuardrailPolicy>;
   getUserFeedbackStatus(feedbackId: string): Promise<UserFeedbackStatus | null>;
   getWorkItem(id: string): Promise<WorkItemRow | null>;
   getWorkItemDetail(id: string): Promise<WorkItemDetail | null>;
@@ -95,6 +97,7 @@ export interface AppStore {
   setApprovalMode(mode: ApiConfig["approvalMode"], actor?: string): Promise<void>;
   setCodexAuthMode(mode: ApiConfig["codexAuthMode"], actor?: string): Promise<void>;
   setMaxFeatureCostUsd(amountUsd: number, actor?: string): Promise<void>;
+  setMergeGuardrailPolicy(policy: MergeGuardrailPolicy, actor?: string): Promise<MergeGuardrailPolicy>;
 }
 
 export interface AppDeps {

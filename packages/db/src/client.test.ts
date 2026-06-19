@@ -61,6 +61,38 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(await store.getMaxFeatureCostUsd(5), 5);
     await store.setMaxFeatureCostUsd(2.25, "db-test");
     assert.equal(await store.getMaxFeatureCostUsd(5), 2.25);
+    assert.deepEqual(
+      await store.getMergeGuardrailPolicy({
+        autoMergePolicyEnabled: true,
+        maxSafeDiffLines: 120,
+        protectedPathFragments: ["auth"],
+      }),
+      {
+        autoMergePolicyEnabled: true,
+        maxSafeDiffLines: 120,
+        protectedPathFragments: ["auth"],
+      },
+    );
+    await store.setMergeGuardrailPolicy(
+      {
+        autoMergePolicyEnabled: false,
+        maxSafeDiffLines: 24,
+        protectedPathFragments: ["auth", "billing"],
+      },
+      "db-test",
+    );
+    assert.deepEqual(
+      await store.getMergeGuardrailPolicy({
+        autoMergePolicyEnabled: true,
+        maxSafeDiffLines: 120,
+        protectedPathFragments: ["auth"],
+      }),
+      {
+        autoMergePolicyEnabled: false,
+        maxSafeDiffLines: 24,
+        protectedPathFragments: ["auth", "billing"],
+      },
+    );
 
     const claimed = await store.claimNextWorkItem("db-test-worker", intake.workItemId ?? undefined);
     assert.equal(claimed?.id, intake.workItemId);
@@ -341,7 +373,9 @@ async function cleanupDatabaseTestRows(url: string): Promise<void> {
           or user_id = 'user-1'`,
     );
     await client.query(`delete from audit_events where target_id = 'max_feature_cost_usd'`);
+    await client.query(`delete from audit_events where target_id = 'merge_guardrails'`);
     await client.query(`delete from policy_configs where key = 'max_feature_cost_usd'`);
+    await client.query(`delete from policy_configs where key = 'merge_guardrails'`);
     await client.query("commit");
   } catch (error) {
     await client.query("rollback");

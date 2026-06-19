@@ -13,6 +13,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
     codexApiKey: await getCodexApiKeyStatus(deps.config),
     codexAuthMode: await deps.store.getCodexAuthMode(deps.config.codexAuthMode),
     maxFeatureCostUsd: await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd),
+    mergeGuardrails: await deps.store.getMergeGuardrailPolicy(defaultMergeGuardrailPolicy(deps)),
   }));
 
   app.patch<{ Body: { approvalMode?: unknown } }>("/admin/settings/approval-mode", async (request, reply) => {
@@ -58,6 +59,36 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
 
     await deps.store.setMaxFeatureCostUsd(amount, "control-center");
     return { maxFeatureCostUsd: Math.round(amount * 100) / 100, status: "updated" };
+  });
+
+  app.patch<{
+    Body: {
+      autoMergePolicyEnabled?: unknown;
+      maxSafeDiffLines?: unknown;
+      protectedPathFragments?: unknown;
+    };
+  }>("/admin/settings/merge-guardrails", async (request, reply) => {
+    const maxSafeDiffLines = Number(request.body.maxSafeDiffLines);
+    if (!Number.isInteger(maxSafeDiffLines) || maxSafeDiffLines < 1 || maxSafeDiffLines > 10_000) {
+      return reply.code(400).send({ error: "maxSafeDiffLines must be an integer between 1 and 10000" });
+    }
+    if (typeof request.body.autoMergePolicyEnabled !== "boolean") {
+      return reply.code(400).send({ error: "autoMergePolicyEnabled must be a boolean" });
+    }
+    const protectedPathFragments = normalizeProtectedPathFragments(request.body.protectedPathFragments);
+    if (!protectedPathFragments.length) {
+      return reply.code(400).send({ error: "protectedPathFragments must include at least one path fragment" });
+    }
+
+    const mergeGuardrails = await deps.store.setMergeGuardrailPolicy(
+      {
+        autoMergePolicyEnabled: request.body.autoMergePolicyEnabled,
+        maxSafeDiffLines,
+        protectedPathFragments,
+      },
+      "control-center",
+    );
+    return { mergeGuardrails, status: "updated" };
   });
 
   app.get<{ Params: { id: string } }>("/admin/work-items/:id", async (request, reply) => {
@@ -259,18 +290,19 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
     const workItem = await deps.store.getWorkItem(request.params.id);
     if (!workItem) return reply.code(404).send({ error: "work item not found" });
     const maxFeatureCostUsd = await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd);
+    const mergeGuardrails = await deps.store.getMergeGuardrailPolicy(defaultMergeGuardrailPolicy(deps));
     const reviewDecision = await deps.store.getWorkItemReviewDecision(workItem.id);
 
     const evaluation = evaluateAutoMerge({
-      autoMergeEnabled: deps.config.autoMergeEnabled,
+      autoMergeEnabled: deps.config.autoMergeEnabled && mergeGuardrails.autoMergePolicyEnabled,
       branchTrusted: request.body.branchTrusted === true,
       changedFiles: request.body.changedFiles ?? [],
       checksPassed: request.body.checksPassed === true,
       costActualUsd: request.body.costActualUsd ?? workItem.costEstimate.amountUsd,
       costCapUsd: maxFeatureCostUsd,
       diffLineCount: request.body.diffLineCount ?? deps.config.maxSafeDiffLines + 1,
-      maxDiffLineCount: deps.config.maxSafeDiffLines,
-      protectedPathFragments: deps.config.protectedPathFragments,
+      maxDiffLineCount: mergeGuardrails.maxSafeDiffLines,
+      protectedPathFragments: mergeGuardrails.protectedPathFragments,
       redactionWarnings: request.body.redactionWarnings ?? 0,
       releaseHealthy: request.body.releaseHealthy === true,
       reviewerApproved: reviewDecision?.approved === true,
@@ -302,6 +334,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
         mergeOutput,
         prUrl,
         branchName: workItem.latestBranchName,
+        mergeGuardrails,
         reviewDecision,
       },
       runType: "automerge",
@@ -323,6 +356,25 @@ function defaultDecisionMessage(status: "blocked" | "not_planned"): string {
     return "We reviewed this request and do not plan to build it right now.";
   }
   return "We reviewed this request and it is blocked from shipping without human intervention.";
+}
+
+function defaultMergeGuardrailPolicy(deps: AppDeps) {
+  return {
+    autoMergePolicyEnabled: true,
+    maxSafeDiffLines: deps.config.maxSafeDiffLines,
+    protectedPathFragments: deps.config.protectedPathFragments,
+  };
+}
+
+function normalizeProtectedPathFragments(value: unknown): string[] {
+  const raw = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
+  return Array.from(
+    new Set(
+      raw
+        .map((item) => (typeof item === "string" ? item.trim() : ""))
+        .filter((item) => item.length > 0 && item.length <= 80 && /^[a-zA-Z0-9_./:-]+$/.test(item)),
+    ),
+  ).slice(0, 50);
 }
 
 function normalizeFeatureId(value: unknown): string | null {

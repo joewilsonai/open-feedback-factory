@@ -51,6 +51,11 @@ describe("control center UI contract", () => {
     expect(source).toContain("Cost controls");
     expect(source).toContain("Save cap");
     expect(source).toContain("Workers and manual runs are blocked");
+    expect(source).toContain("Merge policy");
+    expect(source).toContain("Guardrails");
+    expect(source).toContain("Save guardrails");
+    expect(source).toContain("Protected path fragments");
+    expect(source).toContain("Allow safe auto-merge");
     expect(source).toContain("Manual approval required");
     expect(source).toContain("Auto approval");
     expect(source).toContain("Switch to auto");
@@ -82,6 +87,7 @@ describe("control center UI contract", () => {
     expect(source).toContain("/admin/settings/codex-auth-mode");
     expect(source).toContain("/admin/settings/codex-api-key");
     expect(source).toContain("/admin/settings/cost-cap");
+    expect(source).toContain("/admin/settings/merge-guardrails");
     expect(source).toContain("/github/app/setup");
     expect(source).toContain("/github/app/manifest");
     expect(source).toContain("runnerInstall");

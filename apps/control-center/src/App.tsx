@@ -151,6 +151,7 @@ interface Doctor {
   api: string;
   approvalMode: string;
   autoMergeEnabled: boolean;
+  autoMergePolicyEnabled: boolean;
   codexApiKeyConfigured: boolean;
   codexApiKeyFingerprint: string | null;
   codexApiKeySource: string;
@@ -166,6 +167,8 @@ interface Doctor {
   githubWebhookUrl: string;
   githubWebhooksEnabled: boolean;
   maxFeatureCostUsd: number;
+  maxSafeDiffLines: number;
+  protectedPathFragments: string[];
   publicBaseUrl: string;
   runnerInstall: RunnerInstallPlan;
   runnerAuthRequired: boolean;
@@ -231,12 +234,15 @@ export function App() {
   const [adminTokenInput, setAdminTokenInput] = useState(adminToken);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [adminAuthBlocked, setAdminAuthBlocked] = useState(false);
+  const [autoMergePolicyEnabledInput, setAutoMergePolicyEnabledInput] = useState(true);
   const [costCapInput, setCostCapInput] = useState("");
   const [credentialUpdating, setCredentialUpdating] = useState(false);
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [evidence, setEvidence] = useState<WorkItemEvidence | null>(null);
   const [evidenceLoading, setEvidenceLoading] = useState(false);
   const [modeUpdating, setModeUpdating] = useState(false);
+  const [maxSafeDiffLinesInput, setMaxSafeDiffLinesInput] = useState("");
+  const [protectedPathFragmentsInput, setProtectedPathFragmentsInput] = useState("");
   const [releaseFeatureIdInput, setReleaseFeatureIdInput] = useState("");
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
   const [status, setStatus] = useState("Connecting");
@@ -274,7 +280,10 @@ export function App() {
     const doctorResponse = await fetch(`${apiBaseUrl}/doctor`);
     const nextDoctor = (await doctorResponse.json()) as Doctor;
     setDoctor(nextDoctor);
+    setAutoMergePolicyEnabledInput(nextDoctor.autoMergePolicyEnabled);
     setCostCapInput(String(nextDoctor.maxFeatureCostUsd));
+    setMaxSafeDiffLinesInput(String(nextDoctor.maxSafeDiffLines));
+    setProtectedPathFragmentsInput(nextDoctor.protectedPathFragments.join(", "));
     const snapshotResponse = await adminFetch("/admin/control-room");
     if (snapshotResponse.status === 401) {
       setAdminAuthBlocked(true);
@@ -360,6 +369,34 @@ export function App() {
       setStatus(response.ok ? "Cost cap saved" : `Cost cap blocked: ${String(body.error ?? "not saved")}`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Cost cap save failed");
+    } finally {
+      setModeUpdating(false);
+    }
+  }
+
+  async function saveMergeGuardrails() {
+    const maxSafeDiffLines = Number(maxSafeDiffLinesInput);
+    const protectedPathFragments = protectedPathFragmentsInput
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    setModeUpdating(true);
+    setStatus("Saving merge guardrails");
+    try {
+      const response = await adminFetch("/admin/settings/merge-guardrails", {
+        body: JSON.stringify({
+          autoMergePolicyEnabled: autoMergePolicyEnabledInput,
+          maxSafeDiffLines,
+          protectedPathFragments,
+        }),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      });
+      const body = await response.json().catch(() => ({}));
+      await refresh();
+      setStatus(response.ok ? "Merge guardrails saved" : `Guardrail update blocked: ${String(body.error ?? "not saved")}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Guardrail save failed");
     } finally {
       setModeUpdating(false);
     }
@@ -666,6 +703,17 @@ export function App() {
           modeUpdating={modeUpdating}
           onCostCapInput={setCostCapInput}
           onSaveCostCap={saveCostCap}
+        />
+        <MergeGuardrailsPanel
+          autoMergePolicyEnabledInput={autoMergePolicyEnabledInput}
+          doctor={doctor}
+          maxSafeDiffLinesInput={maxSafeDiffLinesInput}
+          modeUpdating={modeUpdating}
+          onAutoMergePolicyEnabledInput={setAutoMergePolicyEnabledInput}
+          onMaxSafeDiffLinesInput={setMaxSafeDiffLinesInput}
+          onProtectedPathFragmentsInput={setProtectedPathFragmentsInput}
+          onSaveMergeGuardrails={saveMergeGuardrails}
+          protectedPathFragmentsInput={protectedPathFragmentsInput}
         />
         <AgentCredentialsPanel
           apiKeyInput={apiKeyInput}
@@ -1018,6 +1066,71 @@ function CostControlPanel(props: {
   );
 }
 
+function MergeGuardrailsPanel(props: {
+  autoMergePolicyEnabledInput: boolean;
+  doctor: Doctor | null;
+  maxSafeDiffLinesInput: string;
+  modeUpdating: boolean;
+  onAutoMergePolicyEnabledInput: (value: boolean) => void;
+  onMaxSafeDiffLinesInput: (value: string) => void;
+  onProtectedPathFragmentsInput: (value: string) => void;
+  onSaveMergeGuardrails: () => void;
+  protectedPathFragmentsInput: string;
+}) {
+  const parsed = Number(props.maxSafeDiffLinesInput);
+  const protectedPaths = props.protectedPathFragmentsInput
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const invalid = !Number.isInteger(parsed) || parsed < 1 || parsed > 10_000 || protectedPaths.length === 0;
+
+  return (
+    <div className="panel merge-guardrails-panel">
+      <div className="panel-heading">
+        <p className="eyebrow">Merge policy</p>
+        <h2>Guardrails</h2>
+      </div>
+      <label className="checkbox-row">
+        <input
+          checked={props.autoMergePolicyEnabledInput}
+          type="checkbox"
+          onChange={(event) => props.onAutoMergePolicyEnabledInput(event.target.checked)}
+        />
+        <span>Allow safe auto-merge when every gate passes</span>
+      </label>
+      <div className="secret-row merge-input-row">
+        <input
+          inputMode="numeric"
+          min="1"
+          placeholder="120"
+          type="number"
+          value={props.maxSafeDiffLinesInput}
+          onChange={(event) => props.onMaxSafeDiffLinesInput(event.target.value)}
+        />
+        <button disabled={props.modeUpdating || !props.doctor || invalid} type="button" onClick={props.onSaveMergeGuardrails}>
+          Save guardrails
+        </button>
+      </div>
+      <label className="feature-id-field" htmlFor="protected-path-fragments">
+        Protected path fragments
+        <input
+          id="protected-path-fragments"
+          value={props.protectedPathFragmentsInput}
+          onChange={(event) => props.onProtectedPathFragmentsInput(event.target.value)}
+        />
+      </label>
+      <p className="mode-note">
+        Effective auto-merge needs this policy on and <code>AUTO_MERGE_ENABLED=true</code>. Current env switch:{" "}
+        {props.doctor?.autoMergeEnabled ? "enabled" : "disabled"}.
+      </p>
+      <p className="mode-note">
+        Current diff cap: {props.doctor?.maxSafeDiffLines ?? "checking"} lines. Protected paths:{" "}
+        {props.doctor?.protectedPathFragments.join(", ") ?? "checking"}.
+      </p>
+    </div>
+  );
+}
+
 function ModeCard(props: {
   actionLabel: string;
   active: boolean;
@@ -1073,8 +1186,13 @@ function SetupPanel(props: { doctor: Doctor | null }) {
           <Detail label="GitHub" value={doctor.githubMode} />
           <Detail label="GitHub App" value={doctor.githubAppConfigured ? "Configured" : "Not configured"} />
           <Detail label="Webhooks" value={doctor.githubWebhooksEnabled ? "Enabled" : "Local off"} />
-          <Detail label="Auto-merge" value={doctor.autoMergeEnabled ? "Enabled" : "Disabled"} />
+          <Detail
+            label="Auto-merge"
+            value={doctor.autoMergeEnabled && doctor.autoMergePolicyEnabled ? "Enabled" : "Disabled"}
+          />
           <Detail label="Cost cap" value={`$${doctor.maxFeatureCostUsd.toFixed(2)}`} />
+          <Detail label="Diff cap" value={`${doctor.maxSafeDiffLines} lines`} />
+          <Detail label="Protected paths" value={doctor.protectedPathFragments.join(", ")} />
           <Detail label="Public URL" value={doctor.publicBaseUrl} />
           <Detail label="Webhook URL" value={doctor.githubWebhookUrl} />
         </dl>

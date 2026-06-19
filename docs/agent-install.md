@@ -257,6 +257,11 @@ blocked response instead of marking it shipped.
 Use the same stable `featureId` from your app's SDK `trackFeatureUsage` calls so
 the evidence ledger can attribute adoption back to the shipped request.
 
+Use the control center to adjust V1 policy knobs after startup: max feature cost,
+max safe diff lines, protected path fragments, and policy-level safe auto-merge
+allowance. `AUTO_MERGE_ENABLED=false` still wins as the hard environment kill
+switch.
+
 ## What To Report Back
 
 After installation, report:

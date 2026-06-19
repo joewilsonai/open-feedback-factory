@@ -1281,6 +1281,7 @@ trackFeatureOutcome({
 <li>pause the runner when CI failure rate crosses a threshold;</li>
 <li>pause auto-merge when rollback or production incident signals are active.</li>
 </ul>
+<p>V1 should persist the core merge guardrails in policy config: policy-level auto-merge allowance, max safe diff lines, and protected path fragments. These settings should be visible in <code>/doctor</code>, editable in the control center, and used by the auto-merge evaluator. The environment-level <code>AUTO_MERGE_ENABLED</code> switch remains a hard kill switch above the live policy.</p>
 <p>Cost controls should be explicit and visible before work starts.</p>
 <p>Examples:</p>
 <ul>

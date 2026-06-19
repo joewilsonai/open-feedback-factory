@@ -8,6 +8,7 @@ import type { AgentAssumptionRecord, UserFeedbackStatus } from "@open-feedback-f
 import type {
   ControlRoomSnapshot,
   FeedbackClusterRow,
+  MergeGuardrailPolicy,
   WorkItemDetail,
   WorkItemReviewDecision,
   WorkItemRow,
@@ -51,6 +52,7 @@ class MemoryStore implements AppStore {
   githubArtifacts = new Map<string, string>();
   githubArtifactRows: WorkItemDetail["githubArtifacts"] = [];
   maxFeatureCostUsd: number | null = null;
+  mergeGuardrails: MergeGuardrailPolicy | null = null;
   recentAssumptions: AgentAssumptionRecord[] = [];
   releaseEvents: WorkItemDetail["releaseEvents"] = [];
   userNotifications: WorkItemDetail["userNotifications"] = [];
@@ -178,6 +180,19 @@ class MemoryStore implements AppStore {
 
   async setMaxFeatureCostUsd(amountUsd: number) {
     this.maxFeatureCostUsd = Math.round(amountUsd * 100) / 100;
+  }
+
+  async getMergeGuardrailPolicy(defaultPolicy: MergeGuardrailPolicy) {
+    return this.mergeGuardrails ?? defaultPolicy;
+  }
+
+  async setMergeGuardrailPolicy(policy: MergeGuardrailPolicy) {
+    this.mergeGuardrails = {
+      autoMergePolicyEnabled: policy.autoMergePolicyEnabled,
+      maxSafeDiffLines: Math.max(1, Math.floor(policy.maxSafeDiffLines)),
+      protectedPathFragments: policy.protectedPathFragments,
+    };
+    return this.mergeGuardrails;
   }
 
   async getFeedbackClusterSignalCount(clusterKey: string) {
@@ -685,6 +700,9 @@ test("doctor exposes setup wizard links", async () => {
   assert.equal(response.json().githubAppSetupUrl, "http://api.test/github/app/setup");
   assert.equal(response.json().githubWebhookUrl, "http://api.test/github/webhook");
   assert.equal(response.json().githubWebhooksEnabled, true);
+  assert.equal(response.json().autoMergePolicyEnabled, true);
+  assert.equal(response.json().maxSafeDiffLines, 120);
+  assert.deepEqual(response.json().protectedPathFragments, ["auth", "billing", "privacy"]);
   assert.equal(response.json().runnerAuthRequired, false);
   assert.equal(response.json().runnerInstall.recommendedMode, "host_cli");
   assert.equal(response.json().runnerInstall.hostCli.installCommand, "pnpm worker:install:host");
@@ -857,6 +875,95 @@ test("admin can set cost cap and runner claims respect it", async () => {
   const manualRun = await app.inject({ method: "POST", url: `/admin/work-items/${workItemId}/run` });
   assert.equal(manualRun.statusCode, 409);
   assert.equal(manualRun.json().error, "cost cap exceeded");
+
+  await app.close();
+});
+
+test("admin can configure merge guardrails and auto-merge reads them", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({
+    config: { ...config, autoMergeEnabled: true },
+    store,
+  });
+
+  const update = await app.inject({
+    method: "PATCH",
+    payload: {
+      autoMergePolicyEnabled: true,
+      maxSafeDiffLines: 10,
+      protectedPathFragments: ["safe-blocked-path"],
+    },
+    url: "/admin/settings/merge-guardrails",
+  });
+  assert.equal(update.statusCode, 200);
+  assert.equal(update.json().mergeGuardrails.maxSafeDiffLines, 10);
+
+  const doctor = await app.inject({ method: "GET", url: "/doctor" });
+  assert.equal(doctor.json().maxSafeDiffLines, 10);
+  assert.deepEqual(doctor.json().protectedPathFragments, ["safe-blocked-path"]);
+
+  const feedback = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add a calmer save button label",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+  const workItemId = feedback.json().workItemId;
+  await store.recordGithubArtifact({
+    artifactType: "pull_request",
+    url: "https://github.com/joewilsonai/open-feedback-factory/pull/42",
+    workItemId,
+  });
+  await store.recordWorkItemReview({
+    approved: true,
+    reviewType: "agent",
+    summary: "Reviewed and approved.",
+    workItemId,
+  });
+
+  const diffBlocked = await app.inject({
+    method: "POST",
+    payload: {
+      branchTrusted: true,
+      changedFiles: ["apps/demo-app/src/App.tsx"],
+      checksPassed: true,
+      costActualUsd: 1.25,
+      diffLineCount: 12,
+      redactionWarnings: 0,
+      releaseHealthy: true,
+    },
+    url: `/admin/work-items/${workItemId}/automerge`,
+  });
+  assert.equal(diffBlocked.statusCode, 409);
+  assert.equal(diffBlocked.json().evaluation.reasons.includes("diff_too_large"), true);
+
+  await app.inject({
+    method: "PATCH",
+    payload: {
+      autoMergePolicyEnabled: true,
+      maxSafeDiffLines: 100,
+      protectedPathFragments: ["apps/demo-app"],
+    },
+    url: "/admin/settings/merge-guardrails",
+  });
+
+  const pathBlocked = await app.inject({
+    method: "POST",
+    payload: {
+      branchTrusted: true,
+      changedFiles: ["apps/demo-app/src/App.tsx"],
+      checksPassed: true,
+      costActualUsd: 1.25,
+      diffLineCount: 12,
+      redactionWarnings: 0,
+      releaseHealthy: true,
+    },
+    url: `/admin/work-items/${workItemId}/automerge`,
+  });
+  assert.equal(pathBlocked.statusCode, 409);
+  assert.equal(pathBlocked.json().evaluation.reasons.includes("protected_path_changed"), true);
 
   await app.close();
 });

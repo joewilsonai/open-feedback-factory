@@ -142,6 +142,12 @@ export interface UsageAttributionRow {
   workItemId: string;
 }
 
+export interface MergeGuardrailPolicy {
+  autoMergePolicyEnabled: boolean;
+  maxSafeDiffLines: number;
+  protectedPathFragments: string[];
+}
+
 export interface WorkItemDetail {
   agentRuns: AgentRunLedgerRow[];
   assumptions: AssumptionLedgerRow[];
@@ -1281,6 +1287,56 @@ export class OpenFeedbackStore {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultCap;
   }
 
+  async getMergeGuardrailPolicy(defaultPolicy: MergeGuardrailPolicy): Promise<MergeGuardrailPolicy> {
+    const result = await this.pool.query<{ value: Record<string, unknown> | null }>(
+      `select value
+       from policy_configs
+       where key = 'merge_guardrails'
+       limit 1`,
+    );
+    const value = recordFromRow(result.rows[0]?.value);
+    return {
+      autoMergePolicyEnabled:
+        typeof value.autoMergePolicyEnabled === "boolean"
+          ? value.autoMergePolicyEnabled
+          : defaultPolicy.autoMergePolicyEnabled,
+      maxSafeDiffLines: positiveIntegerFromValue(value.maxSafeDiffLines) ?? defaultPolicy.maxSafeDiffLines,
+      protectedPathFragments: nonEmptyStringArray(value.protectedPathFragments, defaultPolicy.protectedPathFragments),
+    };
+  }
+
+  async setMergeGuardrailPolicy(policy: MergeGuardrailPolicy, actor = "operator"): Promise<MergeGuardrailPolicy> {
+    const normalized: MergeGuardrailPolicy = {
+      autoMergePolicyEnabled: policy.autoMergePolicyEnabled,
+      maxSafeDiffLines: Math.max(1, Math.floor(policy.maxSafeDiffLines)),
+      protectedPathFragments: nonEmptyStringArray(policy.protectedPathFragments, []),
+    };
+    const client = await this.pool.connect();
+    try {
+      await client.query("begin");
+      await client.query(
+        `insert into policy_configs (id, key, value)
+         values ($1, 'merge_guardrails', $2)
+         on conflict (key) do update
+         set value = excluded.value,
+             updated_at = now()`,
+        [`policy_${randomUUID()}`, JSON.stringify(normalized)],
+      );
+      await client.query(
+        `insert into audit_events (id, actor, event, target_type, target_id, metadata)
+         values ($1, $2, 'merge_guardrails_updated', 'policy_config', 'merge_guardrails', $3)`,
+        [`audit_${randomUUID()}`, actor, JSON.stringify(normalized)],
+      );
+      await client.query("commit");
+      return normalized;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async setMaxFeatureCostUsd(amountUsd: number, actor = "operator"): Promise<void> {
     const normalized = Math.round(amountUsd * 100) / 100;
     const client = await this.pool.connect();
@@ -1557,6 +1613,20 @@ function confidenceFromRow(value: unknown): AgentAssumptionRecord["confidence"] 
 function stringArrayFromRow(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === "string");
+}
+
+function nonEmptyStringArray(value: unknown, fallback: string[]): string[] {
+  if (!Array.isArray(value)) return fallback;
+  const clean = value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item) => item.length > 0);
+  return clean.length > 0 ? clean : fallback;
+}
+
+function positiveIntegerFromValue(value: unknown): number | null {
+  const number = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(number) || number <= 0) return null;
+  return number;
 }
 
 async function insertAssumptionRecords(
