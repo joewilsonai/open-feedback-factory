@@ -71,6 +71,7 @@ export function App() {
     () => snapshot.workItems.find((item) => item.id === selectedId) ?? snapshot.workItems[0] ?? null,
     [selectedId, snapshot.workItems],
   );
+  const runnerLabel = doctor ? runnerModeLabel(doctor.codexRunnerMode) : "Checking";
 
   async function refresh() {
     setStatus("Refreshing");
@@ -146,6 +147,7 @@ export function App() {
         <Metric label="Open work" value={snapshot.counts.openWorkItems} />
         <Metric label="Agent runs" value={snapshot.counts.agentRuns} />
         <Metric label="Usage events" value={snapshot.counts.featureUsageEvents} />
+        <Metric label="Runner" value={runnerLabel} />
       </section>
 
       <section className="console-grid">
@@ -196,7 +198,7 @@ export function App() {
               </div>
               <div className="action-row">
                 <button type="button" onClick={() => runWorkItem(selected.id)}>
-                  Run agent lane
+                  {doctor?.codexRunnerMode === "codex" ? "Run Codex worker" : "Run simulation"}
                 </button>
                 <button type="button" onClick={() => attemptAutoMerge(selected.id)}>
                   Check auto-merge
@@ -297,7 +299,7 @@ function SetupPanel(props: { doctor: Doctor | null }) {
         <dl className="setup-grid">
           <Detail label="API" value={doctor.api} />
           <Detail label="Database" value={doctor.databaseConfigured ? "Configured" : "Missing"} />
-          <Detail label="Runner" value={doctor.codexRunnerMode} />
+          <Detail label="Runner" value={runnerModeLabel(doctor.codexRunnerMode)} />
           <Detail label="GitHub" value={doctor.githubMode} />
           <Detail label="GitHub App" value={doctor.githubAppConfigured ? "Configured" : "Not configured"} />
           <Detail label="Webhooks" value={doctor.githubWebhooksEnabled ? "Enabled" : "Local off"} />
@@ -331,6 +333,12 @@ function Detail(props: { label: string; value: string }) {
   );
 }
 
+function runnerModeLabel(mode: string): string {
+  if (mode === "codex") return "Codex CLI";
+  if (mode === "demo") return "Simulation";
+  return mode;
+}
+
 function ActivityPanel(props: { rows: Array<Record<string, unknown>>; title: string }) {
   return (
     <div className="panel activity">
@@ -343,6 +351,7 @@ function ActivityPanel(props: { rows: Array<Record<string, unknown>>; title: str
           {props.rows.slice(0, 5).map((row, index) => (
             <li key={String(row.id ?? index)}>
               <code>{String(row.id ?? index)}</code>
+              {"agent_name" in row ? <small>{String(row.agent_name)}</small> : null}
               <span>{String(row.summary ?? row.sanitized_summary ?? row.action ?? row.status ?? "recorded")}</span>
             </li>
           ))}

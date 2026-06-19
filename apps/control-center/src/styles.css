@@ -97,7 +97,7 @@ h2 {
 
 .status-strip {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 1px;
   margin-bottom: 1px;
   border: 1px solid rgba(22, 26, 31, 0.16);
