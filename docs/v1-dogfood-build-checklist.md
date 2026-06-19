@@ -193,6 +193,8 @@ docker compose up --build
 - Cost estimate and actual/token-only actual are recorded honestly.
 - Auto approval and auto-merge are separate and visibly explained.
 - Safe auto-merge is possible only when every gate passes.
+- Reviewer approval is recorded as a durable work-item decision before
+  auto-merge can pass; the system never trusts a request-body shortcut.
 - A release marker is required before a user sees shipped.
 - Negative outcomes tell the user why the item will not be worked on.
 - Not-built categories and repeated demand are stored for reconsideration.

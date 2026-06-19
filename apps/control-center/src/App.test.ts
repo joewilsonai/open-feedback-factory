@@ -28,6 +28,10 @@ describe("control center UI contract", () => {
     expect(source).toContain("Feature trail");
     expect(source).toContain("Cost ledger");
     expect(source).toContain("Release proof");
+    expect(source).toContain("Review decisions");
+    expect(source).toContain("Approve review");
+    expect(source).toContain("Reject review");
+    expect(source).toContain("Waiting for review");
     expect(source).toContain("GitHub artifacts");
     expect(source).toContain("User follow-up");
     expect(source).toContain("Audit events");
@@ -63,6 +67,7 @@ describe("control center UI contract", () => {
     expect(source).toContain("Low-risk auto lane");
     expect(source).toContain("Implemented, awaiting review");
     expect(source).not.toContain("Demo centerpiece");
+    expect(source).not.toContain("reviewerApproved");
     expect(source).toContain("Health");
     expect(source).toContain("Codex CLI");
   });
@@ -80,6 +85,7 @@ describe("control center UI contract", () => {
     expect(source).toContain("/evidence");
     expect(source).toContain("/run");
     expect(source).toContain("/automerge");
+    expect(source).toContain("/review");
     expect(source).toContain("/release");
     expect(source).toContain("/decision");
     expect(source).toContain("/admin/reconciliation/run");

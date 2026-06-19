@@ -174,6 +174,11 @@ actual token/cost data when available, and a user-safe message. Any unresolved
 assumption that affects privacy, cost, merge safety, or release status blocks
 safe auto-merge until a reviewer lane or human operator resolves it.
 
+Reviewer approval is also durable evidence. The control center records review
+approval or rejection on the work item ledger, and safe auto-merge reads that
+latest stored decision. Passing `reviewerApproved` in a one-off request is not a
+merge gate; the review must be recorded first by a reviewer agent or human.
+
 The control center shows estimated cost before work starts and latest actual
 cost after a runner reports completion. It also exposes a reconciliation action
 that requeues stale in-progress work and identifies implemented work still
@@ -181,9 +186,10 @@ waiting for release proof.
 
 Each selected work item also has an evidence ledger. The ledger shows agent
 runs, estimate and actual cost records, all recorded assumptions, GitHub
-artifacts, release markers, user-facing follow-up notifications, and audit
-events. This is the operator proof trail for "what happened, what did it cost,
-what assumptions were made, what PR exists, and has it actually shipped?"
+artifacts, review decisions, release markers, user-facing follow-up
+notifications, and audit events. This is the operator proof trail for "what
+happened, what did it cost, what assumptions were made, who reviewed it, what PR
+exists, and has it actually shipped?"
 
 Below-threshold feedback is not thrown away. The API stores it in feedback
 clusters, increments the cluster signal count on later matching requests, and
@@ -222,8 +228,8 @@ shape instead of silently accepting abuse.
 `GITHUB_MODE=gh` enables internal dogfood mutations through the GitHub CLI. In
 that mode, newly accepted sanitized feedback can create a GitHub issue and store
 the URL on the work item. Safe auto-merge still requires every gate to pass:
-safe risk tier, trusted branch, reviewer approval, passing checks, release
-health, cost cap, allowed paths, and an attached PR URL.
+safe risk tier, trusted branch, persisted reviewer approval, passing checks,
+release health, cost cap, allowed paths, and an attached PR URL.
 
 `GITHUB_MODE=app` is the installable GitHub App path. Configure
 `GITHUB_APP_ID` plus either `GITHUB_APP_PRIVATE_KEY` or

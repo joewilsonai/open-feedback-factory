@@ -1018,7 +1018,7 @@ trackFeatureOutcome({
 <p>a human only because a policy, reviewer, CI, release, cost, or risk gate failed or requires explicit approval.</p>
 </ul>
 <p>The desired default for real indie repos is not &quot;a person reviews every PR.&quot; The default should be &quot;agents do the routine implementation and review work; humans handle exceptions.&quot; The PR remains the audit artifact and rollback point, but human review is a policy outcome, not the universal bottleneck.</p>
-<p>Approval to run and approval to merge are separate controls. <code>auto</code> approval allows an attached worker to claim eligible queued work. It does not mean the PR can merge. Auto-merge requires separate reviewer agents, passing checks, guardrail evaluation, provenance checks, and cost/release policy compliance.</p>
+<p>Approval to run and approval to merge are separate controls. <code>auto</code> approval allows an attached worker to claim eligible queued work. It does not mean the PR can merge. Auto-merge requires separate reviewer agents, passing checks, guardrail evaluation, provenance checks, and cost/release policy compliance. Reviewer approval must be persisted as a work-item review decision before it can unlock any merge path. A transient API request flag or UI assumption is not enough evidence for auto-merge.</p>
 <p>Agent-reviewed auto-merge requires at minimum:</p>
 <ul>
 <li>a separate reviewer agent from the builder agent;</li>
@@ -1032,6 +1032,7 @@ trackFeatureOutcome({
 <li>generated runner branch cleanup after a guarded merge;</li>
 <li>release/deploy health checks when configured.</li>
 </ul>
+<p>The evidence ledger must show the latest reviewer decision, reviewer identity, review type, summary, timestamp, and whether the decision was approving or rejecting. A later rejection overrides an earlier approval until another valid approval is recorded.</p>
 <h3 id="8-7-user-follow-up"><a class="heading-anchor" href="#8-7-user-follow-up" aria-label="Link to 8.7 User Follow-Up">#</a>8.7 User Follow-Up</h3>
 <p>Every submitted item must eventually have a user-safe status.</p>
 <p>Statuses:</p>
@@ -2249,6 +2250,8 @@ feedback-factory demo</code></pre>
 <li>Audit log.</li>
 <li>PR creation.</li>
 <li>Agent reviewer gate.</li>
+<li>Durable review-decision ledger that safe auto-merge reads instead of trusting</li>
+<p>a one-off request flag.</p>
 <li>Policy-governed merge modes: implement-only, agent-reviewed auto-merge, and</li>
 <p>human-exception-required.</p>
 <li>Estimated and actual cost capture.</li>
@@ -2366,7 +2369,7 @@ feedback-factory demo</code></pre>
 <p>Certain categories should be blocked or review-only by default: auth, billing, privacy, legal, data deletion, encryption, infrastructure, permissions, and production release logic.</p>
 <p>Cost caps must be enforced before and during work. If a feature is estimated above budget, it waits. If actual cost exceeds the configured limit, the system stops or escalates. The V1 control center should let an operator change the max feature cost cap without editing environment files, and runner/admin execution must read that live policy before spending model time.</p>
 <p>There needs to be an audit trail for every decision: why it was built, blocked, not planned, merged, reopened, or reconsidered.</p>
-<p>The evidence ledger should be the operator-facing version of that audit trail. It must avoid raw feedback leakage while still showing sanitized summaries, agent run results, estimate-vs-actual cost, unresolved assumptions, release proof, and user-safe follow-up status.</p>
+<p>The evidence ledger should be the operator-facing version of that audit trail. It must avoid raw feedback leakage while still showing sanitized summaries, agent run results, estimate-vs-actual cost, unresolved assumptions, persisted review decisions, release proof, and user-safe follow-up status.</p>
 <p>When an operator decides not to build something, the system should provide an explicit decision action. That action must update the work item, notify matching requesters with a user-safe explanation, store the decision category, and add an audit event. Rejected work should never disappear as an unspoken queue change.</p>
 <p>Admin auth and roles are required so raw feedback, secrets, policy changes, approvals, deletion, billing, and kill-switch access are not all controlled by one undifferentiated admin permission.</p>
 <p>Data retention and deletion are required so developers can purge raw feedback, delete users/workspaces, and keep aggregate demand history where appropriate.</p>

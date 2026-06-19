@@ -95,6 +95,7 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(completed?.githubPrUrl, "https://github.com/joewilsonai/open-feedback-factory/pull/123");
     assert.equal(completed?.latestActualCost?.amountUsd, 1.25);
     assert.equal(completed?.latestBranchName, null);
+    assert.equal(completed?.reviewDecision, null);
     assert.equal(completed?.unresolvedAssumptions.length, 1);
     assert.deepEqual(completed?.unresolvedAssumptions[0]?.impactAreas, ["release_status"]);
 
@@ -109,6 +110,21 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
       workItemId: claimed?.id ?? "",
     });
     assert.equal(artifactTwo, artifactOne);
+
+    const reviewDecision = await store.recordWorkItemReview({
+      actor: "db-reviewer-agent",
+      approved: true,
+      reviewType: "agent",
+      summary: "Reviewed the implementation, test evidence, and merge policy.",
+      workItemId: claimed?.id ?? "",
+    });
+    assert.equal(reviewDecision.approved, true);
+    assert.equal(reviewDecision.reviewType, "agent");
+    const currentReview = await store.getWorkItemReviewDecision(claimed?.id ?? "");
+    assert.equal(currentReview?.summary, "Reviewed the implementation, test evidence, and merge policy.");
+    const reviewed = await store.getWorkItem(claimed?.id ?? "");
+    assert.equal(reviewed?.reviewDecision?.actor, "db-reviewer-agent");
+    assert.equal(reviewed?.reviewDecision?.approved, true);
 
     assert.equal(
       await store.recordGithubWebhookDelivery({ deliveryId: `delivery_${uniqueSuffix}`, event: "pull_request" }),
@@ -140,6 +156,7 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(detail?.githubArtifacts.some((artifact) => artifact.url.endsWith("/pull/123")), true);
     assert.equal(detail?.releaseEvents[0]?.status, "shipped");
     assert.equal(detail?.userNotifications[0]?.message, "Dashboard focus meter has shipped.");
+    assert.equal(detail?.auditEvents.some((event) => event.event === "work_item_review_recorded"), true);
     assert.equal(detail?.auditEvents.some((event) => event.event === "work_item_run_completed"), true);
 
     const staleFeedback = {
