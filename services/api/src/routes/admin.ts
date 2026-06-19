@@ -143,6 +143,37 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
     },
   );
 
+  app.post<{
+    Body: { decisionCategory?: unknown; message?: unknown; status?: unknown };
+    Params: { id: string };
+  }>("/admin/work-items/:id/decision", async (request, reply) => {
+    const workItem = await deps.store.getWorkItem(request.params.id);
+    if (!workItem) return reply.code(404).send({ error: "work item not found" });
+
+    const status = request.body.status;
+    if (status !== "not_planned" && status !== "blocked") {
+      return reply.code(400).send({ error: "status must be not_planned or blocked" });
+    }
+
+    const message =
+      typeof request.body.message === "string" && request.body.message.trim().length > 0
+        ? request.body.message.trim()
+        : defaultDecisionMessage(status);
+    const decisionCategory =
+      typeof request.body.decisionCategory === "string" && request.body.decisionCategory.trim().length > 0
+        ? request.body.decisionCategory.trim()
+        : status;
+
+    await deps.store.markWorkItemDecision({
+      actor: "control-center",
+      decisionCategory,
+      message,
+      status,
+      workItemId: request.params.id,
+    });
+    return reply.code(202).send({ decisionCategory, message, status });
+  });
+
   app.post<{ Body: { staleAfterMinutes?: unknown } }>("/admin/reconciliation/run", async (request, reply) => {
     const staleAfterMinutes =
       typeof request.body?.staleAfterMinutes === "number" ? Math.floor(request.body.staleAfterMinutes) : 60;
@@ -227,4 +258,11 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
 
 function isGeneratedRunnerBranch(branchName: string | null): branchName is string {
   return Boolean(branchName && /^(off\/codex|codex\/off|agent)\/[a-zA-Z0-9/_-]+$/.test(branchName));
+}
+
+function defaultDecisionMessage(status: "blocked" | "not_planned"): string {
+  if (status === "not_planned") {
+    return "We reviewed this request and do not plan to build it right now.";
+  }
+  return "We reviewed this request and it is blocked from shipping without human intervention.";
 }

@@ -371,6 +371,25 @@ export function App() {
     setStatus(response.ok ? "Marked shipped" : `Release blocked: ${String(body.error ?? "not ready")}`);
   }
 
+  async function decideWorkItem(id: string, decisionStatus: "blocked" | "not_planned") {
+    const notPlanned = decisionStatus === "not_planned";
+    setStatus(notPlanned ? "Recording not planned" : "Recording blocked decision");
+    const response = await adminFetch(`/admin/work-items/${id}/decision`, {
+      body: JSON.stringify({
+        decisionCategory: notPlanned ? "not_planned_for_beta" : "blocked_by_operator",
+        message: notPlanned
+          ? "We reviewed this request and do not plan to build it during the current beta."
+          : "We reviewed this request and it is blocked from shipping without human intervention.",
+        status: decisionStatus,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const body = await response.json().catch(() => ({}));
+    await refresh();
+    setStatus(response.ok ? "Decision recorded" : `Decision blocked: ${String(body.error ?? "not recorded")}`);
+  }
+
   async function runReconciliation() {
     setStatus("Running reconciliation");
     const response = await adminFetch("/admin/reconciliation/run", {
@@ -542,6 +561,12 @@ export function App() {
                 </button>
                 <button type="button" onClick={() => releaseWorkItem(selected.id)}>
                   Mark shipped
+                </button>
+                <button type="button" onClick={() => decideWorkItem(selected.id, "not_planned")}>
+                  Mark not planned
+                </button>
+                <button type="button" onClick={() => decideWorkItem(selected.id, "blocked")}>
+                  Block work
                 </button>
               </div>
             </>

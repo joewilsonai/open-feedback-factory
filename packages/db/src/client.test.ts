@@ -168,6 +168,24 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.deepEqual(reconciliation.staleInProgressRequeuedIds, [staleClaimed?.id]);
     const requeued = await store.getWorkItem(staleClaimed?.id ?? "");
     assert.equal(requeued?.status, "planned");
+
+    await store.markWorkItemDecision({
+      actor: "db-test",
+      decisionCategory: "out_of_scope",
+      message: "Pinned notes are not planned for this beta.",
+      status: "not_planned",
+      workItemId: staleClaimed?.id ?? "",
+    });
+    const notPlanned = await store.getWorkItem(staleClaimed?.id ?? "");
+    assert.equal(notPlanned?.status, "not_planned");
+    const notPlannedStatus = await store.getUserFeedbackStatus(staleIntake.feedbackId);
+    assert.equal(notPlannedStatus?.state, "not_planned");
+    assert.equal(notPlannedStatus?.message, "Pinned notes are not planned for this beta.");
+    const notPlannedDetail = await store.getWorkItemDetail(staleClaimed?.id ?? "");
+    assert.equal(
+      notPlannedDetail?.auditEvents.some((event) => event.event === "work_item_decision_recorded"),
+      true,
+    );
   } finally {
     await store.close();
     await cleanupDatabaseTestRows(databaseUrl);

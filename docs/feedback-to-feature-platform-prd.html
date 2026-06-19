@@ -2367,6 +2367,7 @@ feedback-factory demo</code></pre>
 <p>Cost caps must be enforced before and during work. If a feature is estimated above budget, it waits. If actual cost exceeds the configured limit, the system stops or escalates.</p>
 <p>There needs to be an audit trail for every decision: why it was built, blocked, not planned, merged, reopened, or reconsidered.</p>
 <p>The evidence ledger should be the operator-facing version of that audit trail. It must avoid raw feedback leakage while still showing sanitized summaries, agent run results, estimate-vs-actual cost, unresolved assumptions, release proof, and user-safe follow-up status.</p>
+<p>When an operator decides not to build something, the system should provide an explicit decision action. That action must update the work item, notify matching requesters with a user-safe explanation, store the decision category, and add an audit event. Rejected work should never disappear as an unspoken queue change.</p>
 <p>Admin auth and roles are required so raw feedback, secrets, policy changes, approvals, deletion, billing, and kill-switch access are not all controlled by one undifferentiated admin permission.</p>
 <p>Data retention and deletion are required so developers can purge raw feedback, delete users/workspaces, and keep aggregate demand history where appropriate.</p>
 <p>The developer needs a kill switch. One control should pause agent execution while still allowing feedback intake.</p>

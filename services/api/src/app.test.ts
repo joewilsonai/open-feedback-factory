@@ -293,6 +293,51 @@ class MemoryStore implements AppStore {
     }
   }
 
+  async markWorkItemDecision(input: Parameters<AppStore["markWorkItemDecision"]>[0]) {
+    const item = this.workItems.find((workItem) => workItem.id === input.workItemId);
+    if (item) {
+      item.status = input.status;
+      item.userStatus = input.status;
+      item.updatedAt = new Date().toISOString();
+      const cluster = this.feedbackClusters.get(item.clusterKey);
+      if (cluster) {
+        cluster.activeWorkItemStatus = input.status;
+        cluster.latestStatus = input.status;
+        cluster.latestUserMessage = input.message;
+        cluster.updatedAt = new Date().toISOString();
+      }
+    }
+    for (const [feedbackId, current] of this.feedbackStatuses) {
+      this.feedbackStatuses.set(feedbackId, {
+        ...current,
+        label: input.status === "not_planned" ? "Not planned" : "Blocked",
+        message: input.message,
+        state: input.status,
+      });
+      this.userNotifications.unshift({
+        createdAt: new Date().toISOString(),
+        feedbackId,
+        id: `note_${this.userNotifications.length + 1}`,
+        message: input.message,
+        status: input.status,
+        workItemId: input.workItemId,
+      });
+    }
+    this.auditEvents.unshift({
+      actor: input.actor ?? "operator",
+      createdAt: new Date().toISOString(),
+      event: "work_item_decision_recorded",
+      id: `audit_${this.auditEvents.length + 1}`,
+      metadata: {
+        decisionCategory: input.decisionCategory ?? input.status,
+        message: input.message,
+        status: input.status,
+      },
+      targetId: input.workItemId,
+      targetType: "work_item",
+    });
+  }
+
   async reconcileWorkItems(input?: Parameters<AppStore["reconcileWorkItems"]>[0]) {
     const staleAfterMinutes = input?.staleAfterMinutes ?? 60;
     const cutoff = Date.now() - staleAfterMinutes * 60_000;
@@ -1106,6 +1151,46 @@ test("release marker requires implemented work and updates user status after imp
   const status = await app.inject({ method: "GET", url: `/sdk/feedback/${feedbackId}/status` });
   assert.equal(status.json().state, "shipped");
   assert.equal(status.json().message, "Note search has shipped.");
+
+  await app.close();
+});
+
+test("admin can mark work not planned and update requester status", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  const feedback = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add dark mode to settings",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+  const feedbackId = feedback.json().feedbackId;
+  const workItemId = feedback.json().workItemId;
+
+  const decision = await app.inject({
+    method: "POST",
+    payload: {
+      decisionCategory: "out_of_scope",
+      message: "We reviewed this and are not planning it for the current beta.",
+      status: "not_planned",
+    },
+    url: `/admin/work-items/${workItemId}/decision`,
+  });
+
+  assert.equal(decision.statusCode, 202);
+  assert.equal(decision.json().status, "not_planned");
+  assert.equal(store.workItems[0]?.status, "not_planned");
+
+  const status = await app.inject({ method: "GET", url: `/sdk/feedback/${feedbackId}/status` });
+  assert.equal(status.json().state, "not_planned");
+  assert.equal(status.json().message, "We reviewed this and are not planning it for the current beta.");
+
+  const evidence = await app.inject({ method: "GET", url: `/admin/work-items/${workItemId}/evidence` });
+  assert.equal(evidence.json().userNotifications[0].status, "not_planned");
+  assert.equal(evidence.json().auditEvents[0].event, "work_item_decision_recorded");
 
   await app.close();
 });

@@ -149,6 +149,14 @@ export interface RunnerJobCompletionInput extends AgentRunInput {
   status: "blocked" | "failed" | "succeeded";
 }
 
+export interface WorkItemDecisionInput {
+  actor?: string;
+  decisionCategory?: string;
+  message: string;
+  status: "blocked" | "not_planned";
+  workItemId: string;
+}
+
 export interface GithubArtifactInput {
   artifactNumber?: number;
   artifactType: "issue" | "pull_request";
@@ -879,6 +887,62 @@ export class OpenFeedbackStore {
     }
   }
 
+  async markWorkItemDecision(input: WorkItemDecisionInput): Promise<void> {
+    const actor = input.actor ?? "operator";
+    const message = input.message.trim() || decisionMessageForStatus(input.status);
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("begin");
+      const workItemResult = await client.query<{ cluster_key: string }>(
+        `update work_items
+         set status = $2, user_status = $2, updated_at = now()
+         where id = $1
+         returning cluster_key`,
+        [input.workItemId, input.status],
+      );
+      const clusterKey = workItemResult.rows[0]?.cluster_key;
+      if (!clusterKey) {
+        await client.query("rollback");
+        return;
+      }
+
+      await client.query(
+        `update feedback_signals
+         set status = $2, user_message = $3, updated_at = now()
+         where cluster_key = $1`,
+        [clusterKey, input.status, message],
+      );
+      await client.query(
+        `insert into user_notifications (id, feedback_id, work_item_id, status, message)
+         select $1 || '_' || fs.id, fs.id, $2, $3, $4
+         from feedback_signals fs
+         where fs.cluster_key = $5`,
+        [`note_${randomUUID()}`, input.workItemId, input.status, message, clusterKey],
+      );
+      await client.query(
+        `insert into audit_events (id, actor, event, target_type, target_id, metadata)
+         values ($1, $2, 'work_item_decision_recorded', 'work_item', $3, $4)`,
+        [
+          `audit_${randomUUID()}`,
+          actor,
+          input.workItemId,
+          JSON.stringify({
+            decisionCategory: input.decisionCategory ?? input.status,
+            message,
+            status: input.status,
+          }),
+        ],
+      );
+      await client.query("commit");
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async reconcileWorkItems(input: {
     actor?: string;
     staleAfterMinutes?: number;
@@ -1344,6 +1408,13 @@ function completionStateForRun(status: RunnerJobCompletionInput["status"]): {
     userStatus: "blocked",
     workItemStatus: "failed",
   };
+}
+
+function decisionMessageForStatus(status: WorkItemDecisionInput["status"]): string {
+  if (status === "not_planned") {
+    return "We reviewed this request and do not plan to build it right now.";
+  }
+  return "We reviewed this request and it is blocked from shipping without human intervention.";
 }
 
 function followUpForExistingWorkItem(status: string): { message: string; status: UserFeedbackState } {
