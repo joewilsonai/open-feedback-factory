@@ -5,7 +5,7 @@ import type { UserFeedbackStatus } from "@open-feedback-factory/core";
 import type { ControlRoomSnapshot, WorkItemRow } from "@open-feedback-factory/db";
 import { buildApp, type AppStore } from "./app.js";
 import type { ApiConfig } from "./config.js";
-import { buildGithubAppEnvSnippet } from "./routes/github.js";
+import { buildGithubAppEnvSnippet, githubWebhooksEnabledForBaseUrl } from "./routes/github.js";
 import { buildSanitizedGithubIssueInput } from "./routes/sdk.js";
 
 const config: ApiConfig = {
@@ -178,6 +178,8 @@ test("doctor exposes setup wizard links", async () => {
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().controlCenterUrl, "http://control.test");
   assert.equal(response.json().githubAppSetupUrl, "http://api.test/github/app/setup");
+  assert.equal(response.json().githubWebhookUrl, "http://api.test/github/webhook");
+  assert.equal(response.json().githubWebhooksEnabled, true);
 
   await app.close();
 });
@@ -188,10 +190,33 @@ test("API exposes GitHub App manifest seam", async () => {
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().default_permissions.pull_requests, "write");
+  assert.deepEqual(response.json().default_events, ["check_suite", "issues", "pull_request", "push"]);
   assert.deepEqual(response.json().callback_urls, ["http://api.test/github/app/installed"]);
   assert.equal(response.json().hook_attributes.url, "http://api.test/github/webhook");
   assert.equal(response.json().setup_url, "http://control.test");
   assert.equal(response.json().url, "https://github.com/joewilsonai/open-feedback-factory");
+
+  await app.close();
+});
+
+test("GitHub App manifest omits webhooks for localhost setup", async () => {
+  const localConfig: ApiConfig = {
+    ...config,
+    controlCenterUrl: "http://localhost:5173",
+    publicBaseUrl: "http://localhost:4100",
+  };
+  const app = await buildApp({ config: localConfig, store: new MemoryStore() });
+  const response = await app.inject({ method: "GET", url: "/github/app/manifest" });
+
+  assert.equal(response.statusCode, 200);
+  const body = response.json();
+  assert.equal("hook_attributes" in body, false);
+  assert.equal("default_events" in body, false);
+  assert.deepEqual(body.callback_urls, ["http://localhost:4100/github/app/installed"]);
+
+  const setup = await app.inject({ method: "GET", url: "/github/app/setup" });
+  assert.match(setup.body, /Local mode: GitHub cannot reach localhost webhooks/);
+  assert.doesNotMatch(setup.body, /hook_attributes/);
 
   await app.close();
 });
@@ -254,6 +279,13 @@ test("GitHub App conversion env snippet is Docker-ready", () => {
   assert.match(snippet, /GITHUB_APP_ID=12345/);
   assert.match(snippet, /GITHUB_APP_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----/);
   assert.match(snippet, /GITHUB_WEBHOOK_SECRET=secret-value/);
+});
+
+test("webhook reachability rejects local and private URLs", () => {
+  assert.equal(githubWebhooksEnabledForBaseUrl("http://localhost:4100"), false);
+  assert.equal(githubWebhooksEnabledForBaseUrl("http://127.0.0.1:4100"), false);
+  assert.equal(githubWebhooksEnabledForBaseUrl("http://192.168.1.40:4100"), false);
+  assert.equal(githubWebhooksEnabledForBaseUrl("https://off.example.com"), true);
 });
 
 test("sanitized GitHub issue body excludes raw feedback", () => {

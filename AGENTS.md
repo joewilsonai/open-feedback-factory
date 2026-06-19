@@ -71,6 +71,10 @@ The canonical setup path is the control center wizard:
 GitHub requires the confirmation click. Agents should not pretend that step can
 be skipped.
 
+Local `localhost` installs intentionally omit GitHub webhook events. To test
+webhooks, set `PUBLIC_BASE_URL` to an HTTPS tunnel or deployed URL before
+starting the wizard.
+
 ## Codex Runner Path
 
 `CODEX_RUNNER_MODE=demo` is the safe default.

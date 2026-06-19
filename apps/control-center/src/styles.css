@@ -151,7 +151,7 @@ small {
 
 .wizard-rail {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1px;
   margin-bottom: 1rem;
   border: 1px solid rgba(22, 26, 31, 0.13);

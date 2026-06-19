@@ -8,6 +8,7 @@ export async function registerGithubRoutes(app: FastifyInstance, deps: AppDeps):
   app.get("/github/app/setup", async (request, reply) => {
     const ownerType = queryString(request.query, "owner_type") === "organization" ? "organization" : "user";
     const owner = queryString(request.query, "owner") ?? deps.config.githubOwner;
+    const webhooksEnabled = githubWebhooksEnabledForBaseUrl(deps.config.publicBaseUrl);
     const action =
       ownerType === "organization"
         ? `https://github.com/organizations/${encodeURIComponent(owner)}/settings/apps/new`
@@ -25,6 +26,11 @@ export async function registerGithubRoutes(app: FastifyInstance, deps: AppDeps):
     <main>
       <h1>Create Open Feedback Factory GitHub App</h1>
       <p>This posts the V1 GitHub App manifest to GitHub. GitHub will ask you to confirm the app name and permissions.</p>
+      <p>${
+        webhooksEnabled
+          ? "Webhook events are enabled because PUBLIC_BASE_URL is publicly reachable."
+          : "Local mode: GitHub cannot reach localhost webhooks, so webhook events are disabled for this manifest. Set PUBLIC_BASE_URL to an HTTPS tunnel or deployed URL to enable webhooks."
+      }</p>
       <form method="post" action="${escapeHtml(action)}">
         <input type="hidden" name="manifest" value="${escapeHtml(manifest)}">
         <input type="hidden" name="state" value="open-feedback-factory">
@@ -156,9 +162,8 @@ export async function registerGithubRoutes(app: FastifyInstance, deps: AppDeps):
 }
 
 export function buildGithubAppManifest(deps: AppDeps): Record<string, unknown> {
-  return {
+  const manifest: Record<string, unknown> = {
     callback_urls: [`${deps.config.publicBaseUrl}/github/app/installed`],
-    default_events: ["check_suite", "issues", "pull_request", "push"],
     default_permissions: {
       checks: "read",
       contents: "write",
@@ -168,16 +173,22 @@ export function buildGithubAppManifest(deps: AppDeps): Record<string, unknown> {
     },
     description:
       "Open Feedback Factory turns sanitized user feedback into guarded GitHub issues and PRs.",
-    hook_attributes: {
-      active: true,
-      url: `${deps.config.publicBaseUrl}/github/webhook`,
-    },
     name: "Open Feedback Factory",
     public: false,
     redirect_url: `${deps.config.publicBaseUrl}/github/app/installed`,
     setup_url: deps.config.controlCenterUrl,
     url: `https://github.com/${deps.config.githubOwner}/${deps.config.githubRepo}`,
   };
+
+  if (githubWebhooksEnabledForBaseUrl(deps.config.publicBaseUrl)) {
+    manifest.default_events = ["check_suite", "issues", "pull_request", "push"];
+    manifest.hook_attributes = {
+      active: true,
+      url: `${deps.config.publicBaseUrl}/github/webhook`,
+    };
+  }
+
+  return manifest;
 }
 
 export async function handleGithubWebhook(
@@ -305,4 +316,30 @@ export function buildGithubAppEnvSnippet(converted: Record<string, unknown>): st
     `GITHUB_APP_PRIVATE_KEY=${pem}`,
     `GITHUB_WEBHOOK_SECRET=${webhookSecret}`,
   ].join("\n");
+}
+
+export function githubWebhooksEnabledForBaseUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+    const host = url.hostname.toLowerCase().replace(/^\[/, "").replace(/\]$/, "");
+    if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return false;
+    if (host === "0.0.0.0" || host === "::1") return false;
+    if (host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80:")) return false;
+
+    const ipv4 = host.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+    if (!ipv4) return true;
+
+    const octets = ipv4.slice(1).map(Number);
+    const a = octets[0] ?? -1;
+    const b = octets[1] ?? -1;
+    if (a === 10 || a === 127 || a === 0) return false;
+    if (a === 169 && b === 254) return false;
+    if (a === 172 && b >= 16 && b <= 31) return false;
+    if (a === 192 && b === 168) return false;
+    if (a === 100 && b >= 64 && b <= 127) return false;
+    return true;
+  } catch {
+    return false;
+  }
 }

@@ -8,6 +8,7 @@ describe("control center UI contract", () => {
     expect(source).toContain("Control Center");
     expect(source).toContain("Install wizard");
     expect(source).toContain("Create GitHub App");
+    expect(source).toContain("Webhooks");
     expect(source).toContain("Work items");
     expect(source).toContain("Agent runs");
     expect(source).toContain("Feature usage");

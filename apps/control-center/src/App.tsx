@@ -43,6 +43,8 @@ interface Doctor {
   githubAppConfigured: boolean;
   githubAppSetupUrl: string;
   githubMode: string;
+  githubWebhookUrl: string;
+  githubWebhooksEnabled: boolean;
   maxFeatureCostUsd: number;
   publicBaseUrl: string;
 }
@@ -246,6 +248,15 @@ function SetupWizard(props: { doctor: Doctor | null }) {
           label="Mutation mode"
           state={doctor?.githubMode === "app" ? "Enabled" : "Disabled"}
         />
+        <WizardStep
+          detail={
+            doctor?.githubWebhooksEnabled
+              ? "GitHub can call the configured webhook URL"
+              : "Local install; use an HTTPS tunnel or deploy URL for webhook events"
+          }
+          label="Webhooks"
+          state={doctor?.githubWebhooksEnabled ? "Enabled" : "Local off"}
+        />
       </div>
       <div className="wizard-actions">
         <a className="button-link primary" href={setupUrl}>
@@ -289,9 +300,11 @@ function SetupPanel(props: { doctor: Doctor | null }) {
           <Detail label="Runner" value={doctor.codexRunnerMode} />
           <Detail label="GitHub" value={doctor.githubMode} />
           <Detail label="GitHub App" value={doctor.githubAppConfigured ? "Configured" : "Not configured"} />
+          <Detail label="Webhooks" value={doctor.githubWebhooksEnabled ? "Enabled" : "Local off"} />
           <Detail label="Auto-merge" value={doctor.autoMergeEnabled ? "Enabled" : "Disabled"} />
           <Detail label="Cost cap" value={`$${doctor.maxFeatureCostUsd.toFixed(2)}`} />
           <Detail label="Public URL" value={doctor.publicBaseUrl} />
+          <Detail label="Webhook URL" value={doctor.githubWebhookUrl} />
         </dl>
       ) : (
         <p className="empty">Waiting for setup health.</p>

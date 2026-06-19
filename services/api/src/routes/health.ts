@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
+import { githubWebhooksEnabledForBaseUrl } from "./github.js";
 
 export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   app.get("/health", async () => ({
@@ -18,6 +19,8 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
     ),
     githubAppSetupUrl: `${deps.config.publicBaseUrl}/github/app/setup`,
     githubMode: deps.config.githubMode,
+    githubWebhookUrl: `${deps.config.publicBaseUrl}/github/webhook`,
+    githubWebhooksEnabled: githubWebhooksEnabledForBaseUrl(deps.config.publicBaseUrl),
     maxFeatureCostUsd: deps.config.maxFeatureCostUsd,
     protectedPathFragments: deps.config.protectedPathFragments,
     publicBaseUrl: deps.config.publicBaseUrl,
