@@ -4,6 +4,25 @@ This checklist is the build handoff for the first private Open Feedback Factory
 dogfood version. The goal is not a public launch. The goal is a real internal
 feedback-to-feature loop that we can use, inspect, trust, and improve.
 
+See [Implementation Status](implementation-status.md) for the current canonical
+status map.
+
+## Current V1 Status
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| Core/domain policy | Done | Sanitization, clustering, routing, status copy, demand memory, cost estimates, assumptions, learning records, and auto-merge gates are implemented and tested |
+| API/Postgres | Done | Feedback intake, status, usage, admin, runner, GitHub, release, audit, RLS, and policy tests pass |
+| Web SDK | Done | Real SDK client and launcher exist, with user-visible request tracking |
+| Daybook local demo | Done | Local demo app exercises the SDK/API path |
+| Control center | Done for internal dogfood, needs work for final hosted demo | Lifecycle and setup views exist; plant-app onboarding flow still needs proof |
+| GitHub App and runner seams | Done as seams, needs live plant-app proof | Existing tests cover setup/webhook/client seams; final demo needs scoped repo connection and real PR |
+| Local Codex CLI worker | Done locally, needs hosted-token proof | Host worker path exists; hosted API claim path needs `RUNNER_TOKEN` sync proof |
+| Public SDK distribution | Needs work | Prepare public npm package, hold publish for Joe |
+| Clean plant-care demo repo | Not started | Replaces LaunchBrief as final demo target |
+| Fully hosted multi-user alpha | Not started | Later than private demo |
+| Public repo/open-source launch | Hold | Wait for Joe's explicit go |
+
 ## Target Outcome
 
 A beta user in the Daybook demo app submits a real feature request. Open Feedback

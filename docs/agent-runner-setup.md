@@ -4,6 +4,9 @@ Open Feedback Factory separates feedback intake from code execution. Feedback
 can be collected while the runner is paused. Work is implemented only when a
 real Codex worker is attached.
 
+See [Implementation Status](implementation-status.md) for the current canonical
+DONE / PARTIAL / NOT-STARTED / DEFERRED map.
+
 ## Required Pieces
 
 - API, database, control center, and demo app running.
@@ -43,6 +46,27 @@ allows a running worker to claim work.
 `/workspace/.off/secrets.env` in Docker Compose. This path is ignored by git.
 The key is masked in the UI and is never returned to the browser. The worker
 injects it only into the Codex process for API-key runs.
+
+For hosted control-plane installs, `cli` still means "the worker machine has a
+signed-in Codex CLI session." It does not mean Railway, Docker, or a public
+server can borrow the user's subscription automatically. To use a Codex
+subscription with the hosted control plane, run the host worker on a trusted
+developer machine and point it at the hosted API:
+
+```bash
+WORKER_API_BASE_URL=https://api.openfeedbackfactory.com
+CODEX_AUTH_MODE=cli
+CODEX_RUNNER_MODE=codex
+```
+
+If the hosted API requires `RUNNER_TOKEN`, put that token in the worker's
+ignored environment file before starting the host worker. Do not paste it into
+GitHub, prompts, PRs, screenshots, or logs.
+
+Generic hosted/container workers cannot use a developer's local Codex
+subscription session. Those workers should stay disabled or use the Docker
+API-key lane until a provider-supported delegated subscription token flow is
+available for the target account type.
 
 ## Manual One-Item Run
 

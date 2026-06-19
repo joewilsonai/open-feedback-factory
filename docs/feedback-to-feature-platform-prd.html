@@ -667,8 +667,9 @@
 
   <div class="layout">
     <aside class="toc" aria-label="Table of contents">
-      <p class="toc-title">Contents <span>80</span></p>
+      <p class="toc-title">Contents <span>81</span></p>
       <a class="toc-link level-2" href="#1-product-thesis" data-for="1-product-thesis">1. Product Thesis</a>
+<a class="toc-link level-3" href="#current-snapshot" data-for="current-snapshot">Current Snapshot</a>
 <a class="toc-link level-2" href="#2-positioning" data-for="2-positioning">2. Positioning</a>
 <a class="toc-link level-2" href="#3-target-users" data-for="3-target-users">3. Target Users</a>
 <a class="toc-link level-3" href="#primary" data-for="primary">Primary</a>
@@ -761,7 +762,26 @@
       </section>
 
       <article class="prd-body">
-        <h2 id="1-product-thesis"><a class="heading-anchor" href="#1-product-thesis" aria-label="Link to 1. Product Thesis">#</a>1. Product Thesis</h2>
+        <p><strong>Product:</strong> Open Feedback Factory <strong>Working category:</strong> Open-source feedback-to-feature infrastructure <strong>Audience:</strong> Indie developers and small product teams <strong>Status:</strong> Internal dogfood v0.1 <strong>Distribution thesis:</strong> Private dogfood first; open-source launch later</p>
+<p><strong>Current implementation status:</strong> See <a href="implementation-status.md">Implementation Status</a> for the baseline audit snapshot. Live status should move to GitHub Issues and Projects.</p>
+<p>---</p>
+<h2 id="1-product-thesis"><a class="heading-anchor" href="#1-product-thesis" aria-label="Link to 1. Product Thesis">#</a>1. Product Thesis</h2>
+<h3 id="current-snapshot"><a class="heading-anchor" href="#current-snapshot" aria-label="Link to Current Snapshot">#</a>Current Snapshot</h3>
+<p>As of 2026-06-19:</p>
+<ul>
+<li>The local/internal OFF loop has real core policy, API, database, SDK,</li>
+<p>control-center, runner seams, tests, and CI.</p>
+<li>The SDK launcher is real and can submit feedback, show a user-visible request</li>
+<p>receipt, and track status without requiring user access to the control center.</p>
+<li>LaunchBrief proved the real SDK can run in a live app, but it is now treated</li>
+<p>as an interim proof app rather than the final demo.</p>
+<li>The next durable demo app should be a clean SDK-less plant-care app that</li>
+<p>stands in for a customer's product.</p>
+<li>The highest-leverage next slice is preparing</li>
+<p><code>@open-feedback-factory/sdk</code> for public npm distribution while holding the actual publish step for Joe's explicit go.</p>
+<li>The product must not claim durable package install or normal Vercel rebuilds</li>
+<p>until the SDK is actually available through a public package path.</p>
+</ul>
 <p>Beta users should be able to ask for improvements from inside a product and receive a real answer: shipped, already available, planned, needs more signal, not planned, blocked, or unsafe to build.</p>
 <p>Developers should not have to manually copy feedback into GitHub, decide whether it is actionable, ask an agent to work on it, track the PR, calculate cost, ship the release, and remember to follow up with the user.</p>
 <p>This product turns user feedback into a controlled product-development loop:</p>
@@ -1228,6 +1248,13 @@ trackFeatureOutcome({
 <li><code>check_release_status</code>.</li>
 </ul>
 <p>Agents should not query raw private feedback directly. Raw beta data should not be sent to Codex Cloud. The private database remains the source of truth; Codex receives sanitized summaries and narrow tool access.</p>
+<p>OFF should make Codex subscription usage a first-class lane for indie teams. Many small teams already pay for Codex through ChatGPT and will resist duplicating spend through API-key usage. The product should expose three clear runner lanes:</p>
+<ul>
+<li><strong>Local subscription worker:</strong> a trusted developer machine runs the host Codex CLI worker with <code>CODEX_AUTH_MODE=cli</code>. This is the default alpha and self-hosted path because it uses the developer's signed-in Codex subscription and keeps code execution on their own machine.</li>
+<li><strong>Trusted private remote subscription worker:</strong> a future advanced path for customer-owned private runners that can preserve Codex account auth or provider-supported access tokens safely. This is only acceptable for trusted, serialized runner infrastructure with explicit secret handling and audit.</li>
+<li><strong>Hosted API-key worker:</strong> a managed paid path for teams that want OFF to run workers without keeping a local machine online. This uses standard provider API-key billing and must show cost controls clearly before work is claimed.</li>
+</ul>
+<p>The hosted alpha should use a hosted control plane plus a local subscription worker. Hosted containers must not imply they can use a user's local Codex subscription unless OpenAI exposes a safe delegated auth flow for that account type. Until then, fully hosted autonomous workers should remain disabled or API-key-backed.</p>
 <p>Experimental Codex surfaces such as app-server, exec-server, and remote-control should not be core MVP dependencies. They can be revisited later if they become stable and materially simplify hosted execution.</p>
 <p>The admin UI should include a Codex capability health panel showing:</p>
 <ul>
@@ -2176,7 +2203,7 @@ pnpm demo</code></pre>
 <li>Connect GitHub repo.</li>
 <li>Choose install mode: dry-run demo, implement-only PR mode,</li>
 <p>agent-reviewed auto-merge, or human-exception-required.</p>
-<li>Add Codex auth mode: local CLI subscription or server-side API key.</li>
+<li>Add Codex auth mode: local CLI subscription, trusted private subscription runner, or server-side API key.</li>
 <li>Attach a worker: host Codex CLI service, Docker API-key worker, or manual</li>
 <p>one-item command.</p>
 <li>Set cost caps.</li>
@@ -2898,7 +2925,7 @@ feedback-factory demo</code></pre>
 <li>Whether to add a public roadmap, changelog widget, or voting board.</li>
 </ul>
 <h2 id="24-first-demo-script"><a class="heading-anchor" href="#24-first-demo-script" aria-label="Link to 24. First Demo Script">#</a>24. First Demo Script</h2>
-<p>The demo should use a tiny real app, not a mock dashboard. The near-term hosted demo app is LaunchBrief: a clean product-launch workspace with no OFF SDK installed at the start.</p>
+<p>The demo should use a tiny real app, not a mock dashboard. The near-term hosted demo app should be a clean SDK-less plant-care app: clearly consumer, clearly a stand-in for a customer's product, and not confused with OFF itself. LaunchBrief is only an interim real-SDK proof app.</p>
 <p>The first demo has two modes:</p>
 <ul>
 <li>dry-run demo: local education mode with seeded/sample data clearly labeled,</li>
@@ -2908,14 +2935,14 @@ feedback-factory demo</code></pre>
 </ul>
 <p>Scenario:</p>
 <ol>
-<li>Open <code>https://launchbrief-demo.vercel.app</code>.</li>
-<li>Show LaunchBrief is a normal app: tasks, beta signals, no feedback launcher,</li>
-<p>and no OFF SDK dependency.</p>
+<li>Open the clean plant-care demo app.</li>
+<li>Show the plant app is a normal consumer app: plant list, watering reminders,</li>
+<p>plant notes, no feedback launcher, and no OFF SDK dependency.</p>
 <li>Open the OFF control center and show the Hosted Demo Alpha panel.</li>
-<li>Connect the <code>joewilsonai/launchbrief-demo</code> repo through the OFF GitHub App.</li>
+<li>Connect the plant-care repo through the OFF GitHub App.</li>
 <li>Approve the SDK-install work item.</li>
 <li>OFF creates a real sanitized issue or PR lane for adding the SDK launcher.</li>
-<li>The worker opens a PR against the LaunchBrief repo.</li>
+<li>The worker opens a PR against the plant-care repo.</li>
 <li>Tests pass.</li>
 <li>Reviewer, check, policy, cost, and provenance gates pass.</li>
 <li>The PR merges only if the configured merge mode allows it.</li>
