@@ -188,10 +188,8 @@ export function buildGithubAppManifest(deps: AppDeps): Record<string, unknown> {
   const manifest: Record<string, unknown> = {
     callback_urls: [`${deps.config.publicBaseUrl}/github/app/installed`],
     default_permissions: {
-      checks: "read",
       contents: "write",
       issues: "write",
-      metadata: "read",
       pull_requests: "write",
     },
     description:
@@ -211,7 +209,7 @@ export function buildGithubAppManifest(deps: AppDeps): Record<string, unknown> {
   }
 
   if (githubWebhooksEnabledForBaseUrl(deps.config.publicBaseUrl)) {
-    manifest.default_events = ["check_suite", "issues", "pull_request", "push"];
+    manifest.default_events = ["issues", "pull_request", "push"];
     manifest.hook_attributes = {
       active: true,
       url: `${deps.config.publicBaseUrl}/github/webhook`,

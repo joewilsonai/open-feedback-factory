@@ -189,8 +189,10 @@ test("API exposes GitHub App manifest seam", async () => {
   const response = await app.inject({ method: "GET", url: "/github/app/manifest" });
 
   assert.equal(response.statusCode, 200);
+  assert.equal(response.json().default_permissions.contents, "write");
+  assert.equal(response.json().default_permissions.issues, "write");
   assert.equal(response.json().default_permissions.pull_requests, "write");
-  assert.deepEqual(response.json().default_events, ["check_suite", "issues", "pull_request", "push"]);
+  assert.deepEqual(response.json().default_events, ["issues", "pull_request", "push"]);
   assert.deepEqual(response.json().callback_urls, ["http://api.test/github/app/installed"]);
   assert.equal(response.json().hook_attributes.url, "http://api.test/github/webhook");
   assert.equal(response.json().setup_url, "http://control.test");
@@ -249,7 +251,7 @@ test("GitHub App manifest omits local setup URL when API uses a public tunnel", 
   const body = response.json();
   assert.equal(body.hook_attributes.active, true);
   assert.equal(body.hook_attributes.url, "https://off.example.com/github/webhook");
-  assert.deepEqual(body.default_events, ["check_suite", "issues", "pull_request", "push"]);
+  assert.deepEqual(body.default_events, ["issues", "pull_request", "push"]);
   assert.equal("setup_url" in body, false);
 
   await app.close();
