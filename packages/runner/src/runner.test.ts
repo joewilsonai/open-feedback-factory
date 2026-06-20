@@ -545,6 +545,45 @@ test("GitHubClient app mode reads pull request evidence", async () => {
   );
 });
 
+test("GitHubClient app mode degrades when check-run permission is missing", async () => {
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
+  const fetchImpl: typeof fetch = async (url) => {
+    if (String(url).endsWith("/app/installations/456/access_tokens")) {
+      return jsonResponse({ expires_at: new Date(Date.now() + 120_000).toISOString(), token: "installation-token" });
+    }
+    if (String(url).endsWith("/repos/owner/repo/pulls/42")) {
+      return jsonResponse({ head: { ref: "off/codex/work_1", sha: "abc123" } });
+    }
+    if (String(url).endsWith("/repos/owner/repo/pulls/42/files")) {
+      return jsonResponse([{ additions: 2, changes: 3, deletions: 1, filename: "package.json" }]);
+    }
+    if (String(url).endsWith("/repos/owner/repo/commits/abc123/check-runs")) {
+      return new Response(JSON.stringify({ message: "Resource not accessible by integration" }), { status: 403 });
+    }
+    return new Response("not found", { status: 404 });
+  };
+
+  const client = new GitHubClient({
+    appId: "123",
+    appPrivateKey: normalizePrivateKey(pem.replace(/\n/g, "\\n")),
+    cwd: "/repo",
+    fetch: fetchImpl,
+    installationId: "456",
+    mode: "app",
+    owner: "owner",
+    repo: "repo",
+  });
+
+  const evidence = await client.getPullRequestEvidence("https://github.com/owner/repo/pull/42");
+
+  assert.deepEqual(evidence.changedFiles, ["package.json"]);
+  assert.equal(evidence.checksPassed, false);
+  assert.deepEqual(evidence.checkSummaries, []);
+  assert.equal(evidence.checkCollectionError, "GitHub checks unavailable: 403");
+  assert.equal(evidence.diffLineCount, 3);
+});
+
 test("GitHubClient app mode lists accessible installation repositories", async () => {
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();

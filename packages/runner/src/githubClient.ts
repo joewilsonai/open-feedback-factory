@@ -216,11 +216,12 @@ export class GitHubClient {
     const headSha = typeof head.sha === "string" ? head.sha : null;
     const headBranch = typeof head.ref === "string" ? head.ref : null;
     const fileSummaries = await this.listPullRequestFileSummaries(String(number));
-    const checkSummaries = headSha ? await this.listPullRequestChecks(headSha) : [];
+    const checks = headSha ? await this.listPullRequestChecksForEvidence(headSha) : { summaries: [] };
     return {
       changedFiles: fileSummaries.map((file) => file.path),
-      checkSummaries,
-      checksPassed: checksPassed(checkSummaries),
+      ...(checks.error ? { checkCollectionError: checks.error } : {}),
+      checkSummaries: checks.summaries,
+      checksPassed: checksPassed(checks.summaries),
       diffLineCount: diffLineCount(fileSummaries),
       fileSummaries,
       headBranch,
@@ -296,7 +297,7 @@ export class GitHubClient {
     });
 
     if (!response.ok) {
-      throw new Error(`GitHub App request failed ${response.status}: ${await response.text()}`);
+      throw new GitHubAppRequestError(response.status, await response.text());
     }
     if (response.status === 204) return undefined as T;
     return (await response.json()) as T;
@@ -360,6 +361,29 @@ export class GitHubClient {
 
   private apiBaseUrl(): string {
     return (this.options.apiBaseUrl ?? "https://api.github.com").replace(/\/$/, "");
+  }
+
+  private async listPullRequestChecksForEvidence(ref: string): Promise<{
+    error?: string;
+    summaries: GitHubCheckSummary[];
+  }> {
+    try {
+      return { summaries: await this.listPullRequestChecks(ref) };
+    } catch (error) {
+      if (error instanceof GitHubAppRequestError && error.status === 403) {
+        return { error: "GitHub checks unavailable: 403", summaries: [] };
+      }
+      throw error;
+    }
+  }
+}
+
+class GitHubAppRequestError extends Error {
+  constructor(
+    readonly status: number,
+    readonly body: string,
+  ) {
+    super(`GitHub App request failed ${status}: ${body}`);
   }
 }
 

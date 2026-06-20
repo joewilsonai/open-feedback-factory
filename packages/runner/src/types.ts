@@ -81,6 +81,7 @@ export interface GitHubPullRequestFileSummary {
 
 export interface GitHubPullRequestEvidence {
   changedFiles: string[];
+  checkCollectionError?: string;
   checkSummaries: GitHubCheckSummary[];
   checksPassed: boolean;
   diffLineCount: number;
