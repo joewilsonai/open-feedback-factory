@@ -169,6 +169,25 @@ export interface MergeGuardrailPolicy {
   protectedPathFragments: string[];
 }
 
+export interface IntegrationSecretEncryptedEntry {
+  algorithm: "aes-256-gcm";
+  authTag: string;
+  ciphertext: string;
+  createdAt: string;
+  fingerprint: string;
+  iv: string;
+  name: string;
+  provider: string;
+  scopes: string[];
+  updatedAt: string;
+  version: 1;
+}
+
+export interface IntegrationSecretsVaultRecord {
+  secrets: IntegrationSecretEncryptedEntry[];
+  version: 1;
+}
+
 export interface WorkerHeartbeatInput {
   codexAuthMode: string;
   runnerMode: string;
@@ -1445,6 +1464,55 @@ export class OpenFeedbackStore {
     }
   }
 
+  async getIntegrationSecretsVault(): Promise<IntegrationSecretsVaultRecord> {
+    const result = await this.pool.query<{ value: Record<string, unknown> | null }>(
+      `select value
+       from policy_configs
+       where key = 'integration_secrets_vault'
+       limit 1`,
+    );
+    return integrationSecretsVaultFromValue(result.rows[0]?.value);
+  }
+
+  async setIntegrationSecretsVault(
+    vault: IntegrationSecretsVaultRecord,
+    actor = "operator",
+  ): Promise<IntegrationSecretsVaultRecord> {
+    const normalized = integrationSecretsVaultFromValue(vault);
+    const providers = Array.from(new Set(normalized.secrets.map((secret) => secret.provider))).sort();
+    const client = await this.pool.connect();
+    try {
+      await client.query("begin");
+      await client.query(
+        `insert into policy_configs (id, key, value)
+         values ($1, 'integration_secrets_vault', $2)
+         on conflict (key) do update
+         set value = excluded.value,
+             updated_at = now()`,
+        [`policy_${randomUUID()}`, JSON.stringify(normalized)],
+      );
+      await client.query(
+        `insert into audit_events (id, actor, event, target_type, target_id, metadata)
+         values ($1, $2, 'integration_secrets_vault_updated', 'policy_config', 'integration_secrets_vault', $3)`,
+        [
+          `audit_${randomUUID()}`,
+          actor,
+          JSON.stringify({
+            providers,
+            secretCount: normalized.secrets.length,
+          }),
+        ],
+      );
+      await client.query("commit");
+      return normalized;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async getMergeGuardrailPolicy(defaultPolicy: MergeGuardrailPolicy): Promise<MergeGuardrailPolicy> {
     const result = await this.pool.query<{ value: Record<string, unknown> | null }>(
       `select value
@@ -1887,6 +1955,43 @@ function nonEmptyStringArray(value: unknown, fallback: string[]): string[] {
     .map((item) => (typeof item === "string" ? item.trim() : ""))
     .filter((item) => item.length > 0);
   return clean.length > 0 ? clean : fallback;
+}
+
+function integrationSecretsVaultFromValue(value: unknown): IntegrationSecretsVaultRecord {
+  const record = recordFromRow(value);
+  const rawSecrets = Array.isArray(record.secrets) ? record.secrets : [];
+  return {
+    secrets: rawSecrets.map(integrationSecretEntryFromValue).filter((entry): entry is IntegrationSecretEncryptedEntry => Boolean(entry)),
+    version: 1,
+  };
+}
+
+function integrationSecretEntryFromValue(value: unknown): IntegrationSecretEncryptedEntry | null {
+  const record = recordFromRow(value);
+  const provider = stringFromUnknown(record.provider);
+  const name = stringFromUnknown(record.name);
+  const ciphertext = stringFromUnknown(record.ciphertext);
+  const iv = stringFromUnknown(record.iv);
+  const authTag = stringFromUnknown(record.authTag);
+  const fingerprint = stringFromUnknown(record.fingerprint);
+  if (!provider || !name || !ciphertext || !iv || !authTag || !fingerprint) return null;
+  return {
+    algorithm: "aes-256-gcm",
+    authTag,
+    ciphertext,
+    createdAt: stringFromUnknown(record.createdAt) ?? new Date(0).toISOString(),
+    fingerprint,
+    iv,
+    name,
+    provider,
+    scopes: nonEmptyStringArray(record.scopes, []),
+    updatedAt: stringFromUnknown(record.updatedAt) ?? new Date(0).toISOString(),
+    version: 1,
+  };
+}
+
+function stringFromUnknown(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 function positiveIntegerFromValue(value: unknown): number | null {

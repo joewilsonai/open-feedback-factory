@@ -10,6 +10,7 @@ import type {
   CostBudgetPolicy,
   CostBudgetUsage,
   FeedbackClusterRow,
+  IntegrationSecretsVaultRecord,
   MergeGuardrailPolicy,
   WorkItemDetail,
   WorkItemReviewDecision,
@@ -68,6 +69,7 @@ class MemoryStore implements AppStore {
   githubArtifacts = new Map<string, string>();
   githubArtifactRows: WorkItemDetail["githubArtifacts"] = [];
   costBudget: CostBudgetPolicy | null = null;
+  integrationSecretsVault: IntegrationSecretsVaultRecord = { secrets: [], version: 1 };
   maxFeatureCostUsd: number | null = null;
   mergeGuardrails: MergeGuardrailPolicy | null = null;
   recentAssumptions: AgentAssumptionRecord[] = [];
@@ -292,6 +294,14 @@ class MemoryStore implements AppStore {
       protectedPathFragments: policy.protectedPathFragments,
     };
     return this.mergeGuardrails;
+  }
+
+  async getIntegrationSecretsVault() {
+    return this.integrationSecretsVault;
+  }
+
+  async setIntegrationSecretsVault(vault: IntegrationSecretsVaultRecord) {
+    this.integrationSecretsVault = vault;
   }
 
   async recordWorkerHeartbeat(input: Parameters<AppStore["recordWorkerHeartbeat"]>[0]) {
@@ -2396,6 +2406,86 @@ test("admin can configure Codex auth mode and save a masked API key", async () =
     else process.env.OPENAI_API_KEY = previousOpenAiKey;
     await rm(secretsDir, { force: true, recursive: true });
   }
+});
+
+test("admin stores integration secrets encrypted and returns metadata only", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({
+    config: { ...config, secretsVaultKey: "test-vault-key-material-32-bytes-long" },
+    store,
+  });
+
+  const save = await app.inject({
+    method: "PUT",
+    payload: {
+      scopes: ["database:migrations", "schema:read"],
+      secret: "sbp_super_secret_value_for_migrations",
+    },
+    url: "/admin/secrets/supabase/service-role",
+  });
+
+  assert.equal(save.statusCode, 200);
+  assert.equal(save.json().status, "saved");
+  assert.equal(save.json().secret.provider, "supabase");
+  assert.equal(save.json().secret.name, "service-role");
+  assert.deepEqual(save.json().secret.scopes, ["database:migrations", "schema:read"]);
+  assert.equal(save.json().secret.configured, true);
+  assert.match(save.json().secret.fingerprint, /^sha256:/);
+  assert.doesNotMatch(JSON.stringify(save.json()), /sbp_super_secret|ciphertext|authTag|iv/);
+
+  const stored = store.integrationSecretsVault.secrets[0];
+  assert.equal(stored?.provider, "supabase");
+  assert.equal(stored?.name, "service-role");
+  assert.notEqual(stored?.ciphertext.includes("sbp_super_secret"), true);
+  assert.match(stored?.ciphertext ?? "", /^[A-Za-z0-9+/=]+$/);
+  assert.match(stored?.iv ?? "", /^[A-Za-z0-9+/=]+$/);
+  assert.match(stored?.authTag ?? "", /^[A-Za-z0-9+/=]+$/);
+
+  const list = await app.inject({ method: "GET", url: "/admin/secrets" });
+  assert.equal(list.statusCode, 200);
+  assert.equal(list.json().configured, true);
+  assert.equal(list.json().secrets.length, 1);
+  assert.equal(list.json().secrets[0].provider, "supabase");
+  assert.doesNotMatch(JSON.stringify(list.json()), /sbp_super_secret|ciphertext|authTag|iv/);
+
+  const doctor = await app.inject({ method: "GET", url: "/doctor" });
+  assert.equal(doctor.json().secretsVault.configured, true);
+  assert.equal(doctor.json().secretsVault.secretCount, 1);
+  assert.doesNotMatch(JSON.stringify(doctor.json()), /test-vault-key|sbp_super_secret/);
+
+  const remove = await app.inject({ method: "DELETE", url: "/admin/secrets/supabase/service-role" });
+  assert.equal(remove.statusCode, 200);
+  assert.equal(remove.json().status, "removed");
+  assert.equal(remove.json().secret.provider, "supabase");
+  assert.equal(store.integrationSecretsVault.secrets.length, 0);
+
+  await app.close();
+});
+
+test("integration secret saves are blocked when the vault key is missing", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  const blocked = await app.inject({
+    method: "PUT",
+    payload: {
+      scopes: ["send:email"],
+      secret: "resend_secret_that_must_not_echo",
+    },
+    url: "/admin/secrets/resend/api-key",
+  });
+
+  assert.equal(blocked.statusCode, 409);
+  assert.equal(blocked.json().status, "blocked");
+  assert.equal(blocked.json().error, "secrets vault key missing");
+  assert.doesNotMatch(JSON.stringify(blocked.json()), /resend_secret/);
+  assert.equal(store.integrationSecretsVault.secrets.length, 0);
+
+  const doctor = await app.inject({ method: "GET", url: "/doctor" });
+  assert.equal(doctor.json().secretsVault.configured, false);
+  assert.equal(doctor.json().secretsVault.secretCount, 0);
+
+  await app.close();
 });
 
 test("API exposes GitHub App manifest seam", async () => {

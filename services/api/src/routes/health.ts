@@ -4,6 +4,7 @@ import type { AppDeps } from "../app.js";
 import { accessControlStatus } from "../auth.js";
 import { defaultCostBudget } from "../costBudget.js";
 import { getCodexApiKeyStatus } from "../secrets.js";
+import { buildSecretsVaultStatus } from "../secretsVault.js";
 import { githubWebhooksEnabledForBaseUrl } from "./github.js";
 
 const workerHeartbeatStaleAfterMs = 90_000;
@@ -21,6 +22,7 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
     const mergeMode = await deps.store.getMergeMode(deps.config.mergeMode);
     const mergeGuardrails = await deps.store.getMergeGuardrailPolicy(defaultMergeGuardrailPolicy(deps));
     const codexApiKeyStatus = await getCodexApiKeyStatus(deps.config);
+    const secretsVault = await deps.store.getIntegrationSecretsVault();
     const workerHeartbeat = await deps.store.getLatestWorkerHeartbeat();
     const accessControls = accessControlStatus(deps.config);
     return {
@@ -54,6 +56,7 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
       publicBaseUrl: deps.config.publicBaseUrl,
       codexConnection: buildCodexConnectionPlan(codexAuthMode, codexApiKeyStatus),
       runnerInstall: buildRunnerInstallPlan(codexAuthMode),
+      secretsVault: buildSecretsVaultStatus(deps.config, secretsVault),
       workerConnection: buildWorkerConnection(workerHeartbeat),
     };
   });

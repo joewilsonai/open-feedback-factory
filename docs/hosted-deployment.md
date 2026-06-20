@@ -195,8 +195,15 @@ asset from the live control center instead of drawing fake rows.
 
 ## Integration Secrets Vault
 
-Self-hosted V1 can use ignored `.env` files for simple local setup, but the
-hosted product needs a real integration secrets vault.
+Self-hosted V1 can use ignored `.env` files for simple local setup. Hosted V1
+also has a backend integration secrets vault for scoped provider credentials:
+set `SECRETS_VAULT_KEY`, then use the admin API to save/list/delete metadata-only
+secret records. The vault stores encrypted ciphertext plus metadata and `/doctor`
+reports only readiness and counts.
+
+This is secure storage, not provider execution by itself. Agents still need
+narrow, audited provider tools before they can safely apply a Supabase migration,
+change a Vercel project, send Resend email, or mutate another external system.
 
 The vault should store scoped credentials for services such as:
 
@@ -212,6 +219,7 @@ The vault should store scoped credentials for services such as:
 Requirements:
 
 - encrypt secrets at rest;
+- require a configured vault key before accepting provider credentials;
 - mask values in the UI and API responses;
 - store metadata such as provider, scope, owner, created/rotated dates, and
   allowed repositories/environments;
