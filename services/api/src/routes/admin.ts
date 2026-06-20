@@ -16,6 +16,16 @@ import type { AppDeps } from "../app.js";
 import { buildGithubClient } from "../githubClient.js";
 import { defaultCostBudget, evaluateCostBudget, normalizeCostBudget } from "../costBudget.js";
 import { getCodexApiKeyStatus, readCodexApiKey, removeCodexApiKey, saveCodexApiKey } from "../secrets.js";
+import {
+  buildSecretsVaultStatus,
+  encryptedSecretMetadata,
+  encryptIntegrationSecret,
+  normalizeVaultSegment,
+  removeIntegrationSecret,
+  SecretsVaultConfigurationError,
+  SecretsVaultValidationError,
+  upsertIntegrationSecret,
+} from "../secretsVault.js";
 import { buildWorkerConnection } from "./health.js";
 import { buildSanitizedGithubIssueInput } from "./sdk.js";
 
@@ -128,6 +138,68 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
     codexApiKey: await removeCodexApiKey(deps.config),
     status: "removed",
   }));
+
+  app.get("/admin/secrets", async () => {
+    const vault = await deps.store.getIntegrationSecretsVault();
+    return {
+      ...buildSecretsVaultStatus(deps.config, vault),
+      secrets: vault.secrets.map(encryptedSecretMetadata),
+    };
+  });
+
+  app.put<{
+    Body: { scopes?: unknown; secret?: unknown; value?: unknown };
+    Params: { name: string; provider: string };
+  }>("/admin/secrets/:provider/:name", async (request, reply) => {
+    const secret = typeof request.body?.secret === "string" ? request.body.secret : request.body?.value;
+    if (typeof secret !== "string") {
+      return reply.code(400).send({ error: "secret is required" });
+    }
+
+    try {
+      const vault = await deps.store.getIntegrationSecretsVault();
+      const entry = encryptIntegrationSecret(deps.config, {
+        name: request.params.name,
+        provider: request.params.provider,
+        scopes: Array.isArray(request.body?.scopes) ? request.body.scopes : [],
+        secret,
+      });
+      const nextVault = upsertIntegrationSecret(vault, entry);
+      await deps.store.setIntegrationSecretsVault(nextVault, "control-center");
+      return {
+        secret: encryptedSecretMetadata(entry),
+        status: "saved",
+      };
+    } catch (error) {
+      if (error instanceof SecretsVaultConfigurationError) {
+        return reply.code(409).send({
+          error: error.message,
+          status: "blocked",
+        });
+      }
+      if (error instanceof SecretsVaultValidationError) {
+        return reply.code(400).send({ error: error.message });
+      }
+      throw error;
+    }
+  });
+
+  app.delete<{ Params: { name: string; provider: string } }>("/admin/secrets/:provider/:name", async (request, reply) => {
+    const provider = normalizeVaultSegment(request.params.provider);
+    const name = normalizeVaultSegment(request.params.name);
+    if (!provider || !name) {
+      return reply.code(400).send({ error: "provider and name must use lowercase letters, numbers, dot, underscore, colon, or dash" });
+    }
+
+    const vault = await deps.store.getIntegrationSecretsVault();
+    const { nextVault, removed } = removeIntegrationSecret(vault, provider, name);
+    await deps.store.setIntegrationSecretsVault(nextVault, "control-center");
+    return {
+      removed,
+      secret: { configured: false, name, provider },
+      status: "removed",
+    };
+  });
 
   app.get("/admin/github/repositories", async () => githubRepositoryScopeStatus(deps));
 

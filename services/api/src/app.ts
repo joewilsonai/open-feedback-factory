@@ -11,6 +11,7 @@ import type {
   ControlRoomSnapshot,
   CostBudgetPolicy,
   CostBudgetUsage,
+  IntegrationSecretsVaultRecord,
   MergeGuardrailPolicy,
   ReconciliationResult,
   WorkerHeartbeatInput,
@@ -57,6 +58,7 @@ export interface AppStore {
   getCostBudget(defaultBudget: CostBudgetPolicy): Promise<CostBudgetPolicy>;
   getCostBudgetUsage(): Promise<CostBudgetUsage>;
   getFeedbackClusterSignalCount(clusterKey: string): Promise<number>;
+  getIntegrationSecretsVault(): Promise<IntegrationSecretsVaultRecord>;
   getMaxFeatureCostUsd(defaultCap: number): Promise<number>;
   getMergeMode(defaultMode: ApiConfig["mergeMode"]): Promise<MergeMode>;
   getMergeGuardrailPolicy(defaultPolicy: MergeGuardrailPolicy): Promise<MergeGuardrailPolicy>;
@@ -115,6 +117,7 @@ export interface AppStore {
   setApprovalMode(mode: ApiConfig["approvalMode"], actor?: string): Promise<void>;
   setCodexAuthMode(mode: ApiConfig["codexAuthMode"], actor?: string): Promise<void>;
   setCostBudget(policy: CostBudgetPolicy, actor?: string): Promise<CostBudgetPolicy>;
+  setIntegrationSecretsVault(vault: IntegrationSecretsVaultRecord, actor?: string): Promise<IntegrationSecretsVaultRecord | void>;
   setMaxFeatureCostUsd(amountUsd: number, actor?: string): Promise<void>;
   setMergeMode(mode: ApiConfig["mergeMode"], actor?: string): Promise<void>;
   setMergeGuardrailPolicy(policy: MergeGuardrailPolicy, actor?: string): Promise<MergeGuardrailPolicy>;

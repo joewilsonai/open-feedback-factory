@@ -42,6 +42,7 @@ export interface ApiConfig {
   sdkRateLimitMax?: number;
   sdkPackagePublished: boolean;
   workCadence: WorkCadencePolicy;
+  secretsVaultKey?: string;
 }
 
 export function readConfig(env = process.env): ApiConfig {
@@ -88,6 +89,7 @@ export function readConfig(env = process.env): ApiConfig {
     runnerWorkspace: env.RUNNER_WORKSPACE ?? process.cwd(),
     sdkRateLimitMax: Number(env.SDK_RATE_LIMIT_MAX ?? 120),
     sdkPackagePublished: env.SDK_PACKAGE_PUBLISHED === "true",
+    secretsVaultKey: env.SECRETS_VAULT_KEY || env.OFF_SECRETS_VAULT_KEY || undefined,
     workCadence: normalizeWorkCadencePolicy({
       hourUtc: numberFromEnv(env.WORK_CADENCE_HOUR_UTC),
       interval: workCadenceIntervalFromEnv(env.WORK_CADENCE_INTERVAL),

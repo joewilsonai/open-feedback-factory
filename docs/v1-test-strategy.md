@@ -14,7 +14,7 @@ status map.
 | --- | --- | --- |
 | Deterministic CI tests | Done | Workspace `pnpm test`, `pnpm typecheck`, and `pnpm build` pass locally and in GitHub CI |
 | Core policy tests | Done | Sanitization, clustering, routing, statuses, assumptions, and auto-merge gates are covered |
-| API tests | Done | SDK intake/status/usage, admin config, runner gates, GitHub seams, release markers, rate limits, and user-safe decisions are covered |
+| API tests | Done | SDK intake/status/usage, admin config, encrypted integration-secret storage, runner gates, GitHub seams, release markers, rate limits, and user-safe decisions are covered |
 | Database/RLS tests | Done | Postgres integration tests cover store behavior and workspace RLS when `TEST_DATABASE_URL` is available |
 | SDK tests | Done | Client payload safety, usage events, and launcher contract are covered |
 | Runner/GitHub seam tests | Done | Codex args, JSONL parsing, cost usage, GitHub App token flows, PR evidence, branch cleanup, and target-repo mismatch guards are covered with seams/mocks |
@@ -94,9 +94,12 @@ status map.
 - Localhost, private-network, metadata-service, and malformed webhook/tunnel URLs
   are rejected for public GitHub webhook setup unless explicitly in local-only
   development mode.
-- Secrets saved through the control center are stored outside git, masked in
-  responses, never returned to the browser, and never copied into GitHub
-  artifacts or agent prompts.
+- Secrets saved through the control center are stored outside git or encrypted
+  at rest with `SECRETS_VAULT_KEY`, masked in responses, never returned to the
+  browser as raw values, and never copied into GitHub artifacts or agent prompts.
+- Integration secrets saved through `/admin/secrets/*` require a configured
+  vault key, store only encrypted ciphertext plus metadata, return metadata-only
+  lists, and expose only readiness/counts through `/doctor`.
 - Generated host worker service files source `.env` at startup and do not copy
   `OPENAI_API_KEY`, GitHub App private keys, tokens, or raw feedback into
   LaunchAgent/systemd files.

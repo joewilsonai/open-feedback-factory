@@ -79,7 +79,7 @@ reasons.
 | Hosted API/control center stack | PARTIAL | Hosted services exist; SDK-install claim includes target-repo metadata and worker blocks repo mismatches; final demo still needs plant-app flow and local-worker claim proof | 2026-06-20 |
 | Docker Compose local install | PARTIAL | Compose files and docs exist; current cycle still needs fresh end-to-end smoke after plant-demo changes | 2026-06-19 |
 | Agent install docs | PARTIAL | Existing docs work for local setup; need npm SDK and plant-demo updates once package path is real | 2026-06-19 |
-| Secrets vault / third-party credential storage | PARTIAL | Rules and masked storage paths exist for Codex key; generalized Supabase/Vercel/Resend scoped secrets vault is not done | 2026-06-19 |
+| Secrets vault / third-party credential storage | PARTIAL | Backend encrypted integration secrets vault exists with metadata-only admin responses, doctor readiness, audit-backed storage, and missing-key blocking; provider-specific execution tools for Supabase/Vercel/Resend mutations are still pending | 2026-06-20 |
 | Playbook / methodology packs | PARTIAL | Product rules exist; richer in-product agent playbook management is not complete | 2026-06-19 |
 | OpenRouter / Requesty routing | DEFERRED | PRD contains adapter direction; V1 built-in runner remains Codex-only | 2026-06-19 |
 | Mobile SDKs | NOT-STARTED | Web SDK first | 2026-06-19 |
