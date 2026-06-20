@@ -29,6 +29,7 @@ export interface ApiConfig {
   runnerToken?: string;
   runnerWorkspace: string;
   sdkRateLimitMax?: number;
+  sdkPackagePublished: boolean;
 }
 
 export function readConfig(env = process.env): ApiConfig {
@@ -70,6 +71,7 @@ export function readConfig(env = process.env): ApiConfig {
     runnerToken: env.RUNNER_TOKEN || undefined,
     runnerWorkspace: env.RUNNER_WORKSPACE ?? process.cwd(),
     sdkRateLimitMax: Number(env.SDK_RATE_LIMIT_MAX ?? 120),
+    sdkPackagePublished: env.SDK_PACKAGE_PUBLISHED === "true",
   };
 }
 

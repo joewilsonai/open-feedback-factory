@@ -67,6 +67,46 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
 
   app.get("/admin/github/repositories", async () => githubRepositoryScopeStatus(deps));
 
+  app.post<{ Body: { repositoryFullName?: unknown } }>("/admin/connect/sdk-install-pr", async (request, reply) => {
+    const target = githubTargetFromFullName(request.body?.repositoryFullName, deps);
+    if (!target) {
+      return reply.code(400).send({ error: "repositoryFullName must look like owner/repo" });
+    }
+
+    const github = await githubRepositoryScopeStatus(deps, target);
+    if (!github.targetAccessible) {
+      return reply.code(409).send(
+        blockedSdkInstallHandoff({
+          github,
+          missing: ["github_target_missing"],
+          repositoryFullName: target.fullName,
+          summary: `GitHub App cannot access ${target.fullName}. Connect the repo before requesting SDK installation.`,
+        }),
+      );
+    }
+
+    if (!deps.config.sdkPackagePublished) {
+      return reply.code(409).send(
+        blockedSdkInstallHandoff({
+          github,
+          missing: ["sdk_publish_held"],
+          repositoryFullName: target.fullName,
+          summary:
+            "The public SDK package is staged but not published yet, so OFF cannot create a truthful npm install PR.",
+        }),
+      );
+    }
+
+    return reply.code(409).send(
+      blockedSdkInstallHandoff({
+        github,
+        missing: ["worker_offline"],
+        repositoryFullName: target.fullName,
+        summary: "SDK-install PR creation is not wired to a live worker yet.",
+      }),
+    );
+  });
+
   app.patch<{ Body: { maxFeatureCostUsd?: unknown } }>("/admin/settings/cost-cap", async (request, reply) => {
     const amount = Number(request.body?.maxFeatureCostUsd);
     if (!Number.isFinite(amount) || amount <= 0 || amount > 10_000) {
@@ -387,8 +427,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
   });
 }
 
-async function githubRepositoryScopeStatus(deps: AppDeps) {
-  const target = githubTarget(deps);
+async function githubRepositoryScopeStatus(deps: AppDeps, target = githubTarget(deps)) {
   const appConfigured = Boolean(
     deps.config.githubAppId && (deps.config.githubAppPrivateKey || deps.config.githubAppPrivateKeyPath),
   );
@@ -460,6 +499,41 @@ function githubTarget(deps: AppDeps) {
     owner,
     repo,
     url: `https://github.com/${owner}/${repo}`,
+  };
+}
+
+function githubTargetFromFullName(value: unknown, deps: AppDeps): ReturnType<typeof githubTarget> | null {
+  if (value === undefined || value === null || value === "") return githubTarget(deps);
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  const match = trimmed.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/);
+  if (!match) return null;
+  const owner = match[1];
+  const repo = match[2];
+  if (!owner || !repo) return null;
+  return {
+    fullName: `${owner}/${repo}`,
+    owner,
+    repo,
+    url: `https://github.com/${owner}/${repo}`,
+  };
+}
+
+function blockedSdkInstallHandoff(input: {
+  github: Awaited<ReturnType<typeof githubRepositoryScopeStatus>>;
+  missing: string[];
+  repositoryFullName: string;
+  summary: string;
+}) {
+  return {
+    github: input.github,
+    issueUrl: null,
+    missing: input.missing,
+    prUrl: null,
+    repositoryFullName: input.repositoryFullName,
+    status: "blocked",
+    summary: input.summary,
+    workItemId: null,
   };
 }
 

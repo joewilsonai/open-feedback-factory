@@ -38,6 +38,7 @@ const config: ApiConfig = {
   protectedPathFragments: ["auth", "billing", "privacy"],
   publicBaseUrl: "http://api.test",
   runnerWorkspace: "/tmp/open-feedback-factory-test",
+  sdkPackagePublished: false,
 };
 const sampleOnlyFeedbackSources = new Set(["demo_seed", "sample_seed"]);
 
@@ -1123,6 +1124,128 @@ test("admin GitHub repository scope endpoint degrades without leaking provider e
   assert.deepEqual(body.missing, ["github_repository_scope_verification"]);
   assert.equal(body.summary, "GitHub App repository scope could not be verified.");
   assert.doesNotMatch(JSON.stringify(body), /installation-token|sk-test-secret|private-secret|Bearer/);
+
+  await app.close();
+});
+
+test("admin connect SDK install handoff blocks while public SDK publish is held", async () => {
+  const app = await buildApp({
+    config: {
+      ...config,
+      githubAppId: "app-123",
+      githubAppPrivateKey: "private-secret",
+      githubMode: "app",
+      githubOwner: "owner",
+      githubRepo: "alpha",
+      sdkPackagePublished: false,
+    },
+    githubClient: {
+      listInstallationRepositories: async () => ({
+        repositories: [
+          {
+            fullName: "owner/alpha",
+            htmlUrl: "https://github.com/owner/alpha",
+            name: "alpha",
+            owner: "owner",
+            permissions: { pull: true, push: true },
+            private: true,
+          },
+        ],
+        totalCount: 1,
+        truncated: false,
+      }),
+    },
+    store: new MemoryStore(),
+  });
+
+  const response = await app.inject({
+    method: "POST",
+    payload: { repositoryFullName: "owner/alpha" },
+    url: "/admin/connect/sdk-install-pr",
+  });
+  const body = response.json();
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(body.status, "blocked");
+  assert.equal(body.repositoryFullName, "owner/alpha");
+  assert.deepEqual(body.missing, ["sdk_publish_held"]);
+  assert.equal(body.workItemId, null);
+  assert.equal(body.issueUrl, null);
+  assert.equal(body.prUrl, null);
+  assert.equal(body.github.targetAccessible, true);
+  assert.match(body.summary, /publish/i);
+  assert.doesNotMatch(JSON.stringify(body), /private-secret|installation-token|sk-test-secret/);
+
+  await app.close();
+});
+
+test("admin connect SDK install handoff blocks when the GitHub App cannot access the target repo", async () => {
+  const app = await buildApp({
+    config: {
+      ...config,
+      githubAppId: "app-123",
+      githubAppPrivateKey: "private-secret",
+      githubMode: "app",
+      githubOwner: "owner",
+      githubRepo: "alpha",
+      sdkPackagePublished: true,
+    },
+    githubClient: {
+      listInstallationRepositories: async () => ({
+        repositories: [
+          {
+            fullName: "owner/beta",
+            htmlUrl: "https://github.com/owner/beta",
+            name: "beta",
+            owner: "owner",
+            permissions: { pull: true, push: true },
+            private: true,
+          },
+        ],
+        totalCount: 1,
+        truncated: false,
+      }),
+    },
+    store: new MemoryStore(),
+  });
+
+  const response = await app.inject({
+    method: "POST",
+    payload: { repositoryFullName: "owner/alpha" },
+    url: "/admin/connect/sdk-install-pr",
+  });
+  const body = response.json();
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(body.status, "blocked");
+  assert.deepEqual(body.missing, ["github_target_missing"]);
+  assert.equal(body.github.targetAccessible, false);
+  assert.equal(body.prUrl, null);
+
+  await app.close();
+});
+
+test("admin connect SDK install handoff requires the configured admin token", async () => {
+  const app = await buildApp({
+    config: { ...config, adminToken: "admin-test-token" },
+    githubClient: {
+      listInstallationRepositories: async () => ({
+        repositories: [],
+        totalCount: 0,
+        truncated: false,
+      }),
+    },
+    store: new MemoryStore(),
+  });
+
+  const blocked = await app.inject({
+    method: "POST",
+    payload: { repositoryFullName: "owner/alpha" },
+    url: "/admin/connect/sdk-install-pr",
+  });
+
+  assert.equal(blocked.statusCode, 401);
+  assert.equal(blocked.json().error, "admin_auth_required");
 
   await app.close();
 });

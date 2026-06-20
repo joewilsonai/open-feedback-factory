@@ -51,7 +51,7 @@ reasons.
 | Control center final plant-app onboarding UI | PARTIAL | Existing UI needs the clean plant-care repo flow, SDK-missing detection, and install-PR status proof | 2026-06-19 |
 | Realtime / no-refresh control center behavior | PARTIAL | Current UI is improved; final realtime lifecycle proof for plant-app demo still needed | 2026-06-19 |
 | GitHub App manifest/setup/webhook seam | DONE | Manifest, localhost/public tunnel behavior, callback, webhooks, signature verification, and artifact storage are tested | 2026-06-19 |
-| GitHub App scoped live demo install | PARTIAL | Backend/admin repo-scope verification is tested via `/admin/github/repositories`; still needs live proof that the final plant-care demo repo is the scoped installation target before mutation | 2026-06-20 |
+| GitHub App scoped live demo install | PARTIAL | Backend/admin repo-scope verification is tested via `/admin/github/repositories`; SDK-install handoff also verifies target repo access before proceeding; still needs live proof that the final plant-care demo repo is the scoped installation target before mutation | 2026-06-20 |
 | Sanitized GitHub issue creation | DONE | API/runner tests cover sanitized issue bodies and duplicate prevention | 2026-06-19 |
 | Branch and PR creation | PARTIAL | Runner/GitHub client seams exist; next durable proof is a real SDK-install PR in the clean plant-care repo | 2026-06-19 |
 | Branch cleanup | DONE | GitHub client branch cleanup path is tested | 2026-06-19 |
@@ -69,7 +69,7 @@ reasons.
 | Daybook local demo app | DONE | Real local demo app exercises SDK/API path | 2026-06-19 |
 | LaunchBrief proof app | DONE | Live app uses the real SDK at runtime; this is proof only, not the final demo concept | 2026-06-19 |
 | Final plant-care demo app | DONE | Sprout exists at `https://sprout-demo-chi.vercel.app`, starts SDK-less, and was live-gated across Today, My Plants, and detail views | 2026-06-20 |
-| OFF SDK-install PR demo | PARTIAL | Clean Sprout repo exists and SDK package is prepared; durable proof still requires Joe-approved npm publish and a real SDK-install PR | 2026-06-20 |
+| OFF SDK-install PR demo | PARTIAL | Clean Sprout repo exists, SDK package is prepared, and backend handoff blocks truthfully on `sdk_publish_held`; durable proof still requires Joe-approved npm publish and a real SDK-install PR | 2026-06-20 |
 | Full plant-app feedback-to-feature demo | NOT-STARTED | Needs repo connect, SDK-install PR, merge/redeploy, beta feedback, agent PR, release proof, user status, and usage attribution | 2026-06-19 |
 | Hosted landing page | DONE | `openfeedbackfactory.com` is live with current OFF brand | 2026-06-19 |
 | Hosted API/control center stack | PARTIAL | Hosted services exist; final demo needs plant-app flow and local-worker claim proof | 2026-06-19 |
