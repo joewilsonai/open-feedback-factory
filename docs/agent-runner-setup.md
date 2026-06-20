@@ -268,3 +268,7 @@ dollar estimate as a low-confidence amount.
 - If GitHub is disabled, implement locally but do not pretend a PR exists.
 - Do not omit assumptions. If an assumption affects privacy, cost, merge safety,
   or release status, block auto-merge until it is resolved.
+- Keep approval mode and merge mode separate. `APPROVAL_MODE=auto` only lets a
+  live worker claim eligible work. Auto-merge remains blocked unless the
+  persisted `MERGE_MODE` is `agent_reviewed_auto_merge` and every guardrail,
+  reviewer decision, cost, branch, check, and release-health gate passes.

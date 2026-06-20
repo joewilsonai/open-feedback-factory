@@ -18,6 +18,7 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
     const approvalMode = await deps.store.getApprovalMode(deps.config.approvalMode);
     const codexAuthMode = await deps.store.getCodexAuthMode(deps.config.codexAuthMode);
     const costBudget = await deps.store.getCostBudget(defaultCostBudget(deps.config));
+    const mergeMode = await deps.store.getMergeMode(deps.config.mergeMode);
     const mergeGuardrails = await deps.store.getMergeGuardrailPolicy(defaultMergeGuardrailPolicy(deps));
     const codexApiKeyStatus = await getCodexApiKeyStatus(deps.config);
     const workerHeartbeat = await deps.store.getLatestWorkerHeartbeat();
@@ -47,6 +48,7 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
       costBudget,
       costBudgetUsage: await deps.store.getCostBudgetUsage(),
       maxFeatureCostUsd: costBudget.maxFeatureCostUsd,
+      mergeMode,
       maxSafeDiffLines: mergeGuardrails.maxSafeDiffLines,
       protectedPathFragments: mergeGuardrails.protectedPathFragments,
       publicBaseUrl: deps.config.publicBaseUrl,

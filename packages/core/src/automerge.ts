@@ -5,6 +5,8 @@ export function evaluateAutoMerge(input: AutoMergeInput): AutoMergeEvaluation {
   const reasons: string[] = [];
 
   if (!input.autoMergeEnabled) reasons.push("auto_merge_disabled");
+  if (input.mergeMode === "implement_only") reasons.push("merge_mode_implement_only");
+  if (input.mergeMode === "human_exception_required") reasons.push("merge_mode_human_exception_required");
   if (input.riskTier !== "safe_auto_merge") reasons.push("risk_tier_not_safe");
   if (!input.branchTrusted) reasons.push("branch_not_created_by_runner");
   if (!input.checksPassed) reasons.push("checks_not_passing");

@@ -1,5 +1,5 @@
 import cors from "@fastify/cors";
-import { type AgentAssumptionRecord, type FeedbackInput, type UserFeedbackStatus } from "@open-feedback-factory/core";
+import { type AgentAssumptionRecord, type FeedbackInput, type MergeMode, type UserFeedbackStatus } from "@open-feedback-factory/core";
 import type { GitHubInstallationRepositoryList, GitHubIssueInput } from "@open-feedback-factory/runner";
 import type {
   ControlRoomSnapshot,
@@ -52,6 +52,7 @@ export interface AppStore {
   getCostBudgetUsage(): Promise<CostBudgetUsage>;
   getFeedbackClusterSignalCount(clusterKey: string): Promise<number>;
   getMaxFeatureCostUsd(defaultCap: number): Promise<number>;
+  getMergeMode(defaultMode: ApiConfig["mergeMode"]): Promise<MergeMode>;
   getMergeGuardrailPolicy(defaultPolicy: MergeGuardrailPolicy): Promise<MergeGuardrailPolicy>;
   getLatestWorkerHeartbeat(): Promise<WorkerHeartbeatRow | null>;
   getUserFeedbackStatus(feedbackId: string): Promise<UserFeedbackStatus | null>;
@@ -108,6 +109,7 @@ export interface AppStore {
   setCodexAuthMode(mode: ApiConfig["codexAuthMode"], actor?: string): Promise<void>;
   setCostBudget(policy: CostBudgetPolicy, actor?: string): Promise<CostBudgetPolicy>;
   setMaxFeatureCostUsd(amountUsd: number, actor?: string): Promise<void>;
+  setMergeMode(mode: ApiConfig["mergeMode"], actor?: string): Promise<void>;
   setMergeGuardrailPolicy(policy: MergeGuardrailPolicy, actor?: string): Promise<MergeGuardrailPolicy>;
 }
 

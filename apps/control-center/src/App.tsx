@@ -173,6 +173,7 @@ interface Doctor {
   githubWebhookUrl: string;
   githubWebhooksEnabled: boolean;
   maxFeatureCostUsd: number;
+  mergeMode: string;
   maxSafeDiffLines: number;
   protectedPathFragments: string[];
   publicBaseUrl: string;
@@ -425,6 +426,29 @@ export function App() {
       );
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Mode change failed");
+    } finally {
+      setModeUpdating(false);
+    }
+  }
+
+  async function setMergeMode(mergeMode: "agent_reviewed_auto_merge" | "human_exception_required" | "implement_only") {
+    setModeUpdating(true);
+    setStatus(`Switching to ${mergeModeLabel(mergeMode)}`);
+    try {
+      const response = await adminFetch("/admin/settings/merge-mode", {
+        body: JSON.stringify({ mergeMode }),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      });
+      const body = await response.json().catch(() => ({}));
+      await refresh();
+      setStatus(
+        response.ok
+          ? `Merge mode set to ${mergeModeLabel(mergeMode)}`
+          : `Merge mode blocked: ${String(body.error ?? "not saved")}`,
+      );
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Merge mode failed");
     } finally {
       setModeUpdating(false);
     }
@@ -834,6 +858,7 @@ export function App() {
           onMaxSafeDiffLinesInput={setMaxSafeDiffLinesInput}
           onProtectedPathFragmentsInput={setProtectedPathFragmentsInput}
           onSaveMergeGuardrails={saveMergeGuardrails}
+          onSetMergeMode={setMergeMode}
           protectedPathFragmentsInput={protectedPathFragmentsInput}
         />
         <AgentCredentialsPanel
@@ -1288,6 +1313,7 @@ function MergeGuardrailsPanel(props: {
   onMaxSafeDiffLinesInput: (value: string) => void;
   onProtectedPathFragmentsInput: (value: string) => void;
   onSaveMergeGuardrails: () => void;
+  onSetMergeMode: (mode: "agent_reviewed_auto_merge" | "human_exception_required" | "implement_only") => void;
   protectedPathFragmentsInput: string;
 }) {
   const parsed = Number(props.maxSafeDiffLinesInput);
@@ -1302,6 +1328,35 @@ function MergeGuardrailsPanel(props: {
       <div className="panel-heading">
         <p className="eyebrow">Merge policy</p>
         <h2>Guardrails</h2>
+      </div>
+      <div className="mode-grid">
+        <ModeCard
+          active={props.doctor?.mergeMode === "implement_only"}
+          actionLabel={props.doctor?.mergeMode === "implement_only" ? "Current mode" : "Use implement-only"}
+          detail="Agents may create branches and PR evidence, then stop before merge."
+          disabled={props.modeUpdating || !props.doctor || props.doctor?.mergeMode === "implement_only"}
+          label="Implement-only PR mode"
+          onSelect={() => props.onSetMergeMode("implement_only")}
+          state="Safest"
+        />
+        <ModeCard
+          active={props.doctor?.mergeMode === "agent_reviewed_auto_merge"}
+          actionLabel={props.doctor?.mergeMode === "agent_reviewed_auto_merge" ? "Current mode" : "Use agent review"}
+          detail="A separate reviewer decision plus every guardrail is required before auto-merge."
+          disabled={props.modeUpdating || !props.doctor || props.doctor?.mergeMode === "agent_reviewed_auto_merge"}
+          label="Agent-reviewed auto-merge"
+          onSelect={() => props.onSetMergeMode("agent_reviewed_auto_merge")}
+          state="Guarded"
+        />
+        <ModeCard
+          active={props.doctor?.mergeMode === "human_exception_required"}
+          actionLabel={props.doctor?.mergeMode === "human_exception_required" ? "Current mode" : "Require human"}
+          detail="OFF can prepare evidence, but merge stays blocked for a human exception path."
+          disabled={props.modeUpdating || !props.doctor || props.doctor?.mergeMode === "human_exception_required"}
+          label="Human exception required"
+          onSelect={() => props.onSetMergeMode("human_exception_required")}
+          state="Manual"
+        />
       </div>
       <label className="checkbox-row">
         <input
@@ -1335,6 +1390,9 @@ function MergeGuardrailsPanel(props: {
       <p className="mode-note">
         Effective auto-merge needs this policy on and <code>AUTO_MERGE_ENABLED=true</code>. Current env switch:{" "}
         {props.doctor?.autoMergeEnabled ? "enabled" : "disabled"}.
+      </p>
+      <p className="mode-note">
+        Current merge mode: {props.doctor ? mergeModeLabel(props.doctor.mergeMode) : "checking"}.
       </p>
       <p className="mode-note">
         Current diff cap: {props.doctor?.maxSafeDiffLines ?? "checking"} lines. Protected paths:{" "}
@@ -1392,6 +1450,7 @@ function SetupPanel(props: { doctor: Doctor | null }) {
           <Detail label="API" value={doctor.api} />
           <Detail label="Database" value={doctor.databaseConfigured ? "Configured" : "Missing"} />
           <Detail label="Approval" value={approvalModeLabel(doctor.approvalMode)} />
+          <Detail label="Merge mode" value={mergeModeLabel(doctor.mergeMode)} />
           <Detail label="Runner" value={runnerModeLabel(doctor)} />
           <Detail label="Credentials" value={credentialModeLabel(doctor)} />
           <Detail label="Admin auth" value={doctor.adminAuthRequired ? "Token required" : "Local open"} />
@@ -1955,6 +2014,12 @@ function timeLabel(value: Date): string {
 function approvalModeLabel(mode: string): string {
   if (mode === "auto") return "Auto approval";
   return "Manual approval";
+}
+
+function mergeModeLabel(mode: string): string {
+  if (mode === "agent_reviewed_auto_merge") return "Agent-reviewed auto-merge";
+  if (mode === "human_exception_required") return "Human exception required";
+  return "Implement-only PR mode";
 }
 
 function riskTierLabel(riskTier: string): string {

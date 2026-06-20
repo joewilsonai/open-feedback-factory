@@ -128,6 +128,9 @@ status map.
   gates respect the live cost budget before spending model time. V1 includes a
   per-work-item dollar cap, daily dollar cap, monthly dollar cap, and per-run
   token cap when token estimates are available.
+- Approval mode and merge mode are separate: auto approval only lets a worker
+  claim eligible work, while auto-merge is blocked unless the persisted
+  `merge_mode` is `agent_reviewed_auto_merge`.
 - Safe auto-merge reads live merge guardrail policy for max diff lines,
   protected path fragments, and policy-level auto-merge allowance. The env
   `AUTO_MERGE_ENABLED` switch remains a hard kill switch.

@@ -35,6 +35,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
       costBudgetUsage: await deps.store.getCostBudgetUsage(),
       maxFeatureCostUsd: costBudget.maxFeatureCostUsd,
       mergeGuardrails: await deps.store.getMergeGuardrailPolicy(defaultMergeGuardrailPolicy(deps)),
+      mergeMode: await deps.store.getMergeMode(deps.config.mergeMode),
     };
   });
 
@@ -46,6 +47,22 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
 
     await deps.store.setApprovalMode(approvalMode, "control-center");
     return { approvalMode, status: "updated" };
+  });
+
+  app.patch<{ Body: { mergeMode?: unknown } }>("/admin/settings/merge-mode", async (request, reply) => {
+    const mergeMode = request.body?.mergeMode;
+    if (
+      mergeMode !== "agent_reviewed_auto_merge" &&
+      mergeMode !== "human_exception_required" &&
+      mergeMode !== "implement_only"
+    ) {
+      return reply.code(400).send({
+        error: "mergeMode must be implement_only, agent_reviewed_auto_merge, or human_exception_required",
+      });
+    }
+
+    await deps.store.setMergeMode(mergeMode, "control-center");
+    return { mergeMode, status: "updated" };
   });
 
   app.patch<{ Body: { codexAuthMode?: unknown } }>("/admin/settings/codex-auth-mode", async (request, reply) => {
@@ -368,6 +385,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
     if (!detail) return reply.code(404).send({ error: "work item not found" });
     const workItem = detail.workItem;
     const maxFeatureCostUsd = await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd);
+    const mergeMode = await deps.store.getMergeMode(deps.config.mergeMode);
     const mergeGuardrails = await deps.store.getMergeGuardrailPolicy(defaultMergeGuardrailPolicy(deps));
     const reviewDecision = await deps.store.getWorkItemReviewDecision(workItem.id);
     const prUrl = workItem.githubPrUrl;
@@ -406,6 +424,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
       costCapUsd: maxFeatureCostUsd,
       diffLineCount: evidence.diffLineCount,
       maxDiffLineCount: mergeGuardrails.maxSafeDiffLines,
+      mergeMode,
       protectedPathFragments: mergeGuardrails.protectedPathFragments,
       redactionWarnings: evidence.redactionWarnings,
       releaseHealthy: evidence.releaseHealthy,

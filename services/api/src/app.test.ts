@@ -38,6 +38,7 @@ const config: ApiConfig = {
   maxDailyCostUsd: 25,
   maxFeatureCostUsd: 5,
   maxMonthlyCostUsd: 100,
+  mergeMode: "implement_only",
   maxSafeDiffLines: 120,
   maxTokensPerRun: 250_000,
   protectedPathFragments: ["auth", "billing", "privacy"],
@@ -250,6 +251,16 @@ class MemoryStore implements AppStore {
     };
     this.maxFeatureCostUsd = this.costBudget.maxFeatureCostUsd;
     return this.costBudget;
+  }
+
+  mergeMode: "agent_reviewed_auto_merge" | "human_exception_required" | "implement_only" | null = null;
+
+  async getMergeMode(defaultMode: "agent_reviewed_auto_merge" | "human_exception_required" | "implement_only") {
+    return this.mergeMode ?? defaultMode;
+  }
+
+  async setMergeMode(mode: "agent_reviewed_auto_merge" | "human_exception_required" | "implement_only") {
+    this.mergeMode = mode;
   }
 
   async getMergeGuardrailPolicy(defaultPolicy: MergeGuardrailPolicy) {
@@ -1678,6 +1689,38 @@ test("admin can change approval mode without restarting the API", async () => {
   await app.close();
 });
 
+test("admin can configure merge mode independently of approval mode", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  const initialSettings = await app.inject({ method: "GET", url: "/admin/settings" });
+  assert.equal(initialSettings.statusCode, 200);
+  assert.equal(initialSettings.json().approvalMode, "manual");
+  assert.equal(initialSettings.json().mergeMode, "implement_only");
+
+  const update = await app.inject({
+    method: "PATCH",
+    payload: { mergeMode: "agent_reviewed_auto_merge" },
+    url: "/admin/settings/merge-mode",
+  });
+  assert.equal(update.statusCode, 200);
+  assert.equal(update.json().mergeMode, "agent_reviewed_auto_merge");
+  assert.equal(store.approvalMode, null);
+
+  const doctor = await app.inject({ method: "GET", url: "/doctor" });
+  assert.equal(doctor.json().approvalMode, "manual");
+  assert.equal(doctor.json().mergeMode, "agent_reviewed_auto_merge");
+
+  const invalid = await app.inject({
+    method: "PATCH",
+    payload: { mergeMode: "merge_everything" },
+    url: "/admin/settings/merge-mode",
+  });
+  assert.equal(invalid.statusCode, 400);
+
+  await app.close();
+});
+
 test("admin can set cost cap and runner claims respect it", async () => {
   const store = new MemoryStore();
   const app = await buildApp({ config, store });
@@ -1977,6 +2020,90 @@ test("runner leaves sample seed work queued", async () => {
   assert.equal(claim.statusCode, 200);
   assert.equal(claim.json().job, null);
   assert.equal(store.workItems[0]?.status, "planned");
+
+  await app.close();
+});
+
+test("safe auto-merge requires explicit agent-reviewed merge mode", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({
+    config: { ...config, autoMergeEnabled: true },
+    store,
+  });
+
+  const feedback = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add a calmer save button label",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+  const workItemId = feedback.json().workItemId;
+  await store.completeWorkItemRun({
+    agentName: "codex-test",
+    costActual: { amountUsd: 0.4, confidence: "high", model: "gpt-5.5" },
+    metadata: {
+      branchName: "off/codex/work_1",
+      changedFiles: ["apps/demo-app/src/App.tsx"],
+      diffLineCount: 8,
+    },
+    runType: "implementation",
+    status: "succeeded",
+    summary: "Implemented test work.",
+    workItemId,
+  });
+  await store.recordGithubArtifact({
+    artifactType: "pull_request",
+    url: "https://github.com/joewilsonai/open-feedback-factory/pull/42",
+    workItemId,
+  });
+  await store.recordWorkItemReview({
+    approved: true,
+    reviewType: "agent",
+    summary: "Reviewed and approved.",
+    workItemId,
+  });
+
+  const defaultModeBlocked = await app.inject({
+    method: "POST",
+    payload: {
+      branchTrusted: true,
+      changedFiles: ["README.md"],
+      checksPassed: true,
+      costActualUsd: 0.4,
+      diffLineCount: 1,
+      redactionWarnings: 0,
+      releaseHealthy: true,
+    },
+    url: `/admin/work-items/${workItemId}/automerge`,
+  });
+  assert.equal(defaultModeBlocked.statusCode, 409);
+  assert.equal(defaultModeBlocked.json().evaluation.reasons.includes("merge_mode_implement_only"), true);
+
+  const update = await app.inject({
+    method: "PATCH",
+    payload: { mergeMode: "agent_reviewed_auto_merge" },
+    url: "/admin/settings/merge-mode",
+  });
+  assert.equal(update.statusCode, 200);
+
+  const agentReviewedMode = await app.inject({
+    method: "POST",
+    payload: {
+      branchTrusted: true,
+      changedFiles: ["README.md"],
+      checksPassed: true,
+      costActualUsd: 0.4,
+      diffLineCount: 1,
+      redactionWarnings: 0,
+      releaseHealthy: true,
+    },
+    url: `/admin/work-items/${workItemId}/automerge`,
+  });
+  assert.equal(agentReviewedMode.statusCode, 409);
+  assert.equal(agentReviewedMode.json().evaluation.reasons.includes("merge_mode_implement_only"), false);
+  assert.equal(agentReviewedMode.json().evaluation.reasons.includes("github_merge_mode_not_enabled"), true);
 
   await app.close();
 });

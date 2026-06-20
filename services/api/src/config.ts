@@ -21,6 +21,7 @@ export interface ApiConfig {
   maxDailyCostUsd: number;
   maxFeatureCostUsd: number;
   maxMonthlyCostUsd: number;
+  mergeMode: "agent_reviewed_auto_merge" | "human_exception_required" | "implement_only";
   maxSafeDiffLines: number;
   maxTokensPerRun: number;
   protectedPathFragments: string[];
@@ -63,6 +64,7 @@ export function readConfig(env = process.env): ApiConfig {
     maxDailyCostUsd: Number(env.MAX_DAILY_COST_USD ?? 25),
     maxFeatureCostUsd: Number(env.MAX_FEATURE_COST_USD ?? 5),
     maxMonthlyCostUsd: Number(env.MAX_MONTHLY_COST_USD ?? 100),
+    mergeMode: mergeModeFromEnv(env.MERGE_MODE),
     maxSafeDiffLines: Number(env.MAX_SAFE_DIFF_LINES ?? 120),
     maxTokensPerRun: Number(env.MAX_TOKENS_PER_RUN ?? 250_000),
     protectedPathFragments: (env.PROTECTED_PATHS ?? "auth,billing,privacy,legal,encryption,secrets,infra,migrations,release")
@@ -84,6 +86,11 @@ export function readConfig(env = process.env): ApiConfig {
 function githubModeFromEnv(value: string | undefined): ApiConfig["githubMode"] {
   if (value === "app" || value === "gh") return value;
   return "disabled";
+}
+
+function mergeModeFromEnv(value: string | undefined): ApiConfig["mergeMode"] {
+  if (value === "agent_reviewed_auto_merge" || value === "human_exception_required") return value;
+  return "implement_only";
 }
 
 function stripTrailingSlash(value: string): string {

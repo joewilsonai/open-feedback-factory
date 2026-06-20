@@ -101,6 +101,10 @@ describe("control center UI contract", () => {
     expect(source).toContain("/admin/settings/codex-api-key");
     expect(source).toContain("/admin/settings/cost-cap");
     expect(source).toContain("/admin/settings/merge-guardrails");
+    expect(source).toContain("/admin/settings/merge-mode");
+    expect(source).toContain("Implement-only PR mode");
+    expect(source).toContain("Agent-reviewed auto-merge");
+    expect(source).toContain("Human exception required");
     expect(source).toContain("/github/app/setup");
     expect(source).toContain("/github/app/manifest");
     expect(source).toContain("runnerInstall");

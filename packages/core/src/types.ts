@@ -12,6 +12,8 @@ export type FeedbackCategory =
 
 export type WorkRiskTier = "safe_auto_merge" | "guarded_review" | "extra_review" | "plan_only";
 
+export type MergeMode = "agent_reviewed_auto_merge" | "human_exception_required" | "implement_only";
+
 export type AssumptionImpactArea =
   | "cost"
   | "merge_safety"
@@ -100,6 +102,7 @@ export interface AutoMergeInput {
   costCapUsd: number;
   diffLineCount: number;
   maxDiffLineCount: number;
+  mergeMode: MergeMode;
   protectedPathFragments: string[];
   redactionWarnings: number;
   releaseHealthy: boolean;
