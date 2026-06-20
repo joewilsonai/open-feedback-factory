@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { WorkerHeartbeatRow } from "@open-feedback-factory/db";
 import type { AppDeps } from "../app.js";
 import { accessControlStatus } from "../auth.js";
+import { defaultCostBudget } from "../costBudget.js";
 import { getCodexApiKeyStatus } from "../secrets.js";
 import { githubWebhooksEnabledForBaseUrl } from "./github.js";
 
@@ -16,7 +17,7 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
   app.get("/doctor", async () => {
     const approvalMode = await deps.store.getApprovalMode(deps.config.approvalMode);
     const codexAuthMode = await deps.store.getCodexAuthMode(deps.config.codexAuthMode);
-    const maxFeatureCostUsd = await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd);
+    const costBudget = await deps.store.getCostBudget(defaultCostBudget(deps.config));
     const mergeGuardrails = await deps.store.getMergeGuardrailPolicy(defaultMergeGuardrailPolicy(deps));
     const codexApiKeyStatus = await getCodexApiKeyStatus(deps.config);
     const workerHeartbeat = await deps.store.getLatestWorkerHeartbeat();
@@ -43,7 +44,9 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
       githubWebhookUrl: `${deps.config.publicBaseUrl}/github/webhook`,
       githubWebhooksEnabled: githubWebhooksEnabledForBaseUrl(deps.config.publicBaseUrl),
       autoMergePolicyEnabled: mergeGuardrails.autoMergePolicyEnabled,
-      maxFeatureCostUsd,
+      costBudget,
+      costBudgetUsage: await deps.store.getCostBudgetUsage(),
+      maxFeatureCostUsd: costBudget.maxFeatureCostUsd,
       maxSafeDiffLines: mergeGuardrails.maxSafeDiffLines,
       protectedPathFragments: mergeGuardrails.protectedPathFragments,
       publicBaseUrl: deps.config.publicBaseUrl,

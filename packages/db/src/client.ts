@@ -90,6 +90,20 @@ export interface CostLedgerRow {
   workItemId: string | null;
 }
 
+export interface CostBudgetPolicy {
+  maxDailyCostUsd: number;
+  maxFeatureCostUsd: number;
+  maxMonthlyCostUsd: number;
+  maxTokensPerRun: number;
+}
+
+export interface CostBudgetUsage {
+  monthActualTokens: number;
+  monthActualUsd: number;
+  todayActualTokens: number;
+  todayActualUsd: number;
+}
+
 export interface GithubArtifactLedgerRow {
   artifactNumber: number | null;
   artifactType: string;
@@ -828,7 +842,7 @@ export class OpenFeedbackStore {
             input.costActual.amountUsd,
             input.costActual.confidence,
             input.costActual.model,
-            JSON.stringify({ agentRunId: runId }),
+            JSON.stringify({ agentRunId: runId, tokens: tokensFromCostActual(input.costActual) }),
           ],
         );
       }
@@ -1333,6 +1347,54 @@ export class OpenFeedbackStore {
     }
   }
 
+  async getCostBudget(defaultBudget: CostBudgetPolicy): Promise<CostBudgetPolicy> {
+    const budget = await this.pool.query<{ value: Record<string, unknown> | null }>(
+      `select value
+       from policy_configs
+       where key = 'cost_budget'
+       limit 1`,
+    );
+    const value = recordFromRow(budget.rows[0]?.value);
+    if (budget.rows.length > 0) {
+      return normalizeCostBudget(value, defaultBudget);
+    }
+
+    const legacyMaxFeatureCostUsd = await this.getMaxFeatureCostUsd(defaultBudget.maxFeatureCostUsd);
+    return {
+      ...defaultBudget,
+      maxFeatureCostUsd: legacyMaxFeatureCostUsd,
+    };
+  }
+
+  async getCostBudgetUsage(): Promise<CostBudgetUsage> {
+    const result = await this.pool.query<{
+      month_actual_tokens: string | null;
+      month_actual_usd: string | null;
+      today_actual_tokens: string | null;
+      today_actual_usd: string | null;
+    }>(
+      `select
+         coalesce(sum(amount_usd) filter (where phase = 'actual' and created_at >= date_trunc('day', now())), 0)::text
+           as today_actual_usd,
+         coalesce(sum(amount_usd) filter (where phase = 'actual' and created_at >= date_trunc('month', now())), 0)::text
+           as month_actual_usd,
+         coalesce(sum(coalesce((metadata ->> 'tokens')::numeric, 0)) filter
+           (where phase = 'actual' and created_at >= date_trunc('day', now())), 0)::text
+           as today_actual_tokens,
+         coalesce(sum(coalesce((metadata ->> 'tokens')::numeric, 0)) filter
+           (where phase = 'actual' and created_at >= date_trunc('month', now())), 0)::text
+           as month_actual_tokens
+       from cost_records`,
+    );
+    const row = result.rows[0];
+    return {
+      monthActualTokens: Math.round(nonNegativeNumberFromValue(row?.month_actual_tokens) ?? 0),
+      monthActualUsd: roundCurrency(nonNegativeNumberFromValue(row?.month_actual_usd) ?? 0),
+      todayActualTokens: Math.round(nonNegativeNumberFromValue(row?.today_actual_tokens) ?? 0),
+      todayActualUsd: roundCurrency(nonNegativeNumberFromValue(row?.today_actual_usd) ?? 0),
+    };
+  }
+
   async getMaxFeatureCostUsd(defaultCap: number): Promise<number> {
     const result = await this.pool.query<{ amount_usd: string | null }>(
       `select value ->> 'amountUsd' as amount_usd
@@ -1395,7 +1457,7 @@ export class OpenFeedbackStore {
   }
 
   async setMaxFeatureCostUsd(amountUsd: number, actor = "operator"): Promise<void> {
-    const normalized = Math.round(amountUsd * 100) / 100;
+    const normalized = roundCurrency(amountUsd);
     const client = await this.pool.connect();
     try {
       await client.query("begin");
@@ -1413,6 +1475,42 @@ export class OpenFeedbackStore {
         [`audit_${randomUUID()}`, actor, JSON.stringify({ amountUsd: normalized })],
       );
       await client.query("commit");
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async setCostBudget(policy: CostBudgetPolicy, actor = "operator"): Promise<CostBudgetPolicy> {
+    const normalized = normalizeCostBudget(policy, policy);
+    const client = await this.pool.connect();
+    try {
+      await client.query("begin");
+      await client.query(
+        `insert into policy_configs (id, key, value)
+         values ($1, 'cost_budget', $2)
+         on conflict (key) do update
+         set value = excluded.value,
+             updated_at = now()`,
+        [`policy_${randomUUID()}`, JSON.stringify(normalized)],
+      );
+      await client.query(
+        `insert into policy_configs (id, key, value)
+         values ($1, 'max_feature_cost_usd', $2)
+         on conflict (key) do update
+         set value = excluded.value,
+             updated_at = now()`,
+        [`policy_${randomUUID()}`, JSON.stringify({ amountUsd: normalized.maxFeatureCostUsd })],
+      );
+      await client.query(
+        `insert into audit_events (id, actor, event, target_type, target_id, metadata)
+         values ($1, $2, 'cost_budget_updated', 'policy_config', 'cost_budget', $3)`,
+        [`audit_${randomUUID()}`, actor, JSON.stringify(normalized)],
+      );
+      await client.query("commit");
+      return normalized;
     } catch (error) {
       await client.query("rollback");
       throw error;
@@ -1715,6 +1813,36 @@ function positiveIntegerFromValue(value: unknown): number | null {
   const number = typeof value === "number" ? value : Number(value);
   if (!Number.isInteger(number) || number <= 0) return null;
   return number;
+}
+
+function nonNegativeNumberFromValue(value: unknown): number | null {
+  const number = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(number) || number < 0) return null;
+  return number;
+}
+
+function positiveNumberFromValue(value: unknown, fallback: number): number {
+  const number = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(number) || number <= 0) return fallback;
+  return number;
+}
+
+function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function normalizeCostBudget(value: Record<string, unknown> | CostBudgetPolicy, fallback: CostBudgetPolicy): CostBudgetPolicy {
+  return {
+    maxDailyCostUsd: roundCurrency(positiveNumberFromValue(value.maxDailyCostUsd, fallback.maxDailyCostUsd)),
+    maxFeatureCostUsd: roundCurrency(positiveNumberFromValue(value.maxFeatureCostUsd, fallback.maxFeatureCostUsd)),
+    maxMonthlyCostUsd: roundCurrency(positiveNumberFromValue(value.maxMonthlyCostUsd, fallback.maxMonthlyCostUsd)),
+    maxTokensPerRun: Math.round(positiveNumberFromValue(value.maxTokensPerRun, fallback.maxTokensPerRun)),
+  };
+}
+
+function tokensFromCostActual(costActual: Record<string, unknown>): number | null {
+  const tokens = nonNegativeNumberFromValue(costActual.tokens);
+  return tokens === null ? null : Math.round(tokens);
 }
 
 async function insertAssumptionRecords(

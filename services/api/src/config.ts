@@ -18,8 +18,11 @@ export interface ApiConfig {
   githubOwner: string;
   githubRepo: string;
   githubWebhookSecret: string;
+  maxDailyCostUsd: number;
   maxFeatureCostUsd: number;
+  maxMonthlyCostUsd: number;
   maxSafeDiffLines: number;
+  maxTokensPerRun: number;
   protectedPathFragments: string[];
   publicBaseUrl: string;
   adminRateLimitMax?: number;
@@ -57,8 +60,11 @@ export function readConfig(env = process.env): ApiConfig {
     githubOwner: env.GITHUB_OWNER ?? "joewilsonai",
     githubRepo: env.GITHUB_REPO ?? "open-feedback-factory",
     githubWebhookSecret: env.GITHUB_WEBHOOK_SECRET ?? "",
+    maxDailyCostUsd: Number(env.MAX_DAILY_COST_USD ?? 25),
     maxFeatureCostUsd: Number(env.MAX_FEATURE_COST_USD ?? 5),
+    maxMonthlyCostUsd: Number(env.MAX_MONTHLY_COST_USD ?? 100),
     maxSafeDiffLines: Number(env.MAX_SAFE_DIFF_LINES ?? 120),
+    maxTokensPerRun: Number(env.MAX_TOKENS_PER_RUN ?? 250_000),
     protectedPathFragments: (env.PROTECTED_PATHS ?? "auth,billing,privacy,legal,encryption,secrets,infra,migrations,release")
       .split(",")
       .map((item) => item.trim())

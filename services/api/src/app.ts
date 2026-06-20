@@ -3,6 +3,8 @@ import { type AgentAssumptionRecord, type FeedbackInput, type UserFeedbackStatus
 import type { GitHubInstallationRepositoryList, GitHubIssueInput } from "@open-feedback-factory/runner";
 import type {
   ControlRoomSnapshot,
+  CostBudgetPolicy,
+  CostBudgetUsage,
   MergeGuardrailPolicy,
   ReconciliationResult,
   WorkerHeartbeatInput,
@@ -46,6 +48,8 @@ export interface AppStore {
   getControlRoomSnapshot(): Promise<ControlRoomSnapshot>;
   getApprovalMode(defaultMode: ApiConfig["approvalMode"]): Promise<ApiConfig["approvalMode"]>;
   getCodexAuthMode(defaultMode: ApiConfig["codexAuthMode"]): Promise<ApiConfig["codexAuthMode"]>;
+  getCostBudget(defaultBudget: CostBudgetPolicy): Promise<CostBudgetPolicy>;
+  getCostBudgetUsage(): Promise<CostBudgetUsage>;
   getFeedbackClusterSignalCount(clusterKey: string): Promise<number>;
   getMaxFeatureCostUsd(defaultCap: number): Promise<number>;
   getMergeGuardrailPolicy(defaultPolicy: MergeGuardrailPolicy): Promise<MergeGuardrailPolicy>;
@@ -102,6 +106,7 @@ export interface AppStore {
   }): Promise<WorkItemReviewDecision>;
   setApprovalMode(mode: ApiConfig["approvalMode"], actor?: string): Promise<void>;
   setCodexAuthMode(mode: ApiConfig["codexAuthMode"], actor?: string): Promise<void>;
+  setCostBudget(policy: CostBudgetPolicy, actor?: string): Promise<CostBudgetPolicy>;
   setMaxFeatureCostUsd(amountUsd: number, actor?: string): Promise<void>;
   setMergeGuardrailPolicy(policy: MergeGuardrailPolicy, actor?: string): Promise<MergeGuardrailPolicy>;
 }
