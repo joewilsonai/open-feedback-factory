@@ -18,8 +18,8 @@ status map.
 | Control center | Done for internal dogfood, needs work for final hosted demo | Lifecycle and setup views exist; plant-app onboarding flow still needs proof |
 | GitHub App and runner seams | Done as seams, needs live plant-app proof | Existing tests cover setup/webhook/client seams; final demo needs scoped repo connection and real PR |
 | Local Codex CLI worker | Done locally, needs hosted-token proof | Host worker path exists; hosted API claim path needs `RUNNER_TOKEN` sync proof |
-| Public SDK distribution | Needs work | Prepare public npm package, hold publish for Joe |
-| Clean plant-care demo repo | Not started | Replaces LaunchBrief as final demo target |
+| Public SDK distribution | Partial | Package metadata, dist exports, README, pack dry-run, and local tarball import proof are prepared; hold publish for Joe |
+| Clean plant-care demo repo | Done | Sprout is live, SDK-less, and replaces LaunchBrief as the final demo target |
 | Fully hosted multi-user alpha | Not started | Later than private demo |
 | Public repo/open-source launch | Hold | Wait for Joe's explicit go |
 

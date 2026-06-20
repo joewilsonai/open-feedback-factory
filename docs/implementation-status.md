@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-06-19
+Last updated: 2026-06-20
 
 This is a one-time baseline audit snapshot of what Open Feedback Factory has
 actually built versus the PRD. The PRD is the product vision; this file captures
@@ -41,7 +41,7 @@ reasons.
 | RLS / workspace isolation tests | DONE | Postgres integration tests verify RLS scaffolding and cross-workspace blocking | 2026-06-19 |
 | SDK feedback API | DONE | Browser SDK can submit feedback, read status, and record feature usage | 2026-06-19 |
 | SDK floating launcher | DONE | Real launcher opens in-app UI and shows user-visible tracking receipt without control-center access | 2026-06-19 |
-| SDK public npm distribution | PARTIAL | Package code is ready internally; public npm metadata/readme/export hygiene still needs prep, and actual `npm publish --access public` is held for Joe | 2026-06-19 |
+| SDK public npm distribution | PARTIAL | Package metadata, `dist` exports, README, `npm pack --dry-run`, and local tarball import proof are prepared; actual `npm publish --access public` is held for Joe | 2026-06-20 |
 | SDK CDN distribution | NOT-STARTED | Planned option only | 2026-06-19 |
 | API service | DONE | SDK, admin, runner, GitHub, health, doctor, release, rate-limit, and guardrail tests pass | 2026-06-19 |
 | Admin token gate | DONE | `/admin/*` requires token when configured and `/doctor` never exposes token values | 2026-06-19 |
@@ -68,8 +68,8 @@ reasons.
 | Feature usage attribution | DONE | SDK and API can record usage events and control-center counts | 2026-06-19 |
 | Daybook local demo app | DONE | Real local demo app exercises SDK/API path | 2026-06-19 |
 | LaunchBrief proof app | DONE | Live app uses the real SDK at runtime; this is proof only, not the final demo concept | 2026-06-19 |
-| Final plant-care demo app | NOT-STARTED | Needs new clean consumer app repo that starts SDK-less and explicitly stands in for a user's product | 2026-06-19 |
-| OFF SDK-install PR demo | PARTIAL | Requires public npm SDK package and clean plant-care repo before it can be proven durably | 2026-06-19 |
+| Final plant-care demo app | DONE | Sprout exists at `https://sprout-demo-chi.vercel.app`, starts SDK-less, and was live-gated across Today, My Plants, and detail views | 2026-06-20 |
+| OFF SDK-install PR demo | PARTIAL | Clean Sprout repo exists and SDK package is prepared; durable proof still requires Joe-approved npm publish and a real SDK-install PR | 2026-06-20 |
 | Full plant-app feedback-to-feature demo | NOT-STARTED | Needs repo connect, SDK-install PR, merge/redeploy, beta feedback, agent PR, release proof, user status, and usage attribution | 2026-06-19 |
 | Hosted landing page | DONE | `openfeedbackfactory.com` is live with current OFF brand | 2026-06-19 |
 | Hosted API/control center stack | PARTIAL | Hosted services exist; final demo needs plant-app flow and local-worker claim proof | 2026-06-19 |
@@ -88,10 +88,11 @@ LaunchBrief proved that the real SDK can run in a live app, but it is not the
 final demo concept. It is too close to OFF's own product domain and makes the
 story harder to understand.
 
-The next demo app should be a clean, SDK-less plant-care app in a separate repo.
+The current durable demo app is Sprout, a clean, SDK-less plant-care app in a
+separate repo.
 The demo story is:
 
-1. A developer connects the clean plant app repo to OFF.
+1. A developer connects the clean Sprout repo to OFF.
 2. OFF detects that the SDK is missing.
 3. OFF opens a real SDK-install PR using the public npm package.
 4. The developer merges the PR and the app redeploys with the launcher.
@@ -99,5 +100,5 @@ The demo story is:
 6. OFF sanitizes, routes, estimates, builds, opens a PR, records assumptions and
    costs, waits for release proof, and updates the user-facing status.
 
-Until the SDK is actually published to npm, any live demo using a private git
-dependency or prebuilt Vercel deploy must be labeled interim.
+Until the SDK is actually published to npm, any SDK-install demo using a private
+git dependency or prebuilt Vercel deploy must be labeled interim.
