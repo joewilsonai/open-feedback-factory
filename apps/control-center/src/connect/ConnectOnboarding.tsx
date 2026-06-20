@@ -204,7 +204,7 @@ function HandoffStep({ proof }: { proof: RepositoryProof }) {
 
       {blocked && (
         <p className="connect-note">
-          OFF did everything it can without you. The install PR stays staged until the held step is released —
+          OFF did everything it can without you. The handoff stays held until the missing step is released —
           nothing is shipped or installed until then.
         </p>
       )}
