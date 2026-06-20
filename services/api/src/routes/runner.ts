@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { AgentAssumptionRecord } from "@open-feedback-factory/core";
 import type { WorkItemRow } from "@open-feedback-factory/db";
 import type { AppDeps } from "../app.js";
+import { defaultCostBudget, evaluateCostBudget, remainingClaimCapUsd } from "../costBudget.js";
 import { buildWorkerConnection } from "./health.js";
 
 export async function registerRunnerRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
@@ -16,16 +17,20 @@ export async function registerRunnerRoutes(app: FastifyInstance, deps: AppDeps):
       return { approvalMode, job: null, reason: "manual_approval_required" };
     }
 
-    const maxFeatureCostUsd = await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd);
+    const costBudget = await deps.store.getCostBudget(defaultCostBudget(deps.config));
+    const costBudgetUsage = await deps.store.getCostBudgetUsage();
     if (request.body?.workItemId) {
       const workItem = await deps.store.getWorkItem(request.body.workItemId);
-      if (workItem && workItem.costEstimate.amountUsd > maxFeatureCostUsd) {
+      const budgetBlock = workItem ? evaluateCostBudget(workItem, costBudget, costBudgetUsage) : null;
+      if (workItem && budgetBlock) {
         return {
           approvalMode,
+          costBudget,
+          costBudgetUsage,
           costEstimateUsd: workItem.costEstimate.amountUsd,
           job: null,
-          maxFeatureCostUsd,
-          reason: "cost_cap_exceeded",
+          maxFeatureCostUsd: costBudget.maxFeatureCostUsd,
+          reason: budgetBlock.reason,
         };
       }
     }
@@ -33,7 +38,7 @@ export async function registerRunnerRoutes(app: FastifyInstance, deps: AppDeps):
     const job = await deps.store.claimNextWorkItem(
       request.body?.workerName ?? "worker",
       request.body?.workItemId,
-      maxFeatureCostUsd,
+      remainingClaimCapUsd(costBudget, costBudgetUsage),
     );
     return { approvalMode, job: job ? await withRunnerTarget(deps, job) : null };
   });

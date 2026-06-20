@@ -5,6 +5,7 @@ import type { GitHubAccessibleRepository, GitHubIssueInput, GitHubPullRequestEvi
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
 import { buildGithubClient } from "../githubClient.js";
+import { defaultCostBudget, evaluateCostBudget, normalizeCostBudget } from "../costBudget.js";
 import { getCodexApiKeyStatus, readCodexApiKey, removeCodexApiKey, saveCodexApiKey } from "../secrets.js";
 import { buildWorkerConnection } from "./health.js";
 import { buildSanitizedGithubIssueInput } from "./sdk.js";
@@ -24,13 +25,18 @@ interface AutoMergeEvidence {
 export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   app.get("/admin/control-room", async () => deps.store.getControlRoomSnapshot());
 
-  app.get("/admin/settings", async () => ({
-    approvalMode: await deps.store.getApprovalMode(deps.config.approvalMode),
-    codexApiKey: await getCodexApiKeyStatus(deps.config),
-    codexAuthMode: await deps.store.getCodexAuthMode(deps.config.codexAuthMode),
-    maxFeatureCostUsd: await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd),
-    mergeGuardrails: await deps.store.getMergeGuardrailPolicy(defaultMergeGuardrailPolicy(deps)),
-  }));
+  app.get("/admin/settings", async () => {
+    const costBudget = await deps.store.getCostBudget(defaultCostBudget(deps.config));
+    return {
+      approvalMode: await deps.store.getApprovalMode(deps.config.approvalMode),
+      codexApiKey: await getCodexApiKeyStatus(deps.config),
+      codexAuthMode: await deps.store.getCodexAuthMode(deps.config.codexAuthMode),
+      costBudget,
+      costBudgetUsage: await deps.store.getCostBudgetUsage(),
+      maxFeatureCostUsd: costBudget.maxFeatureCostUsd,
+      mergeGuardrails: await deps.store.getMergeGuardrailPolicy(defaultMergeGuardrailPolicy(deps)),
+    };
+  });
 
   app.patch<{ Body: { approvalMode?: unknown } }>("/admin/settings/approval-mode", async (request, reply) => {
     const approvalMode = request.body?.approvalMode;
@@ -118,8 +124,25 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
       return reply.code(400).send({ error: "maxFeatureCostUsd must be between 0 and 10000" });
     }
 
-    await deps.store.setMaxFeatureCostUsd(amount, "control-center");
-    return { maxFeatureCostUsd: Math.round(amount * 100) / 100, status: "updated" };
+    const existing = await deps.store.getCostBudget(defaultCostBudget(deps.config));
+    const costBudget = await deps.store.setCostBudget(
+      { ...existing, maxFeatureCostUsd: Math.round(amount * 100) / 100 },
+      "control-center",
+    );
+    return { costBudget, maxFeatureCostUsd: costBudget.maxFeatureCostUsd, status: "updated" };
+  });
+
+  app.patch<{ Body: Record<string, unknown> }>("/admin/settings/cost-budget", async (request, reply) => {
+    const existing = await deps.store.getCostBudget(defaultCostBudget(deps.config));
+    const costBudget = normalizeCostBudget(request.body ?? {}, existing);
+    if (!costBudget) {
+      return reply.code(400).send({
+        error: "cost budget values must be positive numbers",
+      });
+    }
+
+    const saved = await deps.store.setCostBudget(costBudget, "control-center");
+    return { costBudget: saved, status: "updated" };
   });
 
   app.patch<{
@@ -167,12 +190,17 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
   app.post<{ Params: { id: string } }>("/admin/work-items/:id/run", async (request, reply) => {
     const workItem = await deps.store.getWorkItem(request.params.id);
     if (!workItem) return reply.code(404).send({ error: "work item not found" });
-    const maxFeatureCostUsd = await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd);
-    if (workItem.costEstimate.amountUsd > maxFeatureCostUsd) {
+    const costBudget = await deps.store.getCostBudget(defaultCostBudget(deps.config));
+    const costBudgetUsage = await deps.store.getCostBudgetUsage();
+    const budgetBlock = evaluateCostBudget(workItem, costBudget, costBudgetUsage);
+    if (budgetBlock) {
       return reply.code(409).send({
+        costBudget,
+        costBudgetUsage,
         costEstimateUsd: workItem.costEstimate.amountUsd,
-        error: "cost cap exceeded",
-        maxFeatureCostUsd,
+        error: budgetBlock.error,
+        maxFeatureCostUsd: costBudget.maxFeatureCostUsd,
+        reason: budgetBlock.reason,
         status: "blocked",
       });
     }

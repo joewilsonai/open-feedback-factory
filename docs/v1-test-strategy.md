@@ -125,7 +125,9 @@ status map.
 - Model/agent execution is limited by spend and attempt caps separate from HTTP
   rate limits: per work item, per day, per month, per workspace, and per runner.
 - Manual runs, targeted runner claims, automatic runner claims, and auto-merge
-  gates respect the live max feature cost cap before spending model time.
+  gates respect the live cost budget before spending model time. V1 includes a
+  per-work-item dollar cap, daily dollar cap, monthly dollar cap, and per-run
+  token cap when token estimates are available.
 - Safe auto-merge reads live merge guardrail policy for max diff lines,
   protected path fragments, and policy-level auto-merge allowance. The env
   `AUTO_MERGE_ENABLED` switch remains a hard kill switch.

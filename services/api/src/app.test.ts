@@ -7,6 +7,8 @@ import test from "node:test";
 import type { AgentAssumptionRecord, UserFeedbackStatus } from "@open-feedback-factory/core";
 import type {
   ControlRoomSnapshot,
+  CostBudgetPolicy,
+  CostBudgetUsage,
   FeedbackClusterRow,
   MergeGuardrailPolicy,
   WorkItemDetail,
@@ -33,8 +35,11 @@ const config: ApiConfig = {
   githubOwner: "joewilsonai",
   githubRepo: "open-feedback-factory",
   githubWebhookSecret: "test-secret",
+  maxDailyCostUsd: 25,
   maxFeatureCostUsd: 5,
+  maxMonthlyCostUsd: 100,
   maxSafeDiffLines: 120,
+  maxTokensPerRun: 250_000,
   protectedPathFragments: ["auth", "billing", "privacy"],
   publicBaseUrl: "http://api.test",
   runnerWorkspace: "/tmp/open-feedback-factory-test",
@@ -53,6 +58,7 @@ class MemoryStore implements AppStore {
   feedbackStatuses = new Map<string, UserFeedbackStatus>();
   githubArtifacts = new Map<string, string>();
   githubArtifactRows: WorkItemDetail["githubArtifacts"] = [];
+  costBudget: CostBudgetPolicy | null = null;
   maxFeatureCostUsd: number | null = null;
   mergeGuardrails: MergeGuardrailPolicy | null = null;
   recentAssumptions: AgentAssumptionRecord[] = [];
@@ -204,8 +210,46 @@ class MemoryStore implements AppStore {
     return this.maxFeatureCostUsd ?? defaultCap;
   }
 
+  async getCostBudget(defaultBudget: CostBudgetPolicy) {
+    return this.costBudget ?? {
+      ...defaultBudget,
+      maxFeatureCostUsd: this.maxFeatureCostUsd ?? defaultBudget.maxFeatureCostUsd,
+    };
+  }
+
+  async getCostBudgetUsage(): Promise<CostBudgetUsage> {
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const actuals = this.costRecords.filter((record) => record.phase === "actual");
+    const sumUsd = (records: typeof actuals) =>
+      Math.round(records.reduce((total, record) => total + record.amountUsd, 0) * 100) / 100;
+    const sumTokens = (records: typeof actuals) =>
+      records.reduce((total, record) => total + (typeof record.metadata.tokens === "number" ? record.metadata.tokens : 0), 0);
+    const today = actuals.filter((record) => new Date(record.createdAt) >= startOfDay);
+    const month = actuals.filter((record) => new Date(record.createdAt) >= startOfMonth);
+    return {
+      monthActualTokens: sumTokens(month),
+      monthActualUsd: sumUsd(month),
+      todayActualTokens: sumTokens(today),
+      todayActualUsd: sumUsd(today),
+    };
+  }
+
   async setMaxFeatureCostUsd(amountUsd: number) {
     this.maxFeatureCostUsd = Math.round(amountUsd * 100) / 100;
+  }
+
+  async setCostBudget(policy: CostBudgetPolicy) {
+    this.costBudget = {
+      maxDailyCostUsd: Math.round(policy.maxDailyCostUsd * 100) / 100,
+      maxFeatureCostUsd: Math.round(policy.maxFeatureCostUsd * 100) / 100,
+      maxMonthlyCostUsd: Math.round(policy.maxMonthlyCostUsd * 100) / 100,
+      maxTokensPerRun: Math.round(policy.maxTokensPerRun),
+    };
+    this.maxFeatureCostUsd = this.costBudget.maxFeatureCostUsd;
+    return this.costBudget;
   }
 
   async getMergeGuardrailPolicy(defaultPolicy: MergeGuardrailPolicy) {
@@ -283,7 +327,10 @@ class MemoryStore implements AppStore {
         confidence: typeof input.costActual.confidence === "string" ? input.costActual.confidence : "low",
         createdAt: new Date().toISOString(),
         id: `cost_${this.costRecords.length + 1}`,
-        metadata: { agentRunId: runId },
+        metadata: {
+          agentRunId: runId,
+          tokens: typeof input.costActual.tokens === "number" ? input.costActual.tokens : null,
+        },
         model: input.costActual.model,
         phase: "actual",
         workItemId: input.workItemId,
@@ -1669,6 +1716,228 @@ test("admin can set cost cap and runner claims respect it", async () => {
   const manualRun = await app.inject({ method: "POST", url: `/admin/work-items/${workItemId}/run` });
   assert.equal(manualRun.statusCode, 409);
   assert.equal(manualRun.json().error, "cost cap exceeded");
+
+  await app.close();
+});
+
+test("admin can configure budget caps and runner claims respect daily spend", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  const updateBudget = await app.inject({
+    method: "PATCH",
+    payload: {
+      maxDailyCostUsd: 2,
+      maxFeatureCostUsd: 3,
+      maxMonthlyCostUsd: 10,
+      maxTokensPerRun: 50_000,
+    },
+    url: "/admin/settings/cost-budget",
+  });
+  assert.equal(updateBudget.statusCode, 200);
+  assert.deepEqual(updateBudget.json().costBudget, {
+    maxDailyCostUsd: 2,
+    maxFeatureCostUsd: 3,
+    maxMonthlyCostUsd: 10,
+    maxTokensPerRun: 50_000,
+  });
+
+  const firstFeedback = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add dark mode to settings",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+  const firstWorkItemId = firstFeedback.json().workItemId;
+
+  const firstClaim = await app.inject({
+    method: "POST",
+    payload: { workerName: "worker-test", workItemId: firstWorkItemId },
+    url: "/runner/jobs/claim",
+  });
+  assert.equal(firstClaim.statusCode, 200);
+  assert.equal(firstClaim.json().job.id, firstWorkItemId);
+
+  await app.inject({
+    method: "POST",
+    payload: {
+      agentName: "worker-test",
+      costActual: {
+        amountUsd: 1.25,
+        confidence: "high",
+        model: "gpt-5.5",
+        tokens: 42_000,
+      },
+      status: "succeeded",
+      summary: "Implemented by worker.",
+    },
+    url: `/runner/jobs/${firstWorkItemId}/complete`,
+  });
+
+  const doctor = await app.inject({ method: "GET", url: "/doctor" });
+  assert.deepEqual(doctor.json().costBudget, {
+    maxDailyCostUsd: 2,
+    maxFeatureCostUsd: 3,
+    maxMonthlyCostUsd: 10,
+    maxTokensPerRun: 50_000,
+  });
+  assert.equal(doctor.json().costBudgetUsage.todayActualUsd, 1.25);
+  assert.equal(doctor.json().costBudgetUsage.monthActualUsd, 1.25);
+  assert.equal(doctor.json().costBudgetUsage.todayActualTokens, 42_000);
+
+  const secondFeedback = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add due dates to todos",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+  const secondWorkItemId = secondFeedback.json().workItemId;
+
+  const blockedClaim = await app.inject({
+    method: "POST",
+    payload: { workerName: "worker-test", workItemId: secondWorkItemId },
+    url: "/runner/jobs/claim",
+  });
+  assert.equal(blockedClaim.statusCode, 200);
+  assert.equal(blockedClaim.json().job, null);
+  assert.equal(blockedClaim.json().reason, "daily_cost_cap_exceeded");
+  assert.equal(blockedClaim.json().costBudget.maxDailyCostUsd, 2);
+  assert.equal(store.workItems.find((item) => item.id === secondWorkItemId)?.status, "planned");
+
+  const manualRun = await app.inject({ method: "POST", url: `/admin/work-items/${secondWorkItemId}/run` });
+  assert.equal(manualRun.statusCode, 409);
+  assert.equal(manualRun.json().error, "daily cost cap exceeded");
+
+  await app.close();
+});
+
+test("runner claims respect monthly spend caps", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  await app.inject({
+    method: "PATCH",
+    payload: {
+      maxDailyCostUsd: 10,
+      maxFeatureCostUsd: 3,
+      maxMonthlyCostUsd: 2,
+      maxTokensPerRun: 50_000,
+    },
+    url: "/admin/settings/cost-budget",
+  });
+
+  const firstFeedback = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add dark mode to settings",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+  const firstWorkItemId = firstFeedback.json().workItemId;
+  await app.inject({
+    method: "POST",
+    payload: { workerName: "worker-test", workItemId: firstWorkItemId },
+    url: "/runner/jobs/claim",
+  });
+  await app.inject({
+    method: "POST",
+    payload: {
+      agentName: "worker-test",
+      costActual: {
+        amountUsd: 1.25,
+        confidence: "high",
+        model: "gpt-5.5",
+        tokens: 21_000,
+      },
+      status: "succeeded",
+      summary: "Implemented by worker.",
+    },
+    url: `/runner/jobs/${firstWorkItemId}/complete`,
+  });
+
+  const secondFeedback = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add due dates to todos",
+      source: "demo",
+    },
+    url: "/sdk/feedback",
+  });
+  const blockedClaim = await app.inject({
+    method: "POST",
+    payload: { workerName: "worker-test", workItemId: secondFeedback.json().workItemId },
+    url: "/runner/jobs/claim",
+  });
+  assert.equal(blockedClaim.statusCode, 200);
+  assert.equal(blockedClaim.json().job, null);
+  assert.equal(blockedClaim.json().reason, "monthly_cost_cap_exceeded");
+
+  await app.close();
+});
+
+test("runner claims respect per-run token caps when estimates include tokens", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  await app.inject({
+    method: "PATCH",
+    payload: {
+      maxDailyCostUsd: 10,
+      maxFeatureCostUsd: 3,
+      maxMonthlyCostUsd: 20,
+      maxTokensPerRun: 1_000,
+    },
+    url: "/admin/settings/cost-budget",
+  });
+
+  const tokenHeavyEstimate = {
+    amountUsd: 1.5,
+    confidence: "low",
+    currency: "USD",
+    model: "gpt-5.5",
+    reason: "test",
+    tokens: 2_500,
+  } as WorkItemRow["costEstimate"] & { tokens: number };
+  store.workItems.push({
+    autoMergeEligible: false,
+    category: "feature_request",
+    clusterKey: "feature.token-heavy",
+    costEstimate: tokenHeavyEstimate,
+    createdAt: new Date().toISOString(),
+    githubIssueUrl: null,
+    githubPrUrl: null,
+    id: "work_token_heavy",
+    latestActualCost: null,
+    latestBranchName: null,
+    riskTier: "guarded_review",
+    shouldCreateIssue: true,
+    signalSources: ["demo"],
+    status: "planned",
+    summary: "Please do the token-heavy thing",
+    title: "Token-heavy work",
+    updatedAt: new Date().toISOString(),
+    userStatus: "planned",
+    unresolvedAssumptions: [],
+  });
+
+  const blockedClaim = await app.inject({
+    method: "POST",
+    payload: { workerName: "worker-test", workItemId: "work_token_heavy" },
+    url: "/runner/jobs/claim",
+  });
+  assert.equal(blockedClaim.statusCode, 200);
+  assert.equal(blockedClaim.json().job, null);
+  assert.equal(blockedClaim.json().reason, "token_cap_exceeded");
+  assert.equal(store.workItems[0]?.status, "planned");
+
+  const manualRun = await app.inject({ method: "POST", url: "/admin/work-items/work_token_heavy/run" });
+  assert.equal(manualRun.statusCode, 409);
+  assert.equal(manualRun.json().error, "token cap exceeded");
 
   await app.close();
 });
