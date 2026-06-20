@@ -78,6 +78,9 @@ remains the star.
 - Durable SDK installation needs public npm distribution for
   `@open-feedback-factory/sdk`. The package is prepared for npm distribution,
   but the actual publish step is on hold for Joe's explicit go.
+- The SDK-install handoff endpoint now verifies GitHub App repo access and
+  blocks truthfully on `sdk_publish_held` with no fake work item, issue, or PR
+  evidence until the package publish and worker lane are real.
 - OFF hosted control center has a Hosted Demo Alpha panel that links to the app
   and repo and derives setup readiness from `/doctor`.
 - Hosted Railway workers remain disabled for alpha.
@@ -96,7 +99,8 @@ remains the star.
 | Public SDK package exists for normal installs | Prepared, held | Package metadata/readme/dist exports and pack proof are staged; actual publish is held for Joe |
 | Clean plant-care app repo exists and starts SDK-less | Done | Sprout is live at `https://sprout-demo-chi.vercel.app` and has no OFF SDK |
 | Plant repo is connected to the OFF GitHub App | Needs live proof | Backend repo-scope verification is ready; must verify Sprout is the accessible target before mutation |
-| OFF creates a real sanitized issue or work item for SDK install | Needs work | Existing seams exist; needs plant-app proof |
+| SDK-install handoff blocks honestly when npm publish is held | Partial | `POST /admin/connect/sdk-install-pr` verifies repo access and returns `sdk_publish_held` with null work item, issue, and PR fields until live publish/worker proof exists |
+| OFF creates a real sanitized issue or work item for SDK install | Needs work | Blocked until Joe-approved npm publish and live plant-app worker proof |
 | Local host Codex CLI worker can claim hosted work after manual approval | Needs work | Requires hosted `RUNNER_TOKEN` sync and live proof |
 | Worker opens a real PR that installs SDK from npm | Needs work | Blocked on Joe-approved public package publish |
 | PR includes assumptions, checks, and cost evidence | Needs work | Must be proven in plant-app run |

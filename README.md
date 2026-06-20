@@ -88,6 +88,11 @@ The actual `npm publish --access public` step is intentionally held for Joe.
 Until that hold is lifted, any SDK-install demo that does not install from the
 public npm registry must be labeled interim.
 
+The admin SDK-install handoff endpoint is wired to stay honest while that hold
+is in place: `POST /admin/connect/sdk-install-pr` verifies GitHub App repo
+access and then returns a blocked state with no work item, issue, or PR URL
+until the SDK publish and worker/PR lane are real.
+
 Future/V2: requester-first rollout can expose a shipped feature first to the
 users or cohort who asked for it, collect lightweight feedback, watch health
 and usage, then fall back to the operator's normal rollout policy.
