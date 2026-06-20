@@ -11,6 +11,32 @@ test("sdk package can be installed outside the monorepo", () => {
   assert.deepEqual(packageJson.dependencies ?? {}, {});
 });
 
+test("sdk package manifest is staged for public npm distribution", () => {
+  const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
+    exports?: Record<string, unknown>;
+    files?: string[];
+    main?: string;
+    private?: boolean;
+    publishConfig?: { access?: string };
+    scripts?: Record<string, string>;
+    types?: string;
+  };
+
+  assert.equal(packageJson.private, false);
+  assert.equal(packageJson.main, "./dist/index.js");
+  assert.equal(packageJson.types, "./dist/index.d.ts");
+  assert.deepEqual(packageJson.exports, {
+    ".": {
+      types: "./dist/index.d.ts",
+      import: "./dist/index.js",
+    },
+  });
+  assert.deepEqual(packageJson.files, ["dist", "README.md"]);
+  assert.equal(packageJson.publishConfig?.access, "public");
+  assert.equal(packageJson.scripts?.prepack, "pnpm run build");
+  assert.equal(packageJson.scripts?.["pack:dry-run"], "npm pack --dry-run");
+});
+
 test("submitFeedback sends privacy-safe metadata", async () => {
   const requests: Array<{ body: unknown; url: string }> = [];
   const client = createOpenFeedbackClient({

@@ -18,8 +18,8 @@ DONE / PARTIAL / NOT-STARTED / DEFERRED map.
 | API | `https://api.openfeedbackfactory.com` | Feedback, admin, runner, and GitHub APIs |
 | Current proof app | `https://launchbrief-demo.vercel.app` | Verified real-SDK proof; not the final demo concept |
 | Current proof app repo | `https://github.com/joewilsonai/launchbrief-demo` | Real repo that currently imports the SDK |
-| Next demo app | TBD plant-care app URL | Clean SDK-less consumer app that stands in for a user's product |
-| Next demo app repo | TBD plant-care repo | Real repo OFF should connect, inspect, and mutate |
+| Next demo app | `https://sprout-demo-chi.vercel.app` | Clean SDK-less consumer app that stands in for a user's product |
+| Next demo app repo | `https://github.com/joewilsonai/sprout-demo` | Real repo OFF should connect, inspect, and mutate |
 
 ## Important Constraint
 
@@ -31,9 +31,9 @@ PR that installs the SDK launcher. The demo should not start from an app that is
 already wired to OFF, because that hides the most important onboarding moment.
 
 LaunchBrief has now served as a real-SDK proof, but it is not the final demo
-target. The next demo should be a clean plant-care app: clearly consumer,
-clearly labeled as a sample stand-in for a user's product, and de-emphasized so
-OFF remains the star.
+target. Sprout is the current clean plant-care app: clearly consumer, clearly
+labeled as a sample stand-in for a user's product, and de-emphasized so OFF
+remains the star.
 
 ## Demo Story
 
@@ -49,7 +49,7 @@ OFF remains the star.
    depending on the configured lane.
 8. The worker installs the SDK launcher and opens a PR.
 9. The operator reviews/merges the PR.
-10. LaunchBrief redeploys.
+10. Sprout redeploys.
 11. The user submits real feedback through the newly installed launcher.
 12. The control center shows the real feedback lifecycle, cost estimate,
     assumptions, GitHub artifacts, and any blocked/disabled states.
@@ -73,10 +73,11 @@ OFF remains the star.
 - LaunchBrief uses the real `@open-feedback-factory/sdk` at runtime and proved
   the in-app launcher path.
 - LaunchBrief is an interim proof app, not the final demo app.
-- The durable demo needs a new clean plant-care repo that starts SDK-less.
+- The durable demo now uses Sprout, a clean plant-care repo that starts
+  SDK-less.
 - Durable SDK installation needs public npm distribution for
-  `@open-feedback-factory/sdk`. The actual publish step is on hold for Joe's
-  explicit go.
+  `@open-feedback-factory/sdk`. The package is prepared for npm distribution,
+  but the actual publish step is on hold for Joe's explicit go.
 - OFF hosted control center has a Hosted Demo Alpha panel that links to the app
   and repo and derives setup readiness from `/doctor`.
 - Hosted Railway workers remain disabled for alpha.
@@ -92,12 +93,12 @@ OFF remains the star.
 | --- | --- | --- |
 | LaunchBrief real-SDK proof app builds and deploys | Done | Useful proof, but not final demo concept |
 | Control center shows repo/app/setup status without refresh | Needs work | UI exists, but final plant-app setup flow still needs proof |
-| Public SDK package exists for normal installs | Needs work | Prep package; hold publish for Joe |
-| Clean plant-care app repo exists and starts SDK-less | Not started | Next demo target |
+| Public SDK package exists for normal installs | Prepared, held | Package metadata/readme/dist exports and pack proof are staged; actual publish is held for Joe |
+| Clean plant-care app repo exists and starts SDK-less | Done | Sprout is live at `https://sprout-demo-chi.vercel.app` and has no OFF SDK |
 | Plant repo is connected to the OFF GitHub App | Not started | Must verify repo scope before mutation |
 | OFF creates a real sanitized issue or work item for SDK install | Needs work | Existing seams exist; needs plant-app proof |
 | Local host Codex CLI worker can claim hosted work after manual approval | Needs work | Requires hosted `RUNNER_TOKEN` sync and live proof |
-| Worker opens a real PR that installs SDK from npm | Needs work | Blocked on public package publish |
+| Worker opens a real PR that installs SDK from npm | Needs work | Blocked on Joe-approved public package publish |
 | PR includes assumptions, checks, and cost evidence | Needs work | Must be proven in plant-app run |
 | Merged/redeployed app sends real feedback through installed launcher | Needs work | LaunchBrief proves runtime path; plant-app flow pending |
 | Control center shows feedback lifecycle as a real routed work item | Needs work | Needs plant-app end-to-end run |

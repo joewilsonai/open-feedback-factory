@@ -77,6 +77,17 @@ Hosted trial/sandbox should let a developer connect a test or starter repo,
 install the SDK snippet, submit real feedback, watch the lifecycle, and see a
 guarded PR path without pretending that anything shipped.
 
+## SDK Package Status
+
+The web SDK package is prepared for public npm distribution under
+`@open-feedback-factory/sdk`: it builds to `packages/sdk/dist`, exports
+declaration files, has package-local install docs, and passes `npm pack`
+dry-run plus a disposable tarball import smoke test.
+
+The actual `npm publish --access public` step is intentionally held for Joe.
+Until that hold is lifted, any SDK-install demo that does not install from the
+public npm registry must be labeled interim.
+
 Future/V2: requester-first rollout can expose a shipped feature first to the
 users or cohort who asked for it, collect lightweight feedback, watch health
 and usage, then fall back to the operator's normal rollout policy.

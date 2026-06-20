@@ -20,8 +20,8 @@ status map.
 | Runner/GitHub seam tests | Done | Codex args, JSONL parsing, cost usage, GitHub App token flows, PR evidence, and branch cleanup are covered with seams/mocks |
 | Control-center UI tests | Done for current internal UI | Final plant-app onboarding state still needs tests once implemented |
 | LaunchBrief live proof | Done as interim proof | Proved real SDK runtime path; not the final demo target |
-| Plant-care demo E2E | Not started | Needs clean SDK-less app, OFF SDK-install PR, merge/redeploy, feedback request, implementation PR, release/user status |
-| Public npm SDK install test | Needs work | Must be added before claiming durable package install |
+| Plant-care demo E2E | Partial | Sprout exists and is live-gated SDK-less; still needs OFF SDK-install PR, merge/redeploy, feedback request, implementation PR, release/user status |
+| Public npm SDK install test | Partial | Local tarball install/import proof exists; public registry install remains held until Joe approves npm publish |
 | Hosted control plane to local worker proof | Needs work | Must prove hosted `RUNNER_TOKEN` sync and real local CLI claim against hosted API |
 
 ## Test Principles

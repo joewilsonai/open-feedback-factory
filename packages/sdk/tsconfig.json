@@ -1,5 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*.ts"],
-  "compilerOptions": {}
+  "include": ["src/client.ts", "src/index.ts", "src/widget.ts"],
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src"
+  }
 }
