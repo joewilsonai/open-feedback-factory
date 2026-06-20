@@ -97,6 +97,19 @@ Do not hard-code Railway public domains into product logic when a custom domain
 is configured. Use `PUBLIC_BASE_URL`, `CONTROL_CENTER_URL`, and
 `VITE_API_BASE_URL`.
 
+Hosted Vite preview services also need the API proxy pointed at the hosted API,
+not the `.env.example` localhost target. Set both values on hosted app services
+that serve browser UI:
+
+```bash
+VITE_API_BASE_URL=https://api.openfeedbackfactory.com
+VITE_DEV_API_PROXY_TARGET=https://api.openfeedbackfactory.com
+```
+
+This keeps browser requests and direct diagnostic paths such as `/doctor`
+pointed at the API service instead of `127.0.0.1:4100` inside the app
+container.
+
 ## Hosted Truth Defaults
 
 The first private hosted stack intentionally starts safe:
