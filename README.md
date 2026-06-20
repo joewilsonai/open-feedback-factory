@@ -184,6 +184,9 @@ requests.
 
 `RUNNER_TOKEN` protects `/runner/*` claim and completion routes. Docker and host
 workers read the same `.env` value and send it as `x-off-runner-token`.
+Generated host-worker commands refuse to start against a hosted API if
+`RUNNER_TOKEN` is missing, which keeps a misconfigured subscription worker from
+silently failing every claim.
 
 ## Approval And Credential Modes
 

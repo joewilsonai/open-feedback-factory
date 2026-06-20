@@ -108,7 +108,9 @@ RUNNER_WORKSPACE=/path/to/sprout-demo
 
 If the hosted API requires `RUNNER_TOKEN`, put that token in the worker's
 ignored environment file before starting the host worker. Do not paste it into
-GitHub, prompts, PRs, screenshots, or logs.
+GitHub, prompts, PRs, screenshots, or logs. Host-worker install commands fail
+fast when they point at a hosted API without `RUNNER_TOKEN` so a subscription
+worker does not appear to be running while every claim would be rejected.
 
 For repo-specific jobs such as the hosted SDK-install handoff, the claimed job
 includes a target repository. Configure `GITHUB_OWNER`, `GITHUB_REPO`, and

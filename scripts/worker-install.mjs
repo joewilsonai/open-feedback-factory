@@ -17,6 +17,14 @@ export function buildHostWorkerCommand(input = {}) {
   const secretsPath = input.secretsPath ?? path.join(root, ".off", "secrets.env");
   const runnerWorkspace = input.runnerWorkspace ?? root;
   const pathPrefix = input.pathPrefix ?? "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin";
+  const hostedTokenPreflight = [
+    'case "$WORKER_API_BASE_URL" in',
+    "http://localhost:*|http://127.0.0.1:*|http://0.0.0.0:*) ;;",
+    '*) if [ -z "${RUNNER_TOKEN:-}" ]; then',
+    'echo "RUNNER_TOKEN is required when the host worker points at a hosted API. Put it in the ignored .env file, then restart the worker." >&2; exit 1;',
+    "fi ;;",
+    "esac",
+  ].join(" ");
 
   return [
     `cd ${shellQuote(root)}`,
@@ -28,6 +36,7 @@ export function buildHostWorkerCommand(input = {}) {
     "export WORKER_RUN_ONCE=false",
     `if [ -z "\${WORKER_API_BASE_URL:-}" ] || [ "$WORKER_API_BASE_URL" = "http://api:4100" ]; then export WORKER_API_BASE_URL=${shellQuote(apiBaseUrl)}; fi`,
     `export API_BASE_URL="${envDefault("API_BASE_URL", "$WORKER_API_BASE_URL")}"`,
+    hostedTokenPreflight,
     `export RUNNER_WORKSPACE="${envDefault("RUNNER_WORKSPACE", runnerWorkspace)}"`,
     `export CODEX_SECRETS_PATH="${envDefault("CODEX_SECRETS_PATH", secretsPath)}"`,
     `export WORKER_NAME="${envDefault("WORKER_NAME", workerName)}"`,
