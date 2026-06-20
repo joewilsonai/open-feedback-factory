@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a reproducible product, API, runner, SDK, or docs bug.
+title: "[Bug]: "
+labels: ["type:bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include secrets, raw private feedback, tokens, keys, or logs with credentials.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and the expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Steps, commands, route, or workflow that shows the bug.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - SDK / app launcher
+        - API
+        - Control center
+        - Worker / runner
+        - GitHub App
+        - Release proof / user status
+        - Docs / install
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: proof
+    attributes:
+      label: Evidence
+      description: Safe logs, screenshots, or command output with secrets removed.
+    validations:
+      required: false
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed secrets, raw feedback, private user data, and credentials.
+          required: true

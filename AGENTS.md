@@ -10,6 +10,10 @@ guarded agent work -> PR/release proof -> user-visible outcome.
 If you are an agent installing or evaluating this repo from GitHub, follow
 [docs/agent-install.md](docs/agent-install.md).
 
+For contribution, security, and launch governance, follow
+[CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and
+[docs/governance.md](docs/governance.md).
+
 If you are building V1 behavior, also follow the private dogfood checklist and
 test matrix:
 
@@ -84,8 +88,8 @@ These rules must survive context loss, compaction, new agents, and new sessions.
    token is bad. Never echo or log token values.
 9. **Current Round Context:** The durable demo is an onboarding handoff: a user
    points a clean SDK-less plant-care app repo at OFF, and OFF does the rest.
-   Prepare public distribution for only `@open-feedback-factory/sdk`; keep the
-   OFF repo private. Hold the actual SDK publish for Joe.
+   `@open-feedback-factory/sdk@0.1.0` is published on public npm; keep the OFF
+   repo private until Joe explicitly approves public release.
 
 Private dogfood auth:
 

@@ -1,0 +1,44 @@
+name: Feature request
+description: Propose a product or developer-experience improvement.
+title: "[Feature]: "
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: user-problem
+    attributes:
+      label: User problem
+      description: What real user or operator problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: desired-outcome
+    attributes:
+      label: Desired outcome
+      description: What should be true when this is done?
+    validations:
+      required: true
+  - type: dropdown
+    id: autonomy
+    attributes:
+      label: Suggested automation lane
+      options:
+        - Needs human product judgment
+        - Safe agent work after review
+        - Manual implementation only
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints or guardrails
+      description: Privacy, cost, merge, release, security, or user-status constraints.
+    validations:
+      required: false
+  - type: checkboxes
+    id: truth
+    attributes:
+      label: Truthfulness
+      options:
+        - label: This request should not be marked shipped without release proof.
+          required: true
