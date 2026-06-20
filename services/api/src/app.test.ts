@@ -31,6 +31,16 @@ const config: ApiConfig = {
   codexAuthMode: "cli",
   codexRunnerMode: "disabled",
   codexSecretsPath: ".off/test-secrets.env",
+  configCompatibility: {
+    configuredVersion: 1,
+    currentVersion: 1,
+    deprecatedSettings: [],
+    migrationsRequired: [],
+    rollbackGuidance: ["Back up ignored config files before changing schema versions."],
+    securityInvariant: "Config migrations must not silently enable real execution.",
+    status: "compatible",
+    summary: "Configuration schema is compatible with this Open Feedback Factory release.",
+  },
   controlCenterUrl: "http://control.test",
   databaseUrl: "postgres://example",
   githubMode: "disabled",
@@ -1046,6 +1056,10 @@ test("doctor exposes setup wizard links", async () => {
     assert.equal(response.json().githubAppSetupUrl, "http://api.test/github/app/setup");
     assert.equal(response.json().githubWebhookUrl, "http://api.test/github/webhook");
     assert.equal(response.json().githubWebhooksEnabled, true);
+    assert.equal(response.json().configCompatibility.status, "compatible");
+    assert.equal(response.json().configCompatibility.configuredVersion, 1);
+    assert.equal(response.json().configCompatibility.currentVersion, 1);
+    assert.deepEqual(response.json().configCompatibility.migrationsRequired, []);
     assert.equal(response.json().autoMergePolicyEnabled, true);
     assert.equal(response.json().maxSafeDiffLines, 120);
     assert.deepEqual(response.json().protectedPathFragments, ["auth", "billing", "privacy"]);
@@ -1161,6 +1175,44 @@ test("admin RBAC allows read-only role but blocks policy mutation", async () => 
   assert.equal(doctor.json().adminRbacEnabled, true);
   assert.deepEqual(doctor.json().adminRoles, ["viewer", "owner"]);
   assert.doesNotMatch(JSON.stringify(doctor.json()), /viewer-test-token|owner-test-token/);
+
+  await app.close();
+});
+
+test("doctor reports config migration blockers without enabling execution", async () => {
+  const app = await buildApp({
+    config: {
+      ...config,
+      configCompatibility: {
+        configuredVersion: 0,
+        currentVersion: 1,
+        deprecatedSettings: [],
+        migrationsRequired: [
+          {
+            command: "pnpm config:migrate",
+            fromVersion: 0,
+            requiresBackup: true,
+            summary: "Migrate config from v0 to v1.",
+            toVersion: 1,
+          },
+        ],
+        rollbackGuidance: ["Restore the backup and restart OFF with real execution disabled."],
+        securityInvariant: "Migrations must not silently enable real execution.",
+        status: "migration_required",
+        summary: "Configuration is older than this OFF release.",
+      },
+    },
+    store: new MemoryStore(),
+  });
+
+  const response = await app.inject({ method: "GET", url: "/doctor" });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().configCompatibility.status, "migration_required");
+  assert.equal(response.json().configCompatibility.migrationsRequired[0].requiresBackup, true);
+  assert.equal(response.json().configCompatibility.migrationsRequired[0].command, "pnpm config:migrate");
+  assert.match(response.json().configCompatibility.securityInvariant, /must not/i);
+  assert.equal(response.json().codexRunnerMode, "disabled");
 
   await app.close();
 });

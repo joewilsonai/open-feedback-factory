@@ -3,6 +3,7 @@ export * from "./assumptions.js";
 export * from "./cadence.js";
 export * from "./clarification.js";
 export * from "./cluster.js";
+export * from "./configVersion.js";
 export * from "./cost.js";
 export * from "./playbooks.js";
 export * from "./router.js";
