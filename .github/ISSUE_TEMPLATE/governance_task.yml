@@ -1,0 +1,42 @@
+name: Governance / docs task
+description: Improve contributor, security, release, roadmap, or maintainer docs.
+title: "[Governance]: "
+labels: ["type:docs", "area:governance"]
+body:
+  - type: dropdown
+    id: governance-area
+    attributes:
+      label: Governance area
+      options:
+        - Contribution guide
+        - Code of conduct
+        - Security disclosure
+        - Threat model
+        - Release notes
+        - Public roadmap
+        - License
+        - Maintainer boundaries
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: Proposed change
+      description: What should be added or corrected?
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: Why now?
+      description: What risk or launch-readiness gap does this reduce?
+    validations:
+      required: true
+  - type: checkboxes
+    id: holds
+    attributes:
+      label: Maintainer holds
+      options:
+        - label: This does not choose a license, make the repo public, or announce a public launch without maintainer approval.
+          required: true

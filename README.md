@@ -94,6 +94,22 @@ The admin SDK-install handoff endpoint is wired to stay honest:
 real work item and sanitized GitHub issue only when prerequisites are present,
 and still returns no PR URL until a live worker actually creates one.
 
+## Governance
+
+Open-source launch governance is staged but conservative:
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) explains contribution expectations,
+  verification, and honesty requirements.
+- [SECURITY.md](SECURITY.md) defines private vulnerability reporting for the
+  dogfood alpha.
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) sets conduct expectations.
+- [docs/governance.md](docs/governance.md) captures maintainer boundaries,
+  safe agent patterns, and public-launch holds.
+- [docs/threat-model.md](docs/threat-model.md) names the core trust
+  boundaries and open security gaps.
+
+The license and public roadmap remain held for explicit maintainer approval.
+
 Future/V2: requester-first rollout can expose a shipped feature first to the
 users or cohort who asked for it, collect lightweight feedback, watch health
 and usage, then fall back to the operator's normal rollout policy.
@@ -406,6 +422,8 @@ in-progress work.
 - [Agent runner setup](docs/agent-runner-setup.md)
 - [Hosted deployment](docs/hosted-deployment.md)
 - [Hosted Demo Alpha](docs/hosted-demo-alpha.md)
+- [Governance](docs/governance.md)
+- [Threat model](docs/threat-model.md)
 - [V1 dogfood build checklist](docs/v1-dogfood-build-checklist.md)
 - [V1 test strategy](docs/v1-test-strategy.md)
 - [PRD](docs/feedback-to-feature-platform-prd.md)

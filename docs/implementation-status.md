@@ -83,6 +83,7 @@ reasons.
 | Hosted trial/sandbox path | PARTIAL | Read-only hosted trial readiness endpoint reports repo, SDK package, and worker blockers; starter repos, full trial UX, and end-to-end trial proof are not complete | 2026-06-20 |
 | Docker Compose local install | PARTIAL | Compose files and docs exist; current cycle still needs fresh end-to-end smoke after plant-demo changes | 2026-06-19 |
 | Agent install docs | PARTIAL | Existing docs work for local setup; need npm SDK and plant-demo updates once package path is real | 2026-06-19 |
+| Open-source governance docs | PARTIAL | Contribution guide, code of conduct, security policy, issue/PR templates, governance guide, threat model, and changelog starter exist; license choice, public roadmap, disclosure SLA, and public release process remain held for Joe/public launch | 2026-06-20 |
 | Secrets vault / third-party credential storage | PARTIAL | Backend encrypted integration secrets vault exists with metadata-only admin responses, doctor readiness, audit-backed storage, and missing-key blocking; provider-specific execution tools for Supabase/Vercel/Resend mutations are still pending | 2026-06-20 |
 | Playbook / methodology packs | PARTIAL | Native advisory playbook registry and admin API exist; in-product selection, execution routing, and result capture are not complete | 2026-06-20 |
 | OpenRouter / Requesty routing | DEFERRED | PRD contains adapter direction; V1 built-in runner remains Codex-only | 2026-06-19 |
