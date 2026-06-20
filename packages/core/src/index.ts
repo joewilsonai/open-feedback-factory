@@ -4,6 +4,7 @@ export * from "./cadence.js";
 export * from "./clarification.js";
 export * from "./cluster.js";
 export * from "./cost.js";
+export * from "./playbooks.js";
 export * from "./router.js";
 export * from "./sanitize.js";
 export * from "./status.js";
