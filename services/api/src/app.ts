@@ -1,5 +1,11 @@
 import cors from "@fastify/cors";
-import { type AgentAssumptionRecord, type FeedbackInput, type MergeMode, type UserFeedbackStatus } from "@open-feedback-factory/core";
+import {
+  type AgentAssumptionRecord,
+  type FeedbackInput,
+  type MergeMode,
+  type UserFeedbackStatus,
+  type WorkCadencePolicy,
+} from "@open-feedback-factory/core";
 import type { GitHubInstallationRepositoryList, GitHubIssueInput } from "@open-feedback-factory/runner";
 import type {
   ControlRoomSnapshot,
@@ -54,6 +60,7 @@ export interface AppStore {
   getMaxFeatureCostUsd(defaultCap: number): Promise<number>;
   getMergeMode(defaultMode: ApiConfig["mergeMode"]): Promise<MergeMode>;
   getMergeGuardrailPolicy(defaultPolicy: MergeGuardrailPolicy): Promise<MergeGuardrailPolicy>;
+  getWorkCadencePolicy(defaultPolicy: WorkCadencePolicy): Promise<WorkCadencePolicy>;
   getLatestWorkerHeartbeat(): Promise<WorkerHeartbeatRow | null>;
   getUserFeedbackStatus(feedbackId: string): Promise<UserFeedbackStatus | null>;
   getWorkItem(id: string): Promise<WorkItemRow | null>;
@@ -111,6 +118,7 @@ export interface AppStore {
   setMaxFeatureCostUsd(amountUsd: number, actor?: string): Promise<void>;
   setMergeMode(mode: ApiConfig["mergeMode"], actor?: string): Promise<void>;
   setMergeGuardrailPolicy(policy: MergeGuardrailPolicy, actor?: string): Promise<MergeGuardrailPolicy>;
+  setWorkCadencePolicy(policy: WorkCadencePolicy, actor?: string): Promise<WorkCadencePolicy>;
 }
 
 export interface AppGithubClient {

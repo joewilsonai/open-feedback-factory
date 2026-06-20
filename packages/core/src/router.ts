@@ -1,5 +1,6 @@
 import { clusterKeyForFeedback } from "./cluster.js";
 import { buildEndUserClarificationQuestions } from "./clarification.js";
+import { normalizeWorkCadencePolicy, thresholdCadenceNeedsMoreSignal, type WorkCadencePolicyInput } from "./cadence.js";
 import { estimateFeatureCost } from "./cost.js";
 import type {
   FeedbackCategory,
@@ -13,12 +14,15 @@ export interface RouteFeedbackInput {
   model?: string;
   sanitized: SanitizedFeedback;
   signalCount?: number;
+  workCadence?: WorkCadencePolicyInput;
 }
 
 export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
   const clusterKey = clusterKeyForFeedback(input.sanitized);
   const message = input.sanitized.sanitizedMessage.toLowerCase();
   const clarificationQuestions = buildEndUserClarificationQuestions(input.sanitized);
+  const signalCount = input.signalCount ?? 1;
+  const workCadence = normalizeWorkCadencePolicy(input.workCadence);
 
   if (input.sanitized.privacyRisk === "blocked") {
     return decision({
@@ -71,6 +75,16 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
     clusterKey === "feature.theme.dark-mode" ||
     clusterKey === "feature.theme.color-options"
   ) {
+    if (thresholdCadenceNeedsMoreSignal(workCadence, signalCount)) {
+      return needsMoreSignalDecision({
+        category: "theme",
+        clusterKey,
+        model: input.model,
+        threshold: workCadence.threshold,
+        title: titleForThemeFeature(message, clusterKey),
+      });
+    }
+
     return decision({
       action: "create_work_item",
       category: "theme",
@@ -86,6 +100,16 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
   }
 
   if (/copy|wording|label|typo|text/.test(message)) {
+    if (thresholdCadenceNeedsMoreSignal(workCadence, signalCount)) {
+      return needsMoreSignalDecision({
+        category: "copy",
+        clusterKey,
+        model: input.model,
+        threshold: workCadence.threshold,
+        title: "Improve product copy",
+      });
+    }
+
     return decision({
       action: "create_work_item",
       category: "copy",
@@ -100,6 +124,16 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
   }
 
   if (/due date|deadline|todo|task|pinned note|pin.*note|search.*note|notepad/.test(message)) {
+    if (thresholdCadenceNeedsMoreSignal(workCadence, signalCount)) {
+      return needsMoreSignalDecision({
+        category: "feature_request",
+        clusterKey,
+        model: input.model,
+        threshold: workCadence.threshold,
+        title: titleForDaybookFeature(message),
+      });
+    }
+
     return decision({
       action: "create_work_item",
       category: "feature_request",
@@ -114,8 +148,8 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
     });
   }
 
-  const signalCount = input.signalCount ?? 1;
-  if (signalCount < 2) {
+  const requiredSignalCount = workCadence.mode === "threshold" ? workCadence.threshold : 2;
+  if (signalCount < requiredSignalCount) {
     return decision({
       action: "needs_more_signal",
       category: categoryFor(message, "feature_request"),
@@ -141,6 +175,27 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
     userMessage:
       "Enough similar requests have appeared, so we queued this for a guarded implementation review. It is not shipped yet.",
     userStatus: "planned",
+  });
+}
+
+function needsMoreSignalDecision(input: {
+  category: FeedbackCategory;
+  clusterKey: string;
+  model?: string;
+  threshold: number;
+  title: string;
+}): WorkRoutingDecision {
+  return decision({
+    action: "needs_more_signal",
+    category: input.category,
+    clusterKey: input.clusterKey,
+    model: input.model,
+    riskTier: "plan_only",
+    shouldCreateIssue: false,
+    title: input.title,
+    userMessage:
+      `Thanks, we saved this request. We need more similar requests before adding it to the build queue. Current threshold: ${input.threshold}.`,
+    userStatus: "needs_more_signal",
   });
 }
 

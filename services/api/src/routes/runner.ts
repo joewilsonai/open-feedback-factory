@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { AgentAssumptionRecord } from "@open-feedback-factory/core";
+import { isWorkCadenceClaimWindowOpen, type AgentAssumptionRecord } from "@open-feedback-factory/core";
 import type { WorkItemRow } from "@open-feedback-factory/db";
 import type { AppDeps } from "../app.js";
 import { defaultCostBudget, evaluateCostBudget, remainingClaimCapUsd } from "../costBudget.js";
@@ -15,6 +15,10 @@ export async function registerRunnerRoutes(app: FastifyInstance, deps: AppDeps):
     const approvalMode = await deps.store.getApprovalMode(deps.config.approvalMode);
     if (approvalMode === "manual" && !request.body?.workItemId) {
       return { approvalMode, job: null, reason: "manual_approval_required" };
+    }
+    const workCadence = await deps.store.getWorkCadencePolicy(deps.config.workCadence);
+    if (!request.body?.workItemId && !isWorkCadenceClaimWindowOpen(workCadence)) {
+      return { approvalMode, job: null, reason: "cadence_window_closed", workCadence };
     }
 
     const costBudget = await deps.store.getCostBudget(defaultCostBudget(deps.config));

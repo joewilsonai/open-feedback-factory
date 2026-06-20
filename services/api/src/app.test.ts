@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import type { AgentAssumptionRecord, UserFeedbackStatus } from "@open-feedback-factory/core";
+import type { AgentAssumptionRecord, UserFeedbackStatus, WorkCadencePolicy } from "@open-feedback-factory/core";
 import type {
   ControlRoomSnapshot,
   CostBudgetPolicy,
@@ -45,6 +45,14 @@ const config: ApiConfig = {
   publicBaseUrl: "http://api.test",
   runnerWorkspace: "/tmp/open-feedback-factory-test",
   sdkPackagePublished: false,
+  workCadence: {
+    hourUtc: 9,
+    interval: "weekly",
+    mode: "immediate",
+    scheduledDayOfMonth: 1,
+    scheduledDayOfWeek: 1,
+    threshold: 2,
+  },
 };
 const sampleOnlyFeedbackSources = new Set(["demo_seed", "sample_seed"]);
 
@@ -75,6 +83,7 @@ class MemoryStore implements AppStore {
     workerKind: string;
     workerName: string;
   } | null = null;
+  workCadence: WorkCadencePolicy | null = null;
   workItems: WorkItemRow[] = [];
 
   async createFeedbackIntake(input: Parameters<AppStore["createFeedbackIntake"]>[0]) {
@@ -265,6 +274,15 @@ class MemoryStore implements AppStore {
 
   async getMergeGuardrailPolicy(defaultPolicy: MergeGuardrailPolicy) {
     return this.mergeGuardrails ?? defaultPolicy;
+  }
+
+  async getWorkCadencePolicy(defaultPolicy: WorkCadencePolicy) {
+    return this.workCadence ?? defaultPolicy;
+  }
+
+  async setWorkCadencePolicy(policy: WorkCadencePolicy) {
+    this.workCadence = policy;
+    return policy;
   }
 
   async setMergeGuardrailPolicy(policy: MergeGuardrailPolicy) {
@@ -827,6 +845,53 @@ test("API promotes repeated below-threshold feedback from demand memory", async 
   assert.equal(cluster.signalCount, 2);
   assert.equal(cluster.activeWorkItemId, second.json().workItemId);
   assert.equal(cluster.latestStatus, "planned");
+
+  await app.close();
+});
+
+test("admin threshold cadence holds feedback until enough users request it", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({ config, store });
+
+  const update = await app.inject({
+    method: "PATCH",
+    payload: { mode: "threshold", threshold: 3 },
+    url: "/admin/settings/work-cadence",
+  });
+  assert.equal(update.statusCode, 200);
+  assert.equal(update.json().workCadence.mode, "threshold");
+  assert.equal(update.json().workCadence.threshold, 3);
+
+  for (const userId of ["user-demand-1", "user-demand-2"]) {
+    const response = await app.inject({
+      method: "POST",
+      payload: {
+        message: "Please add dark mode to settings",
+        source: "demo",
+        userId,
+      },
+      url: "/sdk/feedback",
+    });
+
+    assert.equal(response.statusCode, 201);
+    assert.equal(response.json().workItemId, null);
+    assert.equal(response.json().status.state, "needs_more_signal");
+  }
+
+  const third = await app.inject({
+    method: "POST",
+    payload: {
+      message: "Please add dark mode to settings",
+      source: "demo",
+      userId: "user-demand-3",
+    },
+    url: "/sdk/feedback",
+  });
+
+  assert.equal(third.statusCode, 201);
+  assert.match(third.json().workItemId, /^work_/);
+  assert.equal(third.json().status.state, "planned");
+  assert.equal(store.workItems.length, 1);
 
   await app.close();
 });
@@ -2104,6 +2169,63 @@ test("safe auto-merge requires explicit agent-reviewed merge mode", async () => 
   assert.equal(agentReviewedMode.statusCode, 409);
   assert.equal(agentReviewedMode.json().evaluation.reasons.includes("merge_mode_implement_only"), false);
   assert.equal(agentReviewedMode.json().evaluation.reasons.includes("github_merge_mode_not_enabled"), true);
+
+  await app.close();
+});
+
+test("scheduled cadence blocks automatic claim but allows targeted operator runs", async () => {
+  const store = new MemoryStore();
+  store.approvalMode = "auto";
+  const closedHour = (new Date().getUTCHours() + 1) % 24;
+  store.workItems.push({
+    autoMergeEligible: false,
+    category: "feature_request",
+    clusterKey: "feature.daybook.search",
+    costEstimate: { amountUsd: 1.5, confidence: "low", currency: "USD", model: "gpt-5.5", reason: "test" },
+    createdAt: new Date().toISOString(),
+    githubIssueUrl: null,
+    githubPrUrl: null,
+    id: "work_scheduled",
+    latestActualCost: null,
+    latestBranchName: null,
+    riskTier: "safe_auto_merge",
+    shouldCreateIssue: true,
+    signalSources: ["demo"],
+    status: "planned",
+    summary: "Please add note search",
+    title: "Add note search",
+    updatedAt: new Date().toISOString(),
+    unresolvedAssumptions: [],
+    userStatus: "planned",
+  });
+  const app = await buildApp({ config, store });
+
+  const update = await app.inject({
+    method: "PATCH",
+    payload: { hourUtc: closedHour, interval: "daily", mode: "scheduled", threshold: 2 },
+    url: "/admin/settings/work-cadence",
+  });
+  assert.equal(update.statusCode, 200);
+  assert.equal(update.json().workCadence.mode, "scheduled");
+
+  const automaticClaim = await app.inject({
+    method: "POST",
+    payload: { workerName: "worker-test" },
+    url: "/runner/jobs/claim",
+  });
+  assert.equal(automaticClaim.statusCode, 200);
+  assert.equal(automaticClaim.json().job, null);
+  assert.equal(automaticClaim.json().reason, "cadence_window_closed");
+  assert.equal(store.workItems[0]?.status, "planned");
+
+  const targetedClaim = await app.inject({
+    method: "POST",
+    payload: { workerName: "worker-test", workItemId: "work_scheduled" },
+    url: "/runner/jobs/claim",
+  });
+  assert.equal(targetedClaim.statusCode, 200);
+  assert.equal(targetedClaim.json().job.id, "work_scheduled");
+  assert.equal(store.workItems[0]?.status, "in_progress");
 
   await app.close();
 });

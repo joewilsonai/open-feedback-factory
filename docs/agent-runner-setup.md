@@ -42,6 +42,33 @@ Use this for first installs, demos, and risky repos.
 `WORKER_WORK_ITEM_ID`. Auto mode does not create a worker by itself. It only
 allows a running worker to claim work.
 
+## Work Cadence Modes
+
+Cadence controls when eligible feedback becomes runnable work:
+
+- `immediate`: eligible feedback can create a queued work item as soon as it is
+  received.
+- `threshold`: eligible feedback stays grouped as demand memory until the
+  configured number of similar requests is reached.
+- `scheduled`: eligible feedback can queue, but untargeted automatic worker
+  claims pause outside the configured UTC daily, weekly, or monthly batch
+  window. A targeted operator run with `WORKER_WORK_ITEM_ID` can still run
+  outside that window.
+
+Local defaults can be set with:
+
+```bash
+WORK_CADENCE_MODE=immediate
+WORK_CADENCE_THRESHOLD=2
+WORK_CADENCE_INTERVAL=weekly
+WORK_CADENCE_DAY_OF_WEEK=1
+WORK_CADENCE_DAY_OF_MONTH=1
+WORK_CADENCE_HOUR_UTC=9
+```
+
+The control plane stores live cadence changes in `policy_configs`, so API
+restart is not required after an operator updates cadence through the admin API.
+
 ## Codex Auth Modes
 
 `cli` uses the signed-in Codex CLI subscription path on the worker machine.

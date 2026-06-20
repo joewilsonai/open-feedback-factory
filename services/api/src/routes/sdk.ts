@@ -34,10 +34,12 @@ export async function registerSdkRoutes(app: FastifyInstance, deps: AppDeps): Pr
     const sanitized = sanitizeFeedback(feedback);
     const clusterKey = clusterKeyForFeedback(sanitized);
     const previousSignalCount = await deps.store.getFeedbackClusterSignalCount(clusterKey);
+    const workCadence = await deps.store.getWorkCadencePolicy(deps.config.workCadence);
     const decision = routeFeedback({
       model: "gpt-5.5",
       sanitized,
       signalCount: previousSignalCount + 1,
+      workCadence,
     });
     const intake = await deps.store.createFeedbackIntake({ decision, feedback, sanitized });
     let githubIssueError: string | null = null;

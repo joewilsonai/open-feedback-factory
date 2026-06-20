@@ -67,6 +67,7 @@ reasons.
 | Automatic deployment/release detection | PARTIAL | Product rule exists; V1 still relies on explicit release marker unless app-specific deployment proof is added | 2026-06-19 |
 | User notification / follow-up endpoint | DONE | User-safe statuses are returned and admin not-planned/blocked decisions update matching requesters | 2026-06-19 |
 | Outbound email/SMS/webhook notifications | NOT-STARTED | Later integration work | 2026-06-19 |
+| Execution cadence modes | PARTIAL | Backend supports immediate, threshold, and scheduled policies through env/config, admin API, stored policy, threshold-based SDK intake, and scheduled automatic claim pausing; control-center queue visualization is still future UI work | 2026-06-20 |
 | Feature usage attribution | DONE | SDK and API can record usage events and control-center counts | 2026-06-19 |
 | Daybook local demo app | DONE | Real local demo app exercises SDK/API path | 2026-06-19 |
 | LaunchBrief proof app | DONE | Live app uses the real SDK at runtime; this is proof only, not the final demo concept | 2026-06-19 |

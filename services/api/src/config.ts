@@ -1,3 +1,10 @@
+import {
+  normalizeWorkCadencePolicy,
+  type WorkCadenceInterval,
+  type WorkCadenceMode,
+  type WorkCadencePolicy,
+} from "@open-feedback-factory/core";
+
 export interface ApiConfig {
   adminToken?: string;
   apiHost: string;
@@ -34,6 +41,7 @@ export interface ApiConfig {
   runnerWorkspace: string;
   sdkRateLimitMax?: number;
   sdkPackagePublished: boolean;
+  workCadence: WorkCadencePolicy;
 }
 
 export function readConfig(env = process.env): ApiConfig {
@@ -80,6 +88,14 @@ export function readConfig(env = process.env): ApiConfig {
     runnerWorkspace: env.RUNNER_WORKSPACE ?? process.cwd(),
     sdkRateLimitMax: Number(env.SDK_RATE_LIMIT_MAX ?? 120),
     sdkPackagePublished: env.SDK_PACKAGE_PUBLISHED === "true",
+    workCadence: normalizeWorkCadencePolicy({
+      hourUtc: numberFromEnv(env.WORK_CADENCE_HOUR_UTC),
+      interval: workCadenceIntervalFromEnv(env.WORK_CADENCE_INTERVAL),
+      mode: workCadenceModeFromEnv(env.WORK_CADENCE_MODE),
+      scheduledDayOfMonth: numberFromEnv(env.WORK_CADENCE_DAY_OF_MONTH),
+      scheduledDayOfWeek: numberFromEnv(env.WORK_CADENCE_DAY_OF_WEEK),
+      threshold: numberFromEnv(env.WORK_CADENCE_THRESHOLD),
+    }),
   };
 }
 
@@ -95,4 +111,20 @@ function mergeModeFromEnv(value: string | undefined): ApiConfig["mergeMode"] {
 
 function stripTrailingSlash(value: string): string {
   return value.endsWith("/") ? value.slice(0, -1) : value;
+}
+
+function workCadenceModeFromEnv(value: string | undefined): WorkCadenceMode | undefined {
+  if (value === "immediate" || value === "scheduled" || value === "threshold") return value;
+  return undefined;
+}
+
+function workCadenceIntervalFromEnv(value: string | undefined): WorkCadenceInterval | undefined {
+  if (value === "daily" || value === "monthly" || value === "weekly") return value;
+  return undefined;
+}
+
+function numberFromEnv(value: string | undefined): number | undefined {
+  if (value === undefined || value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }

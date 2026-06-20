@@ -1,4 +1,13 @@
-import { evaluateAutoMerge, routeFeedback, sanitizeFeedback, type FeedbackInput, type WorkRiskTier } from "@open-feedback-factory/core";
+import {
+  evaluateAutoMerge,
+  normalizeWorkCadencePolicy,
+  routeFeedback,
+  sanitizeFeedback,
+  type FeedbackInput,
+  type WorkCadenceInterval,
+  type WorkCadenceMode,
+  type WorkRiskTier,
+} from "@open-feedback-factory/core";
 import type { AgentRunLedgerRow, WorkItemDetail, WorkItemRow } from "@open-feedback-factory/db";
 import { CodexCliRunner } from "@open-feedback-factory/runner";
 import type { GitHubAccessibleRepository, GitHubIssueInput, GitHubPullRequestEvidence } from "@open-feedback-factory/runner";
@@ -36,6 +45,7 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
       maxFeatureCostUsd: costBudget.maxFeatureCostUsd,
       mergeGuardrails: await deps.store.getMergeGuardrailPolicy(defaultMergeGuardrailPolicy(deps)),
       mergeMode: await deps.store.getMergeMode(deps.config.mergeMode),
+      workCadence: await deps.store.getWorkCadencePolicy(deps.config.workCadence),
     };
   });
 
@@ -73,6 +83,35 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
 
     await deps.store.setCodexAuthMode(codexAuthMode, "control-center");
     return { codexAuthMode, status: "updated" };
+  });
+
+  app.patch<{ Body: Record<string, unknown> }>("/admin/settings/work-cadence", async (request, reply) => {
+    const current = await deps.store.getWorkCadencePolicy(deps.config.workCadence);
+    const mode = workCadenceModeFromBody(request.body.mode);
+    if (request.body.mode !== undefined && !mode) {
+      return reply.code(400).send({ error: "mode must be immediate, threshold, or scheduled" });
+    }
+    const interval = workCadenceIntervalFromBody(request.body.interval);
+    if (request.body.interval !== undefined && !interval) {
+      return reply.code(400).send({ error: "interval must be daily, weekly, or monthly" });
+    }
+
+    const workCadence = normalizeWorkCadencePolicy({
+      ...current,
+      ...(mode ? { mode } : {}),
+      ...(interval ? { interval } : {}),
+      ...(request.body.threshold !== undefined ? { threshold: Number(request.body.threshold) } : {}),
+      ...(request.body.hourUtc !== undefined ? { hourUtc: Number(request.body.hourUtc) } : {}),
+      ...(request.body.scheduledDayOfWeek !== undefined
+        ? { scheduledDayOfWeek: Number(request.body.scheduledDayOfWeek) }
+        : {}),
+      ...(request.body.scheduledDayOfMonth !== undefined
+        ? { scheduledDayOfMonth: Number(request.body.scheduledDayOfMonth) }
+        : {}),
+    });
+
+    const saved = await deps.store.setWorkCadencePolicy(workCadence, "control-center");
+    return { status: "updated", workCadence: saved };
   });
 
   app.put<{ Body: { apiKey?: unknown } }>("/admin/settings/codex-api-key", async (request, reply) => {
@@ -812,6 +851,16 @@ function defaultMergeGuardrailPolicy(deps: AppDeps) {
     maxSafeDiffLines: deps.config.maxSafeDiffLines,
     protectedPathFragments: deps.config.protectedPathFragments,
   };
+}
+
+function workCadenceModeFromBody(value: unknown): WorkCadenceMode | null {
+  if (value === "immediate" || value === "scheduled" || value === "threshold") return value;
+  return null;
+}
+
+function workCadenceIntervalFromBody(value: unknown): WorkCadenceInterval | null {
+  if (value === "daily" || value === "monthly" || value === "weekly") return value;
+  return null;
 }
 
 function normalizeProtectedPathFragments(value: unknown): string[] {

@@ -19,6 +19,32 @@ test("routeFeedback sends dark mode through the safe implementation lane", () =>
   assert.match(decision.userMessage, /not shipped yet/i);
 });
 
+test("routeFeedback holds safe work until threshold cadence has enough demand", () => {
+  const sanitized = sanitizeFeedback({
+    message: "Please add dark mode to settings",
+    source: "demo",
+  });
+
+  const first = routeFeedback({
+    sanitized,
+    signalCount: 1,
+    workCadence: { mode: "threshold", threshold: 3 },
+  });
+  const third = routeFeedback({
+    sanitized,
+    signalCount: 3,
+    workCadence: { mode: "threshold", threshold: 3 },
+  });
+
+  assert.equal(first.action, "needs_more_signal");
+  assert.equal(first.shouldCreateIssue, false);
+  assert.equal(first.userStatus, "needs_more_signal");
+  assert.match(first.userMessage, /need more similar requests/i);
+  assert.equal(third.action, "create_work_item");
+  assert.equal(third.shouldCreateIssue, true);
+  assert.equal(third.userStatus, "planned");
+});
+
 test("routeFeedback names theme color requests distinctly from dark mode", () => {
   const sanitized = sanitizeFeedback({
     message: "create multiple themes with different colors the user can pick from, they should work in both light and dark mode.",
