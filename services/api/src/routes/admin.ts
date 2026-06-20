@@ -1,7 +1,7 @@
 import { evaluateAutoMerge, type WorkRiskTier } from "@open-feedback-factory/core";
 import type { AgentRunLedgerRow, WorkItemDetail, WorkItemRow } from "@open-feedback-factory/db";
 import { CodexCliRunner } from "@open-feedback-factory/runner";
-import type { GitHubPullRequestEvidence } from "@open-feedback-factory/runner";
+import type { GitHubAccessibleRepository, GitHubPullRequestEvidence } from "@open-feedback-factory/runner";
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
 import { buildGithubClient } from "../githubClient.js";
@@ -64,6 +64,8 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
     codexApiKey: await removeCodexApiKey(deps.config),
     status: "removed",
   }));
+
+  app.get("/admin/github/repositories", async () => githubRepositoryScopeStatus(deps));
 
   app.patch<{ Body: { maxFeatureCostUsd?: unknown } }>("/admin/settings/cost-cap", async (request, reply) => {
     const amount = Number(request.body?.maxFeatureCostUsd);
@@ -383,6 +385,93 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
 
     return { cleanupOutput, evaluation, evidence, mergeOutput, runId, status: "merged" };
   });
+}
+
+async function githubRepositoryScopeStatus(deps: AppDeps) {
+  const target = githubTarget(deps);
+  const appConfigured = Boolean(
+    deps.config.githubAppId && (deps.config.githubAppPrivateKey || deps.config.githubAppPrivateKeyPath),
+  );
+  const installationConfigured = Boolean(deps.config.githubAppInstallationId);
+  const base = {
+    appConfigured,
+    installationConfigured,
+    mode: deps.config.githubMode,
+    repositories: [] as GitHubAccessibleRepository[],
+    target,
+    targetAccessible: false,
+    totalCount: 0,
+    truncated: false,
+  };
+
+  if (deps.config.githubMode !== "app") {
+    return {
+      ...base,
+      missing: ["github_app_mode"],
+      status: "disabled",
+      summary: "GitHub App mode is not enabled.",
+    };
+  }
+
+  const missing = [];
+  if (!appConfigured) missing.push("github_app_credentials");
+  if (missing.length > 0) {
+    return {
+      ...base,
+      missing,
+      status: "not_configured",
+      summary: "GitHub App setup is incomplete.",
+    };
+  }
+
+  try {
+    const github = deps.githubClient ?? buildGithubClient(deps.config);
+    const list = await github.listInstallationRepositories();
+    const targetFullName = target.fullName.toLowerCase();
+    const repositories = list.repositories.map(safeGithubRepository);
+    const targetAccessible = repositories.some((repository) => repository.fullName.toLowerCase() === targetFullName);
+    return {
+      ...base,
+      missing: targetAccessible ? [] : ["github_target_repository_scope"],
+      repositories,
+      status: targetAccessible ? "connected" : "target_missing",
+      summary: targetAccessible
+        ? `GitHub App can access ${target.fullName}.`
+        : `GitHub App is installed but cannot access ${target.fullName}.`,
+      targetAccessible,
+      totalCount: list.totalCount,
+      truncated: list.truncated,
+    };
+  } catch {
+    return {
+      ...base,
+      missing: ["github_repository_scope_verification"],
+      status: "error",
+      summary: "GitHub App repository scope could not be verified.",
+    };
+  }
+}
+
+function githubTarget(deps: AppDeps) {
+  const owner = deps.config.githubOwner;
+  const repo = deps.config.githubRepo;
+  return {
+    fullName: `${owner}/${repo}`,
+    owner,
+    repo,
+    url: `https://github.com/${owner}/${repo}`,
+  };
+}
+
+function safeGithubRepository(repository: GitHubAccessibleRepository): GitHubAccessibleRepository {
+  return {
+    fullName: repository.fullName,
+    htmlUrl: repository.htmlUrl,
+    name: repository.name,
+    owner: repository.owner,
+    permissions: repository.permissions,
+    private: repository.private,
+  };
 }
 
 function storedAutoMergeEvidence(detail: WorkItemDetail, maxSafeDiffLines: number): AutoMergeEvidence {

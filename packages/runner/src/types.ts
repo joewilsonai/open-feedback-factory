@@ -88,3 +88,18 @@ export interface GitHubPullRequestEvidence {
   headBranch: string | null;
   headSha: string | null;
 }
+
+export interface GitHubAccessibleRepository {
+  fullName: string;
+  htmlUrl: string | null;
+  name: string;
+  owner: string | null;
+  permissions: Record<string, boolean>;
+  private: boolean;
+}
+
+export interface GitHubInstallationRepositoryList {
+  repositories: GitHubAccessibleRepository[];
+  totalCount: number;
+  truncated: boolean;
+}

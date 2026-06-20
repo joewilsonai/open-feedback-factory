@@ -361,6 +361,13 @@ The API also exposes `/github/app/manifest`, `/github/app/setup`,
 `/github/app/installed`, and `/github/webhook` for the App installation and
 webhook flow.
 
+After App credentials are configured, operators can verify the installation
+scope with `GET /admin/github/repositories` using the admin token. That endpoint
+lists the repositories visible to the GitHub App installation, reports whether
+the configured `GITHUB_OWNER/GITHUB_REPO` target is accessible, and returns a
+safe blocked/error summary instead of raw provider errors. It never returns the
+App private key, installation token, webhook secret, or admin token.
+
 GitHub webhook deliveries are recorded by delivery id so redelivered events are
 acknowledged without duplicating artifacts or agent-run records. GitHub
 artifacts are idempotent per work item/type/URL, and generated runner branches
