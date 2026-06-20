@@ -46,6 +46,7 @@ reasons.
 | SDK CDN distribution | NOT-STARTED | Planned option only | 2026-06-19 |
 | API service | DONE | SDK, admin, runner, GitHub, health, doctor, release, rate-limit, and guardrail tests pass | 2026-06-19 |
 | Admin token gate | DONE | `/admin/*` requires token when configured and `/doctor` never exposes token values | 2026-06-19 |
+| Admin RBAC role gates | PARTIAL | Token-to-role server gates now protect admin read, work, repo, policy, merge, and secret actions; full hosted multi-user identity/team RBAC is still future work | 2026-06-20 |
 | Runner token gate | DONE | `/runner/*` requires token when configured and worker sends configured token | 2026-06-19 |
 | Public rate limits | DONE | SDK/admin/runner/GitHub route groups have deterministic tests | 2026-06-19 |
 | Control center core UI | DONE | Operator UI shows setup, lifecycle, queue, cost, worker connection liveness, Codex auth lanes, and honest states | 2026-06-19 |

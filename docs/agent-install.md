@@ -65,6 +65,18 @@ The control center asks for `ADMIN_TOKEN` when `/doctor` reports
 `adminAuthRequired=true`. Workers send `RUNNER_TOKEN` automatically when the
 value is present in `.env`.
 
+For team or demo operator access, `ADMIN_ROLE_TOKENS` can add scoped admin
+tokens without sharing the owner token:
+
+```bash
+ADMIN_ROLE_TOKENS=viewer:long-read-only-token,operator:long-work-token,admin:long-policy-token
+```
+
+The roles are enforced server-side: `viewer` can read admin state, `operator`
+can run work-item actions, `admin` can change policy/repo/merge settings, and
+only `owner` can rotate secrets. `ADMIN_TOKEN`, when set, remains the owner
+token. Do not paste any of these tokens into issues, PRs, screenshots, or chat.
+
 Wait for the stack:
 
 ```bash
