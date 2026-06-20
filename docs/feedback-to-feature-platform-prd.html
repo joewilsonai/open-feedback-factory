@@ -1126,6 +1126,7 @@ trackFeatureOutcome({
 </ul>
 <p>Webhook handling must be idempotent. Duplicate GitHub deliveries with the same delivery id should be acknowledged but must not create duplicate artifacts, agent runs, costs, release markers, or user notifications. GitHub artifact storage should also be idempotent by work item, artifact type, and URL.</p>
 <p>V1 should use a GitHub App for installable GitHub integration, narrow permissions, webhook delivery, and auditable merge behavior. <code>GITHUB_MODE=gh</code> can remain an internal dogfood fallback for local testing, but the product should not teach broad personal access tokens as the normal install path.</p>
+<p>The control plane must verify repository scope before mutation. After a GitHub App is installed, an admin-only endpoint should use an installation access token to fetch the repositories visible to that installation, confirm the selected target repo is accessible, and return only safe repository metadata plus human-readable blocked/error states. It must never return App private keys, installation tokens, webhook secrets, admin tokens, or raw provider error text.</p>
 <h3 id="8-5-agent-runner"><a class="heading-anchor" href="#8-5-agent-runner" aria-label="Link to 8.5 Agent Runner">#</a>8.5 Agent Runner</h3>
 <p>The runner performs implementation work in an isolated workspace.</p>
 <p>Supported V1 runner modes:</p>
@@ -2549,8 +2550,8 @@ feedback-factory demo</code></pre>
 <li>Railway hosts the API, control center, legacy/internal Daybook SDK smoke app,</li>
 <p>disabled-by-default worker, and Postgres.</p>
 <li>Vercel hosts the public landing page from <code>apps/landing</code>.</li>
-<li>Vercel hosts the LaunchBrief demo app, which intentionally starts without</li>
-<p>the OFF SDK installed so the demo can show the SDK-install PR.</p>
+<li>Vercel hosts the Sprout demo app, which intentionally starts without the OFF</li>
+<p>SDK installed so the demo can show the SDK-install PR.</p>
 <li>Hostinger owns DNS for <code>openfeedbackfactory.com</code>, <code>openfeedbackfactory.dev</code>,</li>
 <p>and <code>openfeedbackfactory.org</code>.</p>
 </ul>
@@ -2561,7 +2562,8 @@ feedback-factory demo</code></pre>
 <li><code>app.openfeedbackfactory.com</code>: hosted control center;</li>
 <li><code>api.openfeedbackfactory.com</code>: hosted API;</li>
 <li><code>demo.openfeedbackfactory.com</code>: legacy/internal Daybook demo;</li>
-<li><code>launchbrief-demo.vercel.app</code>: clean hosted LaunchBrief demo app;</li>
+<li><code>sprout-demo-chi.vercel.app</code>: clean hosted Sprout demo app;</li>
+<li><code>launchbrief-demo.vercel.app</code>: interim real-SDK proof app;</li>
 <li><code>openfeedbackfactory.dev</code>: developer docs or redirect later;</li>
 <li><code>openfeedbackfactory.org</code>: redirect later.</li>
 </ul>
@@ -2605,8 +2607,8 @@ feedback-factory demo</code></pre>
 <p>credential-backed actions.</p>
 <li>Agent playbook registry with native product, engineering, design, security,</li>
 <p>QA, release, docs, and retro/learning playbooks.</p>
-<li>Real LaunchBrief hosted demo app and repo that start without the OFF SDK so</li>
-<p>the product can demo a real SDK-install PR.</p>
+<li>Real Sprout hosted demo app and repo that start without the OFF SDK so the</li>
+<p>product can demo a real SDK-install PR.</p>
 <li>Real Daybook local/internal SDK smoke app and seed scenario with no fake PRs,</li>
 <p>fake costs, fake releases, or fake shipped states.</p>
 <li>Sample seed/reset path that keeps dry-run installs honest and prevents</li>
@@ -2946,7 +2948,7 @@ feedback-factory demo</code></pre>
 <li>Tests pass.</li>
 <li>Reviewer, check, policy, cost, and provenance gates pass.</li>
 <li>The PR merges only if the configured merge mode allows it.</li>
-<li>Vercel redeploys LaunchBrief from the repo.</li>
+<li>Vercel redeploys Sprout from the repo.</li>
 <li>The user submits real feedback through the newly installed launcher.</li>
 <li>The control center receives and clusters the request.</li>
 <li>The system estimates cost, routes the item, records assumptions, and shows</li>

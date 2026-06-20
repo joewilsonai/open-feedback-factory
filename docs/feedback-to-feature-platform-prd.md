@@ -2433,8 +2433,8 @@ Private V1 hosted architecture:
 - Railway hosts the API, control center, legacy/internal Daybook SDK smoke app,
   disabled-by-default worker, and Postgres.
 - Vercel hosts the public landing page from `apps/landing`.
-- Vercel hosts the LaunchBrief demo app, which intentionally starts without
-  the OFF SDK installed so the demo can show the SDK-install PR.
+- Vercel hosts the Sprout demo app, which intentionally starts without the OFF
+  SDK installed so the demo can show the SDK-install PR.
 - Hostinger owns DNS for `openfeedbackfactory.com`, `openfeedbackfactory.dev`,
   and `openfeedbackfactory.org`.
 
@@ -2445,7 +2445,8 @@ Target domain map:
 - `app.openfeedbackfactory.com`: hosted control center;
 - `api.openfeedbackfactory.com`: hosted API;
 - `demo.openfeedbackfactory.com`: legacy/internal Daybook demo;
-- `launchbrief-demo.vercel.app`: clean hosted LaunchBrief demo app;
+- `sprout-demo-chi.vercel.app`: clean hosted Sprout demo app;
+- `launchbrief-demo.vercel.app`: interim real-SDK proof app;
 - `openfeedbackfactory.dev`: developer docs or redirect later;
 - `openfeedbackfactory.org`: redirect later.
 
@@ -2498,8 +2499,8 @@ actually connected.
   credential-backed actions.
 - Agent playbook registry with native product, engineering, design, security,
   QA, release, docs, and retro/learning playbooks.
-- Real LaunchBrief hosted demo app and repo that start without the OFF SDK so
-  the product can demo a real SDK-install PR.
+- Real Sprout hosted demo app and repo that start without the OFF SDK so the
+  product can demo a real SDK-install PR.
 - Real Daybook local/internal SDK smoke app and seed scenario with no fake PRs,
   fake costs, fake releases, or fake shipped states.
 - Sample seed/reset path that keeps dry-run installs honest and prevents
@@ -3136,7 +3137,7 @@ Scenario:
 8. Tests pass.
 9. Reviewer, check, policy, cost, and provenance gates pass.
 10. The PR merges only if the configured merge mode allows it.
-11. Vercel redeploys LaunchBrief from the repo.
+11. Vercel redeploys Sprout from the repo.
 12. The user submits real feedback through the newly installed launcher.
 13. The control center receives and clusters the request.
 14. The system estimates cost, routes the item, records assumptions, and shows

@@ -3,8 +3,8 @@ import "./styles.css";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 const adminTokenStorageKey = "open-feedback-factory.admin-token";
-const launchBriefAppUrl = "https://launchbrief-demo.vercel.app";
-const launchBriefRepoUrl = "https://github.com/joewilsonai/launchbrief-demo";
+const sproutAppUrl = "https://sprout-demo-chi.vercel.app";
+const sproutRepoUrl = "https://github.com/joewilsonai/sprout-demo";
 const liveSyncIntervalMs = 4_000;
 
 interface Snapshot {
@@ -862,23 +862,23 @@ function HostedDemoAlphaPanel(props: { doctor: Doctor | null; feedbackCount: num
     <div className="panel hosted-demo-panel">
       <div className="panel-heading">
         <p className="eyebrow">Hosted demo alpha</p>
-        <h2>LaunchBrief repo loop</h2>
+        <h2>Sprout repo loop</h2>
       </div>
       <p className="mode-note">
-        LaunchBrief is the repo-connected demo app. The launcher was installed through a real PR, and new suggestions
-        should now create real sanitized work items in this control center.
+        Sprout is the clean SDK-less demo app. The next proof is OFF connecting this repo and opening a real
+        SDK-install PR; LaunchBrief remains the interim proof that the SDK can run in production.
       </p>
       <div className="demo-link-row">
-        <a className="button-link primary" href={launchBriefAppUrl}>
-          Open LaunchBrief
+        <a className="button-link primary" href={sproutAppUrl}>
+          Open Sprout
         </a>
-        <a className="button-link" href={launchBriefRepoUrl}>
+        <a className="button-link" href={sproutRepoUrl}>
           View repo
         </a>
       </div>
       <div className="demo-stage-grid">
-        <DemoStage title="App" state="Live" detail="LaunchBrief is deployed on Vercel" tone="ready" />
-        <DemoStage title="Repo" state="Live" detail="Private GitHub repo created" tone="ready" />
+        <DemoStage title="App" state="Live" detail="Sprout is deployed on Vercel" tone="ready" />
+        <DemoStage title="Repo" state="Live" detail="Clean private GitHub repo" tone="ready" />
         <DemoStage
           title="GitHub App"
           state={githubReady ? "Ready" : "Needed"}
@@ -891,7 +891,7 @@ function HostedDemoAlphaPanel(props: { doctor: Doctor | null; feedbackCount: num
           detail={workerReady ? "Can run approved work" : "Prepared but not attached"}
           tone={workerReady ? "ready" : "blocked"}
         />
-        <DemoStage title="Feedback launcher" state="Installed" detail="Added through a real LaunchBrief PR" tone="ready" />
+        <DemoStage title="Feedback launcher" state="Missing" detail="Waiting for a real SDK-install PR" tone="waiting" />
         <DemoStage
           title="Feedback loop"
           state={props.feedbackCount ? "Active" : "Waiting"}
