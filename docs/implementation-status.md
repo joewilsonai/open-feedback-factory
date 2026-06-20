@@ -51,7 +51,7 @@ reasons.
 | Control center final plant-app onboarding UI | PARTIAL | Existing UI needs the clean plant-care repo flow, SDK-missing detection, and install-PR status proof | 2026-06-19 |
 | Realtime / no-refresh control center behavior | PARTIAL | Current UI is improved; final realtime lifecycle proof for plant-app demo still needed | 2026-06-19 |
 | GitHub App manifest/setup/webhook seam | DONE | Manifest, localhost/public tunnel behavior, callback, webhooks, signature verification, and artifact storage are tested | 2026-06-19 |
-| GitHub App scoped live demo install | PARTIAL | Needs visual/API proof that the final plant-care demo repo is the scoped installation target before mutation | 2026-06-19 |
+| GitHub App scoped live demo install | PARTIAL | Backend/admin repo-scope verification is tested via `/admin/github/repositories`; still needs live proof that the final plant-care demo repo is the scoped installation target before mutation | 2026-06-20 |
 | Sanitized GitHub issue creation | DONE | API/runner tests cover sanitized issue bodies and duplicate prevention | 2026-06-19 |
 | Branch and PR creation | PARTIAL | Runner/GitHub client seams exist; next durable proof is a real SDK-install PR in the clean plant-care repo | 2026-06-19 |
 | Branch cleanup | DONE | GitHub client branch cleanup path is tested | 2026-06-19 |

@@ -146,6 +146,9 @@ Expected result after credentials are configured:
 
 - `githubMode` is `app` when `.env` contains `GITHUB_MODE=app`.
 - `githubAppConfigured` is `true`.
+- `GET /admin/github/repositories` with the configured admin token returns
+  `status: "connected"` and `targetAccessible: true` for the intended repo
+  before live mutation is enabled.
 - The Funnel root serves the demo app, `/ops` serves the control center, and
   `/sdk`, `/admin`, `/runner`, `/doctor`, `/health`, and `/github` route to the API.
 

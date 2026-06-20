@@ -539,6 +539,13 @@ permissions, webhook delivery, and auditable merge behavior. `GITHUB_MODE=gh`
 can remain an internal dogfood fallback for local testing, but the product
 should not teach broad personal access tokens as the normal install path.
 
+The control plane must verify repository scope before mutation. After a GitHub
+App is installed, an admin-only endpoint should use an installation access token
+to fetch the repositories visible to that installation, confirm the selected
+target repo is accessible, and return only safe repository metadata plus
+human-readable blocked/error states. It must never return App private keys,
+installation tokens, webhook secrets, admin tokens, or raw provider error text.
+
 ### 8.5 Agent Runner
 
 The runner performs implementation work in an isolated workspace.

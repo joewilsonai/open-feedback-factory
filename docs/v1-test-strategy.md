@@ -83,8 +83,10 @@ status map.
   auth-required booleans and never returns token values.
 - GitHub webhook requests without a valid signature are rejected and do not
   write artifacts.
-- GitHub App tokens are installation-scoped, and the product refuses to mutate
-  repos outside the configured installation/repo.
+- GitHub App tokens are installation-scoped, the admin API can verify the
+  installation's accessible repository list without leaking credentials or raw
+  provider errors, and the product refuses to mutate repos outside the
+  configured installation/repo.
 - Prompt-injection text inside feedback is treated as user content and cannot
   make the runner request raw feedback, expose secrets, change policy, or bypass
   guardrails.

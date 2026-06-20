@@ -360,6 +360,91 @@ test("GitHubClient app mode reads pull request evidence", async () => {
   );
 });
 
+test("GitHubClient app mode lists accessible installation repositories", async () => {
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
+  const calls: Array<{ method: string; url: string }> = [];
+  const fetchImpl: typeof fetch = async (url, init) => {
+    calls.push({
+      method: init?.method ?? "GET",
+      url: String(url),
+    });
+    if (String(url).endsWith("/app/installations/456/access_tokens")) {
+      return jsonResponse({ expires_at: new Date(Date.now() + 120_000).toISOString(), token: "installation-token" });
+    }
+    if (String(url).endsWith("/installation/repositories?per_page=100&page=1")) {
+      assert.equal((init?.headers as Record<string, string>).authorization, "Bearer installation-token");
+      return jsonResponse({
+        repositories: [
+          {
+            full_name: "owner/alpha",
+            html_url: "https://github.com/owner/alpha",
+            name: "alpha",
+            owner: { login: "owner" },
+            permissions: { pull: true, push: true },
+            private: true,
+          },
+        ],
+        total_count: 2,
+      });
+    }
+    if (String(url).endsWith("/installation/repositories?per_page=100&page=2")) {
+      assert.equal((init?.headers as Record<string, string>).authorization, "Bearer installation-token");
+      return jsonResponse({
+        repositories: [
+          {
+            full_name: "owner/beta",
+            html_url: "https://github.com/owner/beta",
+            name: "beta",
+            owner: { login: "owner" },
+            permissions: { pull: true, push: false },
+            private: false,
+          },
+        ],
+        total_count: 2,
+      });
+    }
+    return new Response("not found", { status: 404 });
+  };
+
+  const client = new GitHubClient({
+    appId: "123",
+    appPrivateKey: normalizePrivateKey(pem.replace(/\n/g, "\\n")),
+    cwd: "/repo",
+    fetch: fetchImpl,
+    installationId: "456",
+    mode: "app",
+    owner: "owner",
+    repo: "repo",
+  });
+
+  const repositories = await client.listInstallationRepositories();
+
+  assert.equal(repositories.totalCount, 2);
+  assert.equal(repositories.truncated, false);
+  assert.deepEqual(
+    repositories.repositories.map((repository) => ({
+      fullName: repository.fullName,
+      htmlUrl: repository.htmlUrl,
+      owner: repository.owner,
+      private: repository.private,
+      push: repository.permissions.push,
+    })),
+    [
+      { fullName: "owner/alpha", htmlUrl: "https://github.com/owner/alpha", owner: "owner", private: true, push: true },
+      { fullName: "owner/beta", htmlUrl: "https://github.com/owner/beta", owner: "owner", private: false, push: false },
+    ],
+  );
+  assert.deepEqual(
+    calls.map((call) => `${call.method} ${call.url}`),
+    [
+      "POST https://api.github.com/app/installations/456/access_tokens",
+      "GET https://api.github.com/installation/repositories?per_page=100&page=1",
+      "GET https://api.github.com/installation/repositories?per_page=100&page=2",
+    ],
+  );
+});
+
 function jsonResponse(value: unknown): Response {
   return new Response(JSON.stringify(value), {
     headers: { "content-type": "application/json" },

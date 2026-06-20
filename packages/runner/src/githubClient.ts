@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { spawn } from "node:child_process";
 import type {
   GitHubCheckSummary,
+  GitHubInstallationRepositoryList,
   GitHubCommentInput,
   GitHubIssueInput,
   GitHubPullRequestEvidence,
@@ -227,6 +228,35 @@ export class GitHubClient {
     };
   }
 
+  async listInstallationRepositories(): Promise<GitHubInstallationRepositoryList> {
+    if (this.mode() !== "app") {
+      throw new Error("GitHub App repository listing requires GitHub App mode");
+    }
+
+    const repositories = [];
+    let totalCount = 0;
+    let page = 1;
+    let truncated = false;
+
+    while (page <= 10) {
+      const response = await this.appRequest<{ repositories?: Array<Record<string, unknown>>; total_count?: number }>(
+        `/installation/repositories?per_page=100&page=${page}`,
+      );
+      const pageRepositories = arrayFrom(response.repositories).map(repositoryFromGitHub).filter((repo) => repo.fullName);
+      repositories.push(...pageRepositories);
+      totalCount = numberFrom(response.total_count);
+
+      if (pageRepositories.length === 0 || repositories.length >= totalCount) break;
+      page += 1;
+    }
+
+    if (totalCount > repositories.length) {
+      truncated = true;
+    }
+
+    return { repositories, totalCount, truncated };
+  }
+
   async cleanupBranch(branchName: string): Promise<string> {
     if (this.mode() === "gh") {
       return runGit(this.options.cwd, ["push", "origin", "--delete", branchName]);
@@ -386,6 +416,18 @@ function fileSummaryFromGitHub(file: Record<string, unknown>): GitHubPullRequest
   };
 }
 
+function repositoryFromGitHub(repository: Record<string, unknown>) {
+  const owner = recordFrom(repository.owner);
+  return {
+    fullName: String(repository.full_name ?? ""),
+    htmlUrl: typeof repository.html_url === "string" ? repository.html_url : null,
+    name: String(repository.name ?? ""),
+    owner: typeof owner.login === "string" ? owner.login : null,
+    permissions: booleanRecordFrom(repository.permissions),
+    private: repository.private === true,
+  };
+}
+
 function arrayFrom(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object")) : [];
 }
@@ -396,6 +438,15 @@ function recordFrom(value: unknown): Record<string, unknown> {
 
 function numberFrom(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function booleanRecordFrom(value: unknown): Record<string, boolean> {
+  const record = recordFrom(value);
+  const output: Record<string, boolean> = {};
+  for (const [key, entry] of Object.entries(record)) {
+    if (typeof entry === "boolean") output[key] = entry;
+  }
+  return output;
 }
 
 function githubNumberFromReference(value: string): string {

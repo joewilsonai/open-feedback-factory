@@ -95,7 +95,7 @@ remains the star.
 | Control center shows repo/app/setup status without refresh | Needs work | UI exists, but final plant-app setup flow still needs proof |
 | Public SDK package exists for normal installs | Prepared, held | Package metadata/readme/dist exports and pack proof are staged; actual publish is held for Joe |
 | Clean plant-care app repo exists and starts SDK-less | Done | Sprout is live at `https://sprout-demo-chi.vercel.app` and has no OFF SDK |
-| Plant repo is connected to the OFF GitHub App | Not started | Must verify repo scope before mutation |
+| Plant repo is connected to the OFF GitHub App | Needs live proof | Backend repo-scope verification is ready; must verify Sprout is the accessible target before mutation |
 | OFF creates a real sanitized issue or work item for SDK install | Needs work | Existing seams exist; needs plant-app proof |
 | Local host Codex CLI worker can claim hosted work after manual approval | Needs work | Requires hosted `RUNNER_TOKEN` sync and live proof |
 | Worker opens a real PR that installs SDK from npm | Needs work | Blocked on Joe-approved public package publish |

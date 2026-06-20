@@ -979,6 +979,154 @@ test("admin routes require the configured admin token without leaking it through
   await app.close();
 });
 
+test("admin GitHub repository scope endpoint verifies the configured target repo", async () => {
+  const app = await buildApp({
+    config: {
+      ...config,
+      adminToken: "admin-test-token",
+      githubAppId: "app-123",
+      githubAppInstallationId: "install-456",
+      githubAppPrivateKey: "-----BEGIN PRIVATE KEY-----\\nprivate-secret\\n-----END PRIVATE KEY-----",
+      githubMode: "app",
+      githubOwner: "owner",
+      githubRepo: "alpha",
+    },
+    githubClient: {
+      listInstallationRepositories: async () => ({
+        repositories: [
+          {
+            fullName: "owner/alpha",
+            htmlUrl: "https://github.com/owner/alpha",
+            name: "alpha",
+            owner: "owner",
+            permissions: { pull: true, push: true },
+            private: true,
+          },
+          {
+            fullName: "owner/beta",
+            htmlUrl: "https://github.com/owner/beta",
+            name: "beta",
+            owner: "owner",
+            permissions: { pull: true, push: false },
+            private: false,
+          },
+        ],
+        totalCount: 2,
+        truncated: false,
+      }),
+    },
+    store: new MemoryStore(),
+  });
+
+  const blocked = await app.inject({ method: "GET", url: "/admin/github/repositories" });
+  assert.equal(blocked.statusCode, 401);
+  assert.equal(blocked.json().error, "admin_auth_required");
+
+  const allowed = await app.inject({
+    headers: { authorization: "Bearer admin-test-token" },
+    method: "GET",
+    url: "/admin/github/repositories",
+  });
+  const body = allowed.json();
+
+  assert.equal(allowed.statusCode, 200);
+  assert.equal(body.status, "connected");
+  assert.equal(body.mode, "app");
+  assert.equal(body.appConfigured, true);
+  assert.equal(body.installationConfigured, true);
+  assert.equal(body.targetAccessible, true);
+  assert.deepEqual(body.target, {
+    fullName: "owner/alpha",
+    owner: "owner",
+    repo: "alpha",
+    url: "https://github.com/owner/alpha",
+  });
+  assert.deepEqual(
+    body.repositories.map((repository: Record<string, unknown>) => repository.fullName),
+    ["owner/alpha", "owner/beta"],
+  );
+  assert.equal(body.totalCount, 2);
+  assert.equal(body.truncated, false);
+  assert.equal(body.summary, "GitHub App can access owner/alpha.");
+  assert.doesNotMatch(JSON.stringify(body), /private-secret|install-456|admin-test-token/);
+
+  await app.close();
+});
+
+test("admin GitHub repository scope endpoint works when installation id is resolved by the client", async () => {
+  const app = await buildApp({
+    config: {
+      ...config,
+      githubAppId: "app-123",
+      githubAppPrivateKey: "-----BEGIN PRIVATE KEY-----\\nprivate-secret\\n-----END PRIVATE KEY-----",
+      githubMode: "app",
+      githubOwner: "owner",
+      githubRepo: "alpha",
+    },
+    githubClient: {
+      listInstallationRepositories: async () => ({
+        repositories: [
+          {
+            fullName: "owner/alpha",
+            htmlUrl: "https://github.com/owner/alpha",
+            name: "alpha",
+            owner: "owner",
+            permissions: { pull: true, push: true },
+            private: true,
+          },
+        ],
+        totalCount: 1,
+        truncated: false,
+      }),
+    },
+    store: new MemoryStore(),
+  });
+
+  const response = await app.inject({ method: "GET", url: "/admin/github/repositories" });
+  const body = response.json();
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.status, "connected");
+  assert.equal(body.installationConfigured, false);
+  assert.equal(body.targetAccessible, true);
+  assert.deepEqual(body.missing, []);
+
+  await app.close();
+});
+
+test("admin GitHub repository scope endpoint degrades without leaking provider errors", async () => {
+  const app = await buildApp({
+    config: {
+      ...config,
+      githubAppId: "app-123",
+      githubAppInstallationId: "install-456",
+      githubAppPrivateKey: "private-secret",
+      githubMode: "app",
+      githubOwner: "owner",
+      githubRepo: "alpha",
+    },
+    githubClient: {
+      listInstallationRepositories: async () => {
+        throw new Error("GitHub App request failed 401: Bearer installation-token sk-test-secret");
+      },
+    },
+    store: new MemoryStore(),
+  });
+
+  const response = await app.inject({ method: "GET", url: "/admin/github/repositories" });
+  const body = response.json();
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.status, "error");
+  assert.equal(body.targetAccessible, false);
+  assert.deepEqual(body.repositories, []);
+  assert.deepEqual(body.missing, ["github_repository_scope_verification"]);
+  assert.equal(body.summary, "GitHub App repository scope could not be verified.");
+  assert.doesNotMatch(JSON.stringify(body), /installation-token|sk-test-secret|private-secret|Bearer/);
+
+  await app.close();
+});
+
 test("runner routes require the configured runner token", async () => {
   const store = new MemoryStore();
   store.approvalMode = "auto";
