@@ -1,12 +1,14 @@
 import { randomUUID } from "node:crypto";
 import {
   buildAssumptionRecord,
+  normalizeWorkCadencePolicy,
   buildUserStatus,
   type AgentAssumptionRecord,
   type FeatureCostEstimate,
   type FeedbackInput,
   type MergeMode,
   type SanitizedFeedback,
+  type WorkCadencePolicy,
   type UserClarificationQuestion,
   type UserFeedbackState,
   type UserFeedbackStatus,
@@ -1459,6 +1461,47 @@ export class OpenFeedbackStore {
       maxSafeDiffLines: positiveIntegerFromValue(value.maxSafeDiffLines) ?? defaultPolicy.maxSafeDiffLines,
       protectedPathFragments: nonEmptyStringArray(value.protectedPathFragments, defaultPolicy.protectedPathFragments),
     };
+  }
+
+  async getWorkCadencePolicy(defaultPolicy: WorkCadencePolicy): Promise<WorkCadencePolicy> {
+    const result = await this.pool.query<{ value: Record<string, unknown> | null }>(
+      `select value
+       from policy_configs
+       where key = 'work_cadence'
+       limit 1`,
+    );
+    return normalizeWorkCadencePolicy({
+      ...defaultPolicy,
+      ...recordFromRow(result.rows[0]?.value),
+    });
+  }
+
+  async setWorkCadencePolicy(policy: WorkCadencePolicy, actor = "operator"): Promise<WorkCadencePolicy> {
+    const normalized = normalizeWorkCadencePolicy(policy);
+    const client = await this.pool.connect();
+    try {
+      await client.query("begin");
+      await client.query(
+        `insert into policy_configs (id, key, value)
+         values ($1, 'work_cadence', $2)
+         on conflict (key) do update
+         set value = excluded.value,
+             updated_at = now()`,
+        [`policy_${randomUUID()}`, JSON.stringify(normalized)],
+      );
+      await client.query(
+        `insert into audit_events (id, actor, event, target_type, target_id, metadata)
+         values ($1, $2, 'work_cadence_updated', 'policy_config', 'work_cadence', $3)`,
+        [`audit_${randomUUID()}`, actor, JSON.stringify(normalized)],
+      );
+      await client.query("commit");
+      return normalized;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async setMergeGuardrailPolicy(policy: MergeGuardrailPolicy, actor = "operator"): Promise<MergeGuardrailPolicy> {

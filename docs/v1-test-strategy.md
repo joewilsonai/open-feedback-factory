@@ -41,8 +41,8 @@ status map.
 
 | Area | Required coverage |
 | --- | --- |
-| Core policy | Sanitization, clustering, routing, demand thresholds, cost estimates, status copy, auto-merge gates, assumption blocking, learning-informed router decisions that preserve hard gates |
-| API | SDK feedback, user-safe status, feature usage, admin config, control-room snapshots, explicit not-planned/blocked decisions, demand-memory promotion, work-item evidence ledger, runner claims, release markers, GitHub webhooks, learning-event writes |
+| Core policy | Sanitization, clustering, routing, demand thresholds, execution cadence policy, cost estimates, status copy, auto-merge gates, assumption blocking, learning-informed router decisions that preserve hard gates |
+| API | SDK feedback, user-safe status, feature usage, admin config, control-room snapshots, explicit not-planned/blocked decisions, demand-memory promotion, cadence mode updates, work-item evidence ledger, runner claims, release markers, GitHub webhooks, learning-event writes |
 | Database | Migrations, feedback, clusters, signal counts, work items, work-item evidence detail, agent runs, assumptions, learning events, costs, GitHub artifacts, releases, notifications, usage, audit events, workspace scope, RLS policies when enabled |
 | Security | Workspace/tenant isolation, RBAC, raw-feedback permissions, admin token gate, runner token gate, secret masking/storage, webhook signatures, prompt injection, SSRF/tunnel URL rejection, GitHub App installation boundaries, path traversal, command injection, branch-name injection, SQL injection, CSRF/CORS, rate limits, replay/idempotency, package-script sandboxing, token scope, audit tamper resistance, retention/delete |
 | SDK | Feedback submission, floating suggestion launcher, status polling, feature usage, privacy-safe metadata |
