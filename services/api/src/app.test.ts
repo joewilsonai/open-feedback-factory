@@ -1385,6 +1385,122 @@ test("admin GitHub repository scope endpoint degrades without leaking provider e
   await app.close();
 });
 
+test("admin hosted trial readiness reports blockers without creating fake work", async () => {
+  const app = await buildApp({ config, store: new MemoryStore() });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/admin/hosted-trial/readiness?repositoryFullName=owner/alpha",
+  });
+  const body = response.json();
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.mode, "hosted_trial");
+  assert.equal(body.status, "blocked");
+  assert.equal(body.repositoryFullName, "owner/alpha");
+  assert.deepEqual(body.missing, ["github_app_mode", "sdk_publish_held", "worker_offline"]);
+  assert.equal(body.steps.some((step: { id: string; status: string }) => step.id === "repo_access" && step.status === "blocked"), true);
+  assert.equal(body.steps.some((step: { id: string; status: string }) => step.id === "sdk_package" && step.status === "blocked"), true);
+  assert.equal(body.steps.some((step: { id: string; status: string }) => step.id === "worker" && step.status === "blocked"), true);
+  assert.equal("workItemId" in body, false);
+  assert.equal("issueUrl" in body, false);
+  assert.equal("prUrl" in body, false);
+  assert.doesNotMatch(JSON.stringify(body), /shipped|merged|completed/i);
+
+  await app.close();
+});
+
+test("admin hosted trial readiness uses the read-only RBAC gate", async () => {
+  const app = await buildApp({
+    config: {
+      ...config,
+      adminRoleTokens: [
+        { role: "viewer", token: "viewer-test-token" },
+        { role: "owner", token: "owner-test-token" },
+      ],
+    },
+    store: new MemoryStore(),
+  });
+
+  const blocked = await app.inject({
+    method: "GET",
+    url: "/admin/hosted-trial/readiness?repositoryFullName=owner/alpha",
+  });
+  assert.equal(blocked.statusCode, 401);
+  assert.equal(blocked.json().error, "admin_auth_required");
+
+  const allowed = await app.inject({
+    headers: { "x-off-admin-token": "viewer-test-token" },
+    method: "GET",
+    url: "/admin/hosted-trial/readiness?repositoryFullName=owner/alpha",
+  });
+  assert.equal(allowed.statusCode, 200);
+  assert.equal(allowed.json().mode, "hosted_trial");
+  assert.equal(allowed.json().status, "blocked");
+  assert.doesNotMatch(JSON.stringify(allowed.json()), /viewer-test-token|owner-test-token/);
+
+  await app.close();
+});
+
+test("admin hosted trial readiness becomes ready only when repo SDK and worker are live", async () => {
+  const store = new MemoryStore();
+  store.workerHeartbeat = {
+    codexAuthMode: "cli",
+    lastSeenAt: new Date().toISOString(),
+    runnerMode: "codex",
+    status: "idle",
+    workerKind: "host",
+    workerName: "test-worker",
+  };
+  const app = await buildApp({
+    config: {
+      ...config,
+      codexRunnerMode: "codex",
+      githubAppId: "app-123",
+      githubAppPrivateKey: "private-secret",
+      githubMode: "app",
+      githubOwner: "owner",
+      githubRepo: "alpha",
+      sdkPackagePublished: true,
+    },
+    githubClient: {
+      listInstallationRepositories: async () => ({
+        repositories: [
+          {
+            fullName: "owner/alpha",
+            htmlUrl: "https://github.com/owner/alpha",
+            name: "alpha",
+            owner: "owner",
+            permissions: { pull: true, push: true },
+            private: true,
+          },
+        ],
+        totalCount: 1,
+        truncated: false,
+      }),
+    },
+    store,
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/admin/hosted-trial/readiness?repositoryFullName=owner/alpha",
+  });
+  const body = response.json();
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.status, "ready");
+  assert.equal(body.stage, "ready_for_sdk_install");
+  assert.deepEqual(body.missing, []);
+  assert.equal(body.steps.every((step: { status: string }) => step.status === "ready"), true);
+  assert.equal(body.workerConnection.status, "online");
+  assert.equal(body.github.targetAccessible, true);
+  assert.equal(body.sdkPackagePublished, true);
+  assert.doesNotMatch(JSON.stringify(body), /private-secret|installation-token|sk-test-secret/);
+
+  await app.close();
+});
+
 test("admin connect SDK install handoff blocks while public SDK publish is held", async () => {
   const app = await buildApp({
     config: {

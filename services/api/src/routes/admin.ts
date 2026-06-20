@@ -211,6 +211,15 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
       "OFF-native playbooks are available as advisory execution/review methods. They cannot loosen policy, access secrets, merge, ship, or notify users by themselves.",
   }));
 
+  app.get<{ Querystring: { repositoryFullName?: unknown } }>("/admin/hosted-trial/readiness", async (request, reply) => {
+    const target = githubTargetFromFullName(request.query?.repositoryFullName, deps);
+    if (!target) {
+      return reply.code(400).send({ error: "repositoryFullName must look like owner/repo" });
+    }
+
+    return hostedTrialReadiness(deps, target);
+  });
+
   app.post<{ Body: { repositoryFullName?: unknown } }>("/admin/connect/sdk-install-pr", async (request, reply) => {
     const target = githubTargetFromFullName(request.body?.repositoryFullName, deps);
     if (!target) {
@@ -660,6 +669,87 @@ async function githubRepositoryScopeStatus(deps: AppDeps, target = githubTarget(
       summary: "GitHub App repository scope could not be verified.",
     };
   }
+}
+
+async function hostedTrialReadiness(deps: AppDeps, target: ReturnType<typeof githubTarget>) {
+  const github = await githubRepositoryScopeStatus(deps, target);
+  const workerHeartbeat = await deps.store.getLatestWorkerHeartbeat();
+  const workerConnection = buildWorkerConnection(workerHeartbeat);
+  const sdkMissing = deps.config.sdkPackagePublished ? [] : ["sdk_publish_held"];
+  const workerMissing =
+    deps.config.codexRunnerMode === "codex" && workerConnection.status === "online" ? [] : ["worker_offline"];
+  const missing = uniqueStrings([...(github.missing ?? []), ...sdkMissing, ...workerMissing]);
+  const stage = hostedTrialStage({
+    githubReady: github.targetAccessible,
+    sdkReady: deps.config.sdkPackagePublished,
+    workerReady: workerMissing.length === 0,
+  });
+
+  return {
+    github,
+    mode: "hosted_trial",
+    missing,
+    repositoryFullName: target.fullName,
+    sdkPackagePublished: deps.config.sdkPackagePublished,
+    stage,
+    status: missing.length === 0 ? "ready" : "blocked",
+    steps: [
+      {
+        blocking: !github.targetAccessible,
+        id: "repo_access",
+        label: "Connect repository",
+        status: github.targetAccessible ? "ready" : "blocked",
+        summary: github.targetAccessible
+          ? `GitHub App can access ${target.fullName}.`
+          : `Connect ${target.fullName} to the OFF GitHub App before SDK installation.`,
+      },
+      {
+        blocking: !deps.config.sdkPackagePublished,
+        id: "sdk_package",
+        label: "Publish SDK package",
+        status: deps.config.sdkPackagePublished ? "ready" : "blocked",
+        summary: deps.config.sdkPackagePublished
+          ? "The public @open-feedback-factory/sdk package is available for a truthful install PR."
+          : "The public SDK package is not marked published, so OFF will not claim an npm install PR.",
+      },
+      {
+        blocking: workerMissing.length > 0,
+        id: "worker",
+        label: "Attach worker",
+        status: workerMissing.length === 0 ? "ready" : "blocked",
+        summary:
+          workerMissing.length === 0
+            ? "A live worker is connected and can claim hosted trial work."
+            : "A live worker is not connected; OFF can queue work but must not claim PR creation.",
+      },
+      {
+        blocking: false,
+        id: "sdk_install_handoff",
+        label: "Request SDK install",
+        status: missing.length === 0 ? "ready" : "waiting",
+        summary:
+          missing.length === 0
+            ? "Ready to queue a real SDK-install work item and sanitized GitHub issue."
+            : "SDK-install handoff waits until blockers clear; no issue, PR, merge, or release is implied.",
+      },
+    ],
+    summary:
+      missing.length === 0
+        ? "Hosted trial is ready for a real SDK-install handoff. No work has been created by this read-only check."
+        : "Hosted trial has blockers. This read-only check did not create work, issues, PRs, costs, or release proof.",
+    workerConnection,
+  };
+}
+
+function hostedTrialStage(input: { githubReady: boolean; sdkReady: boolean; workerReady: boolean }) {
+  if (!input.githubReady) return "connect_repository";
+  if (!input.sdkReady) return "publish_sdk";
+  if (!input.workerReady) return "attach_worker";
+  return "ready_for_sdk_install";
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return Array.from(new Set(values));
 }
 
 function githubTarget(deps: AppDeps) {

@@ -79,6 +79,7 @@ reasons.
 | Full plant-app feedback-to-feature demo | NOT-STARTED | Needs repo connect, SDK-install PR, merge/redeploy, beta feedback, agent PR, release proof, user status, and usage attribution | 2026-06-19 |
 | Hosted landing page | DONE | `openfeedbackfactory.com` is live with current OFF brand | 2026-06-19 |
 | Hosted API/control center stack | PARTIAL | Hosted services exist; SDK-install claim includes target-repo metadata and worker blocks repo mismatches; final demo still needs plant-app flow and local-worker claim proof | 2026-06-20 |
+| Hosted trial/sandbox path | PARTIAL | Read-only hosted trial readiness endpoint reports repo, SDK package, and worker blockers; starter repos, full trial UX, and end-to-end trial proof are not complete | 2026-06-20 |
 | Docker Compose local install | PARTIAL | Compose files and docs exist; current cycle still needs fresh end-to-end smoke after plant-demo changes | 2026-06-19 |
 | Agent install docs | PARTIAL | Existing docs work for local setup; need npm SDK and plant-demo updates once package path is real | 2026-06-19 |
 | Secrets vault / third-party credential storage | PARTIAL | Backend encrypted integration secrets vault exists with metadata-only admin responses, doctor readiness, audit-backed storage, and missing-key blocking; provider-specific execution tools for Supabase/Vercel/Resend mutations are still pending | 2026-06-20 |
