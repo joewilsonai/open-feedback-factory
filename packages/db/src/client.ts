@@ -872,7 +872,10 @@ export class OpenFeedbackStore {
       if (githubPrUrl) {
         await client.query(
           `insert into github_artifacts (id, work_item_id, artifact_type, url, artifact_number, metadata)
-           values ($1, $2, 'pull_request', $3, $4, $5)`,
+           values ($1, $2, 'pull_request', $3, $4, $5)
+           on conflict (work_item_id, artifact_type, url) do update
+           set artifact_number = coalesce(github_artifacts.artifact_number, excluded.artifact_number),
+               metadata = github_artifacts.metadata || excluded.metadata`,
           [
             `gh_${randomUUID()}`,
             input.workItemId,
