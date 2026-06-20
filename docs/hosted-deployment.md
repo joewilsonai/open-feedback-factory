@@ -45,6 +45,9 @@ The local hosted admin token is stored outside git at:
 ```
 
 Do not commit this file. `.off/` is ignored by git.
+For hosted demo operators, prefer scoped `ADMIN_ROLE_TOKENS` over sharing the
+owner token. Keep role tokens in Railway variables or an external secrets
+manager, not in repo docs or PR comments.
 
 ## Intended Domain Map
 

@@ -5,7 +5,15 @@ import {
   type WorkCadencePolicy,
 } from "@open-feedback-factory/core";
 
+export type AdminRole = "admin" | "operator" | "owner" | "viewer";
+
+export interface AdminRoleToken {
+  role: AdminRole;
+  token: string;
+}
+
 export interface ApiConfig {
+  adminRoleTokens: AdminRoleToken[];
   adminToken?: string;
   apiHost: string;
   apiPort: number;
@@ -51,6 +59,7 @@ export function readConfig(env = process.env): ApiConfig {
   const railwayPublicUrl = env.RAILWAY_PUBLIC_DOMAIN ? `https://${env.RAILWAY_PUBLIC_DOMAIN}` : undefined;
 
   return {
+    adminRoleTokens: parseAdminRoleTokens(env.ADMIN_ROLE_TOKENS),
     adminToken: env.ADMIN_TOKEN || undefined,
     apiHost: env.API_HOST ?? (runningOnRailway ? "0.0.0.0" : "127.0.0.1"),
     apiPort: Number(apiPort),
@@ -129,4 +138,24 @@ function numberFromEnv(value: string | undefined): number | undefined {
   if (value === undefined || value === "") return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function parseAdminRoleTokens(value: string | undefined): AdminRoleToken[] {
+  if (!value) return [];
+  const tokens: AdminRoleToken[] = [];
+  for (const entry of value.split(",")) {
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+    const separator = trimmed.includes("=") ? "=" : ":";
+    const [rawRole, ...rawTokenParts] = trimmed.split(separator);
+    const role = adminRoleFromValue(rawRole?.trim());
+    const token = rawTokenParts.join(separator).trim();
+    if (role && token.length >= 8) tokens.push({ role, token });
+  }
+  return tokens;
+}
+
+function adminRoleFromValue(value: string | undefined): AdminRole | null {
+  if (value === "admin" || value === "operator" || value === "owner" || value === "viewer") return value;
+  return null;
 }

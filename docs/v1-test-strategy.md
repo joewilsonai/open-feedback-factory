@@ -80,8 +80,10 @@ status map.
 - Non-owner roles cannot rotate secrets, enable auto-merge, broaden protected
   paths, raise cost caps, toggle the kill switch, or weaken policy.
 - When configured, `ADMIN_TOKEN` is required for `/admin/*` routes and
-  `RUNNER_TOKEN` is required for `/runner/*` routes; `/doctor` exposes only
-  auth-required booleans and never returns token values.
+  `RUNNER_TOKEN` is required for `/runner/*` routes; optional
+  `ADMIN_ROLE_TOKENS` must be resolved server-side rather than trusting client
+  role headers; `/doctor` exposes only auth-required booleans/role names and
+  never returns token values.
 - GitHub webhook requests without a valid signature are rejected and do not
   write artifacts.
 - GitHub App tokens are installation-scoped, the admin API can verify the

@@ -24,6 +24,7 @@ import { buildSanitizedGithubIssueInput } from "./routes/sdk.js";
 const config: ApiConfig = {
   apiHost: "127.0.0.1",
   apiPort: 4100,
+  adminRoleTokens: [],
   approvalMode: "manual",
   autoMergeEnabled: false,
   codexApiKeyConfigured: false,
@@ -1109,6 +1110,57 @@ test("admin routes require the configured admin token without leaking it through
   assert.equal(doctor.statusCode, 200);
   assert.equal(doctor.json().adminAuthRequired, true);
   assert.equal("adminToken" in doctor.json(), false);
+
+  await app.close();
+});
+
+test("admin RBAC allows read-only role but blocks policy mutation", async () => {
+  const app = await buildApp({
+    config: {
+      ...config,
+      adminRoleTokens: [
+        { role: "viewer", token: "viewer-test-token" },
+        { role: "owner", token: "owner-test-token" },
+      ],
+    },
+    store: new MemoryStore(),
+  });
+
+  const read = await app.inject({
+    headers: { "x-off-admin-token": "viewer-test-token" },
+    method: "GET",
+    url: "/admin/settings",
+  });
+  assert.equal(read.statusCode, 200);
+
+  const denied = await app.inject({
+    headers: {
+      "x-off-admin-role": "owner",
+      "x-off-admin-token": "viewer-test-token",
+    },
+    method: "PATCH",
+    payload: { approvalMode: "auto" },
+    url: "/admin/settings/approval-mode",
+  });
+  assert.equal(denied.statusCode, 403);
+  assert.equal(denied.json().error, "admin_permission_denied");
+  assert.equal(denied.json().requiredPermission, "policy:write");
+  assert.doesNotMatch(JSON.stringify(denied.json()), /viewer-test-token|owner-test-token/);
+
+  const allowed = await app.inject({
+    headers: { authorization: "Bearer owner-test-token" },
+    method: "PATCH",
+    payload: { approvalMode: "auto" },
+    url: "/admin/settings/approval-mode",
+  });
+  assert.equal(allowed.statusCode, 200);
+  assert.equal(allowed.json().approvalMode, "auto");
+
+  const doctor = await app.inject({ method: "GET", url: "/doctor" });
+  assert.equal(doctor.json().adminAuthRequired, true);
+  assert.equal(doctor.json().adminRbacEnabled, true);
+  assert.deepEqual(doctor.json().adminRoles, ["viewer", "owner"]);
+  assert.doesNotMatch(JSON.stringify(doctor.json()), /viewer-test-token|owner-test-token/);
 
   await app.close();
 });
