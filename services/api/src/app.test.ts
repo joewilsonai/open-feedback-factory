@@ -1239,6 +1239,26 @@ test("admin GitHub repository scope endpoint verifies the configured target repo
   await app.close();
 });
 
+test("admin exposes native playbook registry without run evidence", async () => {
+  const app = await buildApp({ config, store: new MemoryStore() });
+
+  const response = await app.inject({ method: "GET", url: "/admin/playbooks" });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().status, "available");
+  assert.equal(response.json().playbooks.length, 10);
+  assert.equal(response.json().playbooks[0].id, "feedback-interviewer");
+  assert.equal(response.json().playbooks.some((playbook: { canImplement?: boolean }) => playbook.canImplement), true);
+  assert.equal(response.json().playbooks.every((playbook: { source?: string }) => playbook.source === "off_native"), true);
+  assert.equal("runId" in response.json(), false);
+  assert.equal("agentRun" in response.json(), false);
+  assert.equal("passed" in response.json(), false);
+  assert.equal("completedAt" in response.json(), false);
+  assert.equal("shippedAt" in response.json(), false);
+
+  await app.close();
+});
+
 test("admin GitHub repository scope endpoint works when installation id is resolved by the client", async () => {
   const app = await buildApp({
     config: {

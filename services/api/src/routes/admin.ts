@@ -1,5 +1,6 @@
 import {
   evaluateAutoMerge,
+  listPlaybooks,
   normalizeWorkCadencePolicy,
   routeFeedback,
   sanitizeFeedback,
@@ -202,6 +203,13 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
   });
 
   app.get("/admin/github/repositories", async () => githubRepositoryScopeStatus(deps));
+
+  app.get("/admin/playbooks", async () => ({
+    playbooks: listPlaybooks(),
+    status: "available",
+    summary:
+      "OFF-native playbooks are available as advisory execution/review methods. They cannot loosen policy, access secrets, merge, ship, or notify users by themselves.",
+  }));
 
   app.post<{ Body: { repositoryFullName?: unknown } }>("/admin/connect/sdk-install-pr", async (request, reply) => {
     const target = githubTargetFromFullName(request.body?.repositoryFullName, deps);
