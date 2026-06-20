@@ -1,8 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import type { AgentAssumptionRecord } from "@open-feedback-factory/core";
 import type { AppDeps } from "../app.js";
+import { buildWorkerConnection } from "./health.js";
 
 export async function registerRunnerRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
+  app.post<{ Body: Record<string, unknown> }>("/runner/heartbeat", async (request) => {
+    const heartbeat = await deps.store.recordWorkerHeartbeat(normalizeHeartbeat(request.body));
+    return { workerConnection: buildWorkerConnection(heartbeat) };
+  });
+
   app.post<{ Body: { workItemId?: string; workerName?: string } }>("/runner/jobs/claim", async (request) => {
     const approvalMode = await deps.store.getApprovalMode(deps.config.approvalMode);
     if (approvalMode === "manual" && !request.body?.workItemId) {
@@ -58,4 +64,26 @@ export async function registerRunnerRoutes(app: FastifyInstance, deps: AppDeps):
 
     return { runId, status: request.body.status ?? "succeeded" };
   });
+}
+
+function normalizeHeartbeat(body: Record<string, unknown> | undefined) {
+  return {
+    codexAuthMode: body?.codexAuthMode === "api_key" ? "api_key" : "cli",
+    runnerMode: body?.runnerMode === "codex" ? "codex" : "disabled",
+    status: heartbeatStatus(body?.status),
+    workerKind: body?.workerKind === "docker" || body?.workerKind === "host" ? body.workerKind : "unknown",
+    workerName: safeString(body?.workerName, "open-feedback-worker", 80),
+  };
+}
+
+function heartbeatStatus(value: unknown): "error" | "idle" | "online" {
+  if (value === "error" || value === "idle" || value === "online") return value;
+  return "online";
+}
+
+function safeString(value: unknown, fallback: string, maxLength: number): string {
+  if (typeof value !== "string") return fallback;
+  const clean = value.replace(/[\u0000-\u001f\u007f]/g, "").trim();
+  if (!clean) return fallback;
+  return clean.slice(0, maxLength);
 }

@@ -59,6 +59,14 @@ class MemoryStore implements AppStore {
   userNotifications: WorkItemDetail["userNotifications"] = [];
   usageEvents: Array<{ action: string; featureId: string; metadata: Record<string, unknown>; userId?: string }> = [];
   usageCount = 0;
+  workerHeartbeat: {
+    codexAuthMode: string;
+    lastSeenAt: string;
+    runnerMode: string;
+    status: string;
+    workerKind: string;
+    workerName: string;
+  } | null = null;
   workItems: WorkItemRow[] = [];
 
   async createFeedbackIntake(input: Parameters<AppStore["createFeedbackIntake"]>[0]) {
@@ -210,6 +218,22 @@ class MemoryStore implements AppStore {
       protectedPathFragments: policy.protectedPathFragments,
     };
     return this.mergeGuardrails;
+  }
+
+  async recordWorkerHeartbeat(input: Parameters<AppStore["recordWorkerHeartbeat"]>[0]) {
+    this.workerHeartbeat = {
+      codexAuthMode: input.codexAuthMode,
+      lastSeenAt: new Date().toISOString(),
+      runnerMode: input.runnerMode,
+      status: input.status,
+      workerKind: input.workerKind,
+      workerName: input.workerName,
+    };
+    return this.workerHeartbeat;
+  }
+
+  async getLatestWorkerHeartbeat() {
+    return this.workerHeartbeat;
   }
 
   async getFeedbackClusterSignalCount(clusterKey: string) {
@@ -1015,6 +1039,84 @@ test("runner routes require the configured runner token", async () => {
   const doctor = await app.inject({ method: "GET", url: "/doctor" });
   assert.equal(doctor.json().runnerAuthRequired, true);
   assert.equal("runnerToken" in doctor.json(), false);
+
+  await app.close();
+});
+
+test("runner heartbeat is token gated and appears in doctor without leaking secrets", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({
+    config: { ...config, runnerToken: "runner-test-token" },
+    store,
+  });
+
+  const blocked = await app.inject({
+    method: "POST",
+    payload: {
+      codexAuthMode: "cli",
+      openAiApiKey: "sk-test-secret-that-must-not-echo",
+      runnerMode: "codex",
+      status: "sk-test-secret-that-must-not-echo",
+      workerKind: "host",
+      workerName: "host-worker-a",
+    },
+    url: "/runner/heartbeat",
+  });
+  assert.equal(blocked.statusCode, 401);
+  assert.equal(blocked.json().error, "runner_auth_required");
+
+  const heartbeat = await app.inject({
+    headers: { "x-off-runner-token": "runner-test-token" },
+    method: "POST",
+    payload: {
+      codexAuthMode: "cli",
+      openAiApiKey: "sk-test-secret-that-must-not-echo",
+      runnerMode: "codex",
+      status: "sk-test-secret-that-must-not-echo",
+      workerKind: "host",
+      workerName: "host-worker-a",
+    },
+    url: "/runner/heartbeat",
+  });
+
+  assert.equal(heartbeat.statusCode, 200);
+  assert.equal(heartbeat.json().workerConnection.status, "online");
+  assert.equal(heartbeat.json().workerConnection.workerName, "host-worker-a");
+  assert.equal(heartbeat.json().workerConnection.runnerMode, "codex");
+  assert.equal(heartbeat.json().workerConnection.codexAuthMode, "cli");
+  assert.equal(heartbeat.json().workerConnection.workerKind, "host");
+  assert.equal(heartbeat.json().workerConnection.heartbeatStatus, "online");
+  assert.doesNotMatch(JSON.stringify(heartbeat.json()), /sk-test-secret/);
+
+  const doctor = await app.inject({ method: "GET", url: "/doctor" });
+  const doctorBody = doctor.json();
+  assert.equal(doctorBody.workerConnection.status, "online");
+  assert.equal(doctorBody.workerConnection.workerName, "host-worker-a");
+  assert.equal(doctorBody.workerConnection.runnerMode, "codex");
+  assert.equal(doctorBody.workerConnection.codexAuthMode, "cli");
+  assert.equal("runnerToken" in doctorBody, false);
+  assert.doesNotMatch(JSON.stringify(doctorBody), /sk-test-secret/);
+
+  await app.close();
+});
+
+test("doctor marks stale worker heartbeat without claiming work", async () => {
+  const store = new MemoryStore();
+  store.workerHeartbeat = {
+    codexAuthMode: "cli",
+    lastSeenAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+    runnerMode: "codex",
+    status: "online",
+    workerKind: "host",
+    workerName: "stale-host-worker",
+  };
+  const app = await buildApp({ config, store });
+
+  const doctor = await app.inject({ method: "GET", url: "/doctor" });
+  assert.equal(doctor.statusCode, 200);
+  assert.equal(doctor.json().workerConnection.status, "stale");
+  assert.equal(doctor.json().workerConnection.workerName, "stale-host-worker");
+  assert.match(doctor.json().workerConnection.summary, /stale/i);
 
   await app.close();
 });

@@ -75,6 +75,11 @@ describe("control center UI contract", () => {
     expect(source).toContain("Codex API key");
     expect(source).toContain("saved key injected server-side");
     expect(source).toContain("Worker install");
+    expect(source).toContain("Worker connection");
+    expect(source).toContain("Trusted worker online");
+    expect(source).toContain("Worker is stale");
+    expect(source).toContain("No worker heartbeat yet");
+    expect(source).toContain("Last seen");
     expect(source).toContain("Runner setup");
     expect(source).toContain("pnpm worker:install:host");
     expect(source).toContain("pnpm worker:status:host");

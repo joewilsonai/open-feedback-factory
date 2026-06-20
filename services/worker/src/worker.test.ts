@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import type { WorkItemRow } from "@open-feedback-factory/db";
 import { readWorkerConfig } from "./config.js";
-import { claimJob, runWorkerOnce, type FetchLike } from "./worker.js";
+import { claimJob, runWorkerOnce, sendHeartbeat, type FetchLike } from "./worker.js";
 
 const job: WorkItemRow = {
   autoMergeEligible: false,
@@ -69,6 +69,33 @@ test("claimJob sends the configured runner token", async () => {
   assert.equal(await claimJob(config, fetchImpl), null);
 });
 
+test("sendHeartbeat posts safe worker liveness with the configured runner token", async () => {
+  const config = readWorkerConfig({
+    API_BASE_URL: "http://api.test",
+    CODEX_AUTH_MODE: "api_key",
+    CODEX_RUNNER_MODE: "codex",
+    OFF_WORKER_CONTAINER: "true",
+    OPENAI_API_KEY: "sk-test_1234567890abcdef",
+    RUNNER_TOKEN: "runner-test-token",
+    WORKER_NAME: "worker-a",
+  });
+  const fetchImpl: FetchLike = async (url, init) => {
+    assert.equal(url, "http://api.test/runner/heartbeat");
+    const headers = init?.headers as Record<string, string>;
+    assert.equal(headers["x-off-runner-token"], "runner-test-token");
+    const body = JSON.parse(String(init?.body));
+    assert.equal(body.workerName, "worker-a");
+    assert.equal(body.runnerMode, "codex");
+    assert.equal(body.codexAuthMode, "api_key");
+    assert.equal(body.workerKind, "docker");
+    assert.equal("openAiApiKey" in body, false);
+    assert.doesNotMatch(String(init?.body), /sk-test/);
+    return jsonResponse({ workerConnection: { status: "online" } });
+  };
+
+  await sendHeartbeat(config, fetchImpl);
+});
+
 test("runWorkerOnce leaves work queued when runner is disabled", async () => {
   const calls: Array<{ body: unknown; url: string }> = [];
   const config = readWorkerConfig({ API_BASE_URL: "http://api.test" });
@@ -92,15 +119,19 @@ test("runWorkerOnce leaves work queued when API requires manual approval", async
     if (String(url).endsWith("/doctor")) {
       return jsonResponse({ approvalMode: "manual", codexAuthMode: "cli" });
     }
+    if (String(url).endsWith("/runner/heartbeat")) {
+      return jsonResponse({ workerConnection: { status: "online" } });
+    }
     return jsonResponse({ approvalMode: "manual", job: null, reason: "manual_approval_required" });
   };
 
   assert.equal(config.approvalMode, "manual");
   assert.equal(config.runnerMode, "codex");
   assert.equal(await runWorkerOnce(config, fetchImpl), false);
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
   assert.equal(calls[0]?.url, "http://api.test/doctor");
-  assert.equal(calls[1]?.url, "http://api.test/runner/jobs/claim");
+  assert.equal(calls[1]?.url, "http://api.test/runner/heartbeat");
+  assert.equal(calls[2]?.url, "http://api.test/runner/jobs/claim");
 });
 
 test("readWorkerConfig loads api key mode from the local secrets file", async () => {
@@ -136,12 +167,15 @@ test("runWorkerOnce leaves work queued for Docker workers in cli auth mode", asy
     if (String(url).endsWith("/doctor")) {
       return jsonResponse({ approvalMode: "auto", codexAuthMode: "cli" });
     }
+    if (String(url).endsWith("/runner/heartbeat")) {
+      return jsonResponse({ workerConnection: { status: "online" } });
+    }
     return new Response("not found", { status: 404 });
   };
 
   assert.equal(config.runsInContainer, true);
   assert.equal(await runWorkerOnce(config, fetchImpl), false);
-  assert.deepEqual(calls.map((call) => call.url), ["http://api.test/doctor"]);
+  assert.deepEqual(calls.map((call) => call.url), ["http://api.test/doctor", "http://api.test/runner/heartbeat"]);
 });
 
 test("runWorkerOnce leaves work queued when Codex CLI is missing", async () => {
@@ -159,13 +193,17 @@ test("runWorkerOnce leaves work queued when Codex CLI is missing", async () => {
     if (String(url).endsWith("/doctor")) {
       return jsonResponse({ approvalMode: "auto", codexAuthMode: "api_key" });
     }
+    if (String(url).endsWith("/runner/heartbeat")) {
+      return jsonResponse({ workerConnection: { status: "online" } });
+    }
     return new Response("not found", { status: 404 });
   };
 
   assert.equal(config.codexAuthMode, "api_key");
   assert.equal(await runWorkerOnce(config, fetchImpl), false);
-  assert.equal(calls.length, 1);
+  assert.equal(calls.length, 2);
   assert.equal(calls[0]?.url, "http://api.test/doctor");
+  assert.equal(calls[1]?.url, "http://api.test/runner/heartbeat");
 });
 
 test("runWorkerOnce picks api key auth from API settings even when env defaults to cli", async () => {
@@ -182,6 +220,9 @@ test("runWorkerOnce picks api key auth from API settings even when env defaults 
     if (String(url).endsWith("/doctor")) {
       return jsonResponse({ approvalMode: "auto", codexAuthMode: "api_key" });
     }
+    if (String(url).endsWith("/runner/heartbeat")) {
+      return jsonResponse({ workerConnection: { status: "online" } });
+    }
     if (String(url).endsWith("/runner/jobs/claim")) return jsonResponse({ job });
     if (String(url).endsWith(`/runner/jobs/${job.id}/complete`)) return jsonResponse({ runId: "run_test" });
     return new Response("not found", { status: 404 });
@@ -189,7 +230,10 @@ test("runWorkerOnce picks api key auth from API settings even when env defaults 
 
   assert.equal(config.codexAuthMode, "cli");
   assert.equal(await runWorkerOnce(config, fetchImpl), true);
-  assert.equal(calls.map((call) => call.url).join(" "), "http://api.test/doctor http://api.test/runner/jobs/claim http://api.test/runner/jobs/work_test/complete");
+  assert.equal(
+    calls.map((call) => call.url).join(" "),
+    "http://api.test/doctor http://api.test/runner/heartbeat http://api.test/runner/jobs/claim http://api.test/runner/jobs/work_test/complete",
+  );
 });
 
 function jsonResponse(value: unknown): Response {

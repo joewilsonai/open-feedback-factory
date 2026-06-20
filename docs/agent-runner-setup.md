@@ -23,10 +23,15 @@ worker will pick it up. `CODEX_RUNNER_MODE=codex` still has to be set on the
 worker process because it is the switch that attaches real execution.
 If `RUNNER_TOKEN` is set, the worker sends it to `/runner/*` as
 `x-off-runner-token`; unauthenticated claim/complete requests are rejected.
+When the runner is attached, it also posts a token-gated `/runner/heartbeat`
+before trying to claim work. `/doctor` and the control center expose only a
+safe liveness summary: worker name, host-vs-Docker kind, runner/auth mode, last
+seen time, and online/stale/offline status. They never expose `RUNNER_TOKEN`,
+API keys, or Codex session material.
 
 The control center's **Worker install** panel exposes the supported install
-commands. Users should not need to hand-wire LaunchAgents, systemd units, or
-Docker worker snippets from memory.
+commands and the current **Worker connection** status. Users should not need to
+hand-wire LaunchAgents, systemd units, or Docker worker snippets from memory.
 
 ## Approval Modes
 

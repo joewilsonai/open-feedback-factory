@@ -1,8 +1,11 @@
 import type { FastifyInstance } from "fastify";
+import type { WorkerHeartbeatRow } from "@open-feedback-factory/db";
 import type { AppDeps } from "../app.js";
 import { accessControlStatus } from "../auth.js";
 import { getCodexApiKeyStatus } from "../secrets.js";
 import { githubWebhooksEnabledForBaseUrl } from "./github.js";
+
+const workerHeartbeatStaleAfterMs = 90_000;
 
 export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   app.get("/health", async () => ({
@@ -16,6 +19,7 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
     const maxFeatureCostUsd = await deps.store.getMaxFeatureCostUsd(deps.config.maxFeatureCostUsd);
     const mergeGuardrails = await deps.store.getMergeGuardrailPolicy(defaultMergeGuardrailPolicy(deps));
     const codexApiKeyStatus = await getCodexApiKeyStatus(deps.config);
+    const workerHeartbeat = await deps.store.getLatestWorkerHeartbeat();
     const accessControls = accessControlStatus(deps.config);
     return {
       ...accessControls,
@@ -45,6 +49,7 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
       publicBaseUrl: deps.config.publicBaseUrl,
       codexConnection: buildCodexConnectionPlan(codexAuthMode, codexApiKeyStatus),
       runnerInstall: buildRunnerInstallPlan(codexAuthMode),
+      workerConnection: buildWorkerConnection(workerHeartbeat),
     };
   });
 }
@@ -110,5 +115,42 @@ function buildRunnerInstallPlan(codexAuthMode: "api_key" | "cli") {
       uninstallCommand: "pnpm worker:uninstall:host",
     },
     recommendedMode: codexAuthMode === "api_key" ? "docker_api_key" : "host_cli",
+  };
+}
+
+export function buildWorkerConnection(row: WorkerHeartbeatRow | null, now = new Date()) {
+  if (!row) {
+    return {
+      ageSeconds: null,
+      codexAuthMode: null,
+      heartbeatStatus: null,
+      lastSeenAt: null,
+      runnerMode: null,
+      staleAfterSeconds: workerHeartbeatStaleAfterMs / 1000,
+      status: "offline",
+      summary: "No worker heartbeat yet. Install and start a trusted worker before expecting agent work.",
+      workerKind: null,
+      workerName: null,
+    };
+  }
+
+  const lastSeenAt = new Date(row.lastSeenAt);
+  const ageMs = now.getTime() - lastSeenAt.getTime();
+  const ageSeconds = Number.isFinite(ageMs) ? Math.max(0, Math.round(ageMs / 1000)) : null;
+  const stale = ageSeconds === null || ageMs > workerHeartbeatStaleAfterMs;
+
+  return {
+    ageSeconds,
+    codexAuthMode: row.codexAuthMode,
+    heartbeatStatus: row.status,
+    lastSeenAt: row.lastSeenAt,
+    runnerMode: row.runnerMode,
+    staleAfterSeconds: workerHeartbeatStaleAfterMs / 1000,
+    status: stale ? "stale" : "online",
+    summary: stale
+      ? "Worker is stale; the last heartbeat is older than the liveness window."
+      : "Trusted worker online; the last heartbeat was received recently.",
+    workerKind: row.workerKind,
+    workerName: row.workerName,
   };
 }

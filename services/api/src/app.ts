@@ -4,6 +4,8 @@ import type {
   ControlRoomSnapshot,
   MergeGuardrailPolicy,
   ReconciliationResult,
+  WorkerHeartbeatInput,
+  WorkerHeartbeatRow,
   WorkItemDetail,
   WorkItemReviewDecision,
   WorkItemRow,
@@ -46,6 +48,7 @@ export interface AppStore {
   getFeedbackClusterSignalCount(clusterKey: string): Promise<number>;
   getMaxFeatureCostUsd(defaultCap: number): Promise<number>;
   getMergeGuardrailPolicy(defaultPolicy: MergeGuardrailPolicy): Promise<MergeGuardrailPolicy>;
+  getLatestWorkerHeartbeat(): Promise<WorkerHeartbeatRow | null>;
   getUserFeedbackStatus(feedbackId: string): Promise<UserFeedbackStatus | null>;
   getWorkItem(id: string): Promise<WorkItemRow | null>;
   getWorkItemDetail(id: string): Promise<WorkItemDetail | null>;
@@ -88,6 +91,7 @@ export interface AppStore {
     event: string;
     metadata?: Record<string, unknown>;
   }): Promise<boolean>;
+  recordWorkerHeartbeat(input: WorkerHeartbeatInput): Promise<WorkerHeartbeatRow>;
   recordWorkItemReview(input: {
     actor?: string;
     approved: boolean;

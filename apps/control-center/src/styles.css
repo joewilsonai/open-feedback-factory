@@ -327,6 +327,68 @@ small {
   min-height: 22rem;
 }
 
+.worker-connection-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.75fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(22, 26, 31, 0.13);
+  border-left: 4px solid #8a4f00;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #ffffff;
+}
+
+.worker-connection-card.online {
+  border-left-color: var(--off-lime);
+}
+
+.worker-connection-card.stale {
+  border-left-color: #b08b21;
+}
+
+.worker-connection-card strong {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  color: var(--off-lime-dark);
+  background: var(--off-lime-soft);
+  font-size: 0.72rem;
+}
+
+.worker-connection-card.stale strong {
+  color: #6b4f00;
+  background: rgba(176, 139, 33, 0.14);
+}
+
+.worker-connection-card.offline strong {
+  color: #6d3f00;
+  background: rgba(138, 79, 0, 0.12);
+}
+
+.worker-connection-card h3,
+.worker-connection-card p,
+.worker-connection-card dl {
+  margin: 0;
+}
+
+.worker-connection-card h3 {
+  margin-top: 0.55rem;
+  font-size: 1.05rem;
+}
+
+.worker-connection-card p {
+  margin-top: 0.35rem;
+  color: #52605a;
+  line-height: 1.45;
+}
+
+.worker-connection-card dl {
+  display: grid;
+  gap: 0.55rem;
+}
+
 .reconciliation-panel {
   min-height: 12rem;
 }
@@ -1089,6 +1151,10 @@ code {
   }
 
   .install-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .worker-connection-card {
     grid-template-columns: 1fr;
   }
 
