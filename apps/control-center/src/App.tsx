@@ -176,6 +176,20 @@ interface Doctor {
   publicBaseUrl: string;
   runnerInstall: RunnerInstallPlan;
   runnerAuthRequired: boolean;
+  workerConnection: WorkerConnection;
+}
+
+interface WorkerConnection {
+  ageSeconds: number | null;
+  codexAuthMode: string | null;
+  heartbeatStatus: string | null;
+  lastSeenAt: string | null;
+  runnerMode: string | null;
+  staleAfterSeconds: number;
+  status: "offline" | "online" | "stale" | string;
+  summary: string;
+  workerKind: string | null;
+  workerName: string | null;
 }
 
 interface CodexConnectionPlan {
@@ -284,6 +298,19 @@ const defaultCodexConnectionPlan: CodexConnectionPlan = {
     supported: true,
     workerRequirement: "Install the host worker on the trusted host worker where Codex is signed in.",
   },
+};
+
+const defaultWorkerConnection: WorkerConnection = {
+  ageSeconds: null,
+  codexAuthMode: null,
+  heartbeatStatus: null,
+  lastSeenAt: null,
+  runnerMode: null,
+  staleAfterSeconds: 90,
+  status: "offline",
+  summary: "No worker heartbeat yet. Install and start a trusted worker before expecting agent work.",
+  workerKind: null,
+  workerName: null,
 };
 
 function OffMark() {
@@ -1098,6 +1125,7 @@ function WorkerInstallPanel(props: { doctor: Doctor | null }) {
   const plan = props.doctor?.runnerInstall ?? defaultRunnerInstallPlan;
   const hostRecommended = plan?.recommendedMode !== "docker_api_key";
   const dockerRecommended = plan?.recommendedMode === "docker_api_key";
+  const workerConnection = props.doctor?.workerConnection ?? defaultWorkerConnection;
 
   return (
     <div className="panel worker-install-panel">
@@ -1105,6 +1133,7 @@ function WorkerInstallPanel(props: { doctor: Doctor | null }) {
         <p className="eyebrow">Runner setup</p>
         <h2>Worker install</h2>
       </div>
+      <WorkerConnectionCard connection={workerConnection} />
       <div className="install-grid">
         <article className={hostRecommended ? "install-card recommended" : "install-card"}>
           <strong>{hostRecommended ? "Recommended" : "Available"}</strong>
@@ -1129,6 +1158,24 @@ function WorkerInstallPanel(props: { doctor: Doctor | null }) {
         actually run, record real costs, and open real PRs when GitHub mutation is enabled.
       </p>
     </div>
+  );
+}
+
+function WorkerConnectionCard(props: { connection: WorkerConnection }) {
+  const connection = props.connection;
+  return (
+    <article className={`worker-connection-card ${connection.status}`}>
+      <div>
+        <strong>{workerConnectionLabel(connection)}</strong>
+        <h3>Worker connection</h3>
+        <p>{connection.summary}</p>
+      </div>
+      <dl>
+        <Detail label="Worker" value={connection.workerName ?? "None"} />
+        <Detail label="Mode" value={workerConnectionModeLabel(connection)} />
+        <Detail label="Last seen" value={workerLastSeenLabel(connection)} />
+      </dl>
+    </article>
   );
 }
 
@@ -2008,6 +2055,25 @@ function runButtonLabel(doctor: Doctor | null): string {
 
 function credentialsReady(doctor: Doctor): boolean {
   return doctor.codexAuthMode === "cli" || (doctor.codexAuthMode === "api_key" && doctor.codexApiKeyConfigured);
+}
+
+function workerConnectionLabel(connection: WorkerConnection): string {
+  if (connection.status === "online") return "Trusted worker online";
+  if (connection.status === "stale") return "Worker is stale";
+  return "No worker heartbeat yet";
+}
+
+function workerConnectionModeLabel(connection: WorkerConnection): string {
+  if (!connection.runnerMode || !connection.codexAuthMode) return "Not connected";
+  const auth = connection.codexAuthMode === "api_key" ? "API key" : "Codex subscription";
+  const kind = connection.workerKind === "docker" ? "Docker" : connection.workerKind === "host" ? "Host" : "Worker";
+  return `${kind} / ${auth} / ${titleCase(connection.runnerMode)}`;
+}
+
+function workerLastSeenLabel(connection: WorkerConnection): string {
+  if (!connection.lastSeenAt) return "Never";
+  const age = connection.ageSeconds === null ? "" : ` (${connection.ageSeconds}s ago)`;
+  return `${dateLabel(connection.lastSeenAt)}${age}`;
 }
 
 function actualCostLabel(item: WorkItem): string {

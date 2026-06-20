@@ -50,9 +50,25 @@ export async function completeJob(
   return body.runId;
 }
 
+export async function sendHeartbeat(config: WorkerConfig, fetchImpl: FetchLike = fetch): Promise<void> {
+  const response = await fetchImpl(`${config.apiBaseUrl}/runner/heartbeat`, {
+    body: JSON.stringify({
+      codexAuthMode: config.codexAuthMode,
+      runnerMode: config.runnerMode,
+      status: "online",
+      workerKind: config.runsInContainer ? "docker" : "host",
+      workerName: config.workerName,
+    }),
+    headers: runnerHeaders(config),
+    method: "POST",
+  });
+  if (!response.ok) throw new Error(`Failed to send worker heartbeat: ${response.status} ${await response.text()}`);
+}
+
 export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike = fetch): Promise<boolean> {
   if (config.runnerMode !== "codex") return false;
   const runtimeConfig = await resolveRuntimeConfig(config, fetchImpl);
+  await sendHeartbeat(runtimeConfig, fetchImpl);
   if (runtimeConfig.codexAuthMode === "api_key" && !runtimeConfig.openAiApiKey) return false;
   if (runtimeConfig.runsInContainer && runtimeConfig.codexAuthMode === "cli") {
     console.error("Docker worker cannot use host Codex CLI auth; switch to CODEX_AUTH_MODE=api_key or use the host worker.");

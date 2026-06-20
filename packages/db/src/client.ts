@@ -152,6 +152,18 @@ export interface MergeGuardrailPolicy {
   protectedPathFragments: string[];
 }
 
+export interface WorkerHeartbeatInput {
+  codexAuthMode: string;
+  runnerMode: string;
+  status: string;
+  workerKind: string;
+  workerName: string;
+}
+
+export interface WorkerHeartbeatRow extends WorkerHeartbeatInput {
+  lastSeenAt: string;
+}
+
 export interface WorkItemDetail {
   agentRuns: AgentRunLedgerRow[];
   assumptions: AssumptionLedgerRow[];
@@ -1221,6 +1233,34 @@ export class OpenFeedbackStore {
     return result.rows[0]?.work_item_id ?? null;
   }
 
+  async recordWorkerHeartbeat(input: WorkerHeartbeatInput): Promise<WorkerHeartbeatRow> {
+    const result = await this.pool.query(
+      `insert into worker_heartbeats
+       (worker_name, runner_mode, codex_auth_mode, worker_kind, status, last_seen_at, updated_at)
+       values ($1, $2, $3, $4, $5, now(), now())
+       on conflict (workspace_id, worker_name) do update
+       set runner_mode = excluded.runner_mode,
+           codex_auth_mode = excluded.codex_auth_mode,
+           worker_kind = excluded.worker_kind,
+           status = excluded.status,
+           last_seen_at = now(),
+           updated_at = now()
+       returning worker_name, runner_mode, codex_auth_mode, worker_kind, status, last_seen_at`,
+      [input.workerName, input.runnerMode, input.codexAuthMode, input.workerKind, input.status],
+    );
+    return workerHeartbeatFromRow(result.rows[0]);
+  }
+
+  async getLatestWorkerHeartbeat(): Promise<WorkerHeartbeatRow | null> {
+    const result = await this.pool.query(
+      `select worker_name, runner_mode, codex_auth_mode, worker_kind, status, last_seen_at
+       from worker_heartbeats
+       order by last_seen_at desc
+       limit 1`,
+    );
+    return result.rows[0] ? workerHeartbeatFromRow(result.rows[0]) : null;
+  }
+
   async getApprovalMode(defaultMode: ApprovalMode): Promise<ApprovalMode> {
     const result = await this.pool.query<{ mode: string | null }>(
       `select value ->> 'mode' as mode
@@ -1614,6 +1654,17 @@ function auditLedgerFromRow(row: Record<string, unknown>): AuditLedgerRow {
     metadata: recordFromRow(row.metadata),
     targetId: String(row.target_id),
     targetType: String(row.target_type),
+  };
+}
+
+function workerHeartbeatFromRow(row: Record<string, unknown>): WorkerHeartbeatRow {
+  return {
+    codexAuthMode: String(row.codex_auth_mode),
+    lastSeenAt: dateString(row.last_seen_at),
+    runnerMode: String(row.runner_mode),
+    status: String(row.status),
+    workerKind: String(row.worker_kind),
+    workerName: String(row.worker_name),
   };
 }
 

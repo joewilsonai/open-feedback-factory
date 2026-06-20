@@ -47,7 +47,7 @@ reasons.
 | Admin token gate | DONE | `/admin/*` requires token when configured and `/doctor` never exposes token values | 2026-06-19 |
 | Runner token gate | DONE | `/runner/*` requires token when configured and worker sends configured token | 2026-06-19 |
 | Public rate limits | DONE | SDK/admin/runner/GitHub route groups have deterministic tests | 2026-06-19 |
-| Control center core UI | DONE | Operator UI shows setup, lifecycle, queue, cost, worker, Codex auth lanes, and honest states | 2026-06-19 |
+| Control center core UI | DONE | Operator UI shows setup, lifecycle, queue, cost, worker connection liveness, Codex auth lanes, and honest states | 2026-06-19 |
 | Control center final plant-app onboarding UI | PARTIAL | Existing UI needs the clean plant-care repo flow, SDK-missing detection, and install-PR status proof | 2026-06-19 |
 | Realtime / no-refresh control center behavior | PARTIAL | Current UI is improved; final realtime lifecycle proof for plant-app demo still needed | 2026-06-19 |
 | GitHub App manifest/setup/webhook seam | DONE | Manifest, localhost/public tunnel behavior, callback, webhooks, signature verification, and artifact storage are tested | 2026-06-19 |
@@ -56,7 +56,7 @@ reasons.
 | Branch and PR creation | PARTIAL | Runner/GitHub client seams exist; next durable proof is a real SDK-install PR in the clean plant-care repo | 2026-06-19 |
 | Branch cleanup | DONE | GitHub client branch cleanup path is tested | 2026-06-19 |
 | Codex CLI runner | DONE | Runner builds `codex exec --json` args, parses structured JSONL, captures usage, and handles disabled/missing CLI states honestly | 2026-06-19 |
-| Local subscription worker | PARTIAL | Host worker path exists and `/doctor` / control center now expose the trusted host worker + `codex login --device-auth` path; hosted-control-plane to local-worker claim still needs `RUNNER_TOKEN` sync and live proof | 2026-06-19 |
+| Local subscription worker | PARTIAL | Host worker path exists, sends token-gated heartbeats, and `/doctor` / control center expose online/stale/offline worker liveness plus the trusted host worker + `codex login --device-auth` path; hosted-control-plane to local-worker claim still needs `RUNNER_TOKEN` sync and live proof | 2026-06-19 |
 | Hosted API-key worker | DEFERRED | Supported as a paid/managed future lane and shown as the OpenAI API-key path, but not default alpha path because Joe wants subscription/free local worker path first | 2026-06-19 |
 | Delegated Codex subscription auth for hosted workers | NOT-STARTED | `/doctor` / control center explicitly state this is not supported without a trusted runner or provider-supported delegated token path; do not imply hosted Plus/Pro subscription delegation exists | 2026-06-19 |
 | Safe auto-merge policy | DONE | Guardrail policy, protected paths, diff/check/provenance/cost assumptions, and reviewer-decision requirements are tested | 2026-06-19 |

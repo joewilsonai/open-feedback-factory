@@ -63,6 +63,20 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(await store.getMaxFeatureCostUsd(5), 5);
     await store.setMaxFeatureCostUsd(2.25, "db-test");
     assert.equal(await store.getMaxFeatureCostUsd(5), 2.25);
+    const heartbeat = await store.recordWorkerHeartbeat({
+      codexAuthMode: "cli",
+      runnerMode: "codex",
+      status: "online",
+      workerKind: "host",
+      workerName: `db-worker-${uniqueSuffix}`,
+    });
+    assert.equal(heartbeat.workerName, `db-worker-${uniqueSuffix}`);
+    assert.equal(heartbeat.runnerMode, "codex");
+    assert.equal(heartbeat.codexAuthMode, "cli");
+    assert.equal(heartbeat.workerKind, "host");
+    assert.match(heartbeat.lastSeenAt, /^\d{4}-\d{2}-\d{2}T/);
+    const latestHeartbeat = await store.getLatestWorkerHeartbeat();
+    assert.equal(latestHeartbeat?.workerName, `db-worker-${uniqueSuffix}`);
     assert.deepEqual(
       await store.getMergeGuardrailPolicy({
         autoMergePolicyEnabled: true,
@@ -280,6 +294,7 @@ test("schema migration enables workspace RLS scaffolding", { skip: !databaseUrl 
       "feature_usage_events",
       "policy_configs",
       "audit_events",
+      "worker_heartbeats",
     ];
     const rowSecurity = await pool.query<{ tablename: string }>(
       `select c.relname as tablename
@@ -448,6 +463,7 @@ async function cleanupDatabaseTestRows(url: string): Promise<void> {
     await client.query(`delete from audit_events where target_id = 'merge_guardrails'`);
     await client.query(`delete from policy_configs where key = 'max_feature_cost_usd'`);
     await client.query(`delete from policy_configs where key = 'merge_guardrails'`);
+    await client.query(`delete from worker_heartbeats where worker_name like 'db-worker-%'`);
     await client.query("commit");
   } catch (error) {
     await client.query("rollback");

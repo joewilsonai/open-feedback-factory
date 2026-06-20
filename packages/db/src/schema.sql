@@ -151,6 +151,20 @@ create table if not exists audit_events (
   created_at timestamptz not null default now()
 );
 
+create table if not exists worker_heartbeats (
+  workspace_id text not null default 'default',
+  worker_name text not null,
+  runner_mode text not null,
+  codex_auth_mode text not null,
+  worker_kind text not null,
+  status text not null,
+  metadata jsonb not null default '{}'::jsonb,
+  last_seen_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (workspace_id, worker_name)
+);
+
 create or replace function assumption_record_json(input_row agent_assumptions)
 returns jsonb
 language sql
@@ -183,6 +197,8 @@ alter table user_notifications add column if not exists clarification_questions 
 alter table feature_usage_events add column if not exists workspace_id text not null default 'default';
 alter table policy_configs add column if not exists workspace_id text not null default 'default';
 alter table audit_events add column if not exists workspace_id text not null default 'default';
+alter table worker_heartbeats add column if not exists workspace_id text not null default 'default';
+alter table worker_heartbeats add column if not exists metadata jsonb not null default '{}'::jsonb;
 
 create or replace function off_workspace_id()
 returns text
@@ -204,6 +220,7 @@ alter table user_notifications enable row level security;
 alter table feature_usage_events enable row level security;
 alter table policy_configs enable row level security;
 alter table audit_events enable row level security;
+alter table worker_heartbeats enable row level security;
 
 alter table feedback_signals force row level security;
 alter table feedback_clusters force row level security;
@@ -217,6 +234,7 @@ alter table user_notifications force row level security;
 alter table feature_usage_events force row level security;
 alter table policy_configs force row level security;
 alter table audit_events force row level security;
+alter table worker_heartbeats force row level security;
 
 drop policy if exists feedback_signals_workspace_isolation on feedback_signals;
 create policy feedback_signals_workspace_isolation on feedback_signals using (workspace_id = off_workspace_id()) with check (workspace_id = off_workspace_id());
@@ -242,6 +260,8 @@ drop policy if exists policy_configs_workspace_isolation on policy_configs;
 create policy policy_configs_workspace_isolation on policy_configs using (workspace_id = off_workspace_id()) with check (workspace_id = off_workspace_id());
 drop policy if exists audit_events_workspace_isolation on audit_events;
 create policy audit_events_workspace_isolation on audit_events using (workspace_id = off_workspace_id()) with check (workspace_id = off_workspace_id());
+drop policy if exists worker_heartbeats_workspace_isolation on worker_heartbeats;
+create policy worker_heartbeats_workspace_isolation on worker_heartbeats using (workspace_id = off_workspace_id()) with check (workspace_id = off_workspace_id());
 
 create index if not exists feedback_signals_cluster_key_idx on feedback_signals(cluster_key);
 create index if not exists work_items_cluster_key_idx on work_items(cluster_key);
@@ -251,3 +271,4 @@ create index if not exists agent_assumptions_agent_run_id_idx on agent_assumptio
 create unique index if not exists github_artifacts_work_item_type_url_idx on github_artifacts(work_item_id, artifact_type, url);
 create index if not exists feature_usage_events_feature_id_idx on feature_usage_events(feature_id);
 create unique index if not exists audit_events_github_delivery_idx on audit_events(target_id) where event = 'github_webhook_delivery';
+create index if not exists worker_heartbeats_last_seen_at_idx on worker_heartbeats(last_seen_at desc);
