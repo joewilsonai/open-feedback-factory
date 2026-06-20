@@ -260,6 +260,63 @@ test("GitHubClient app mode creates sanitized issues with installation tokens", 
   );
 });
 
+test("GitHubClient app mode creates pull requests with installation tokens", async () => {
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
+  const calls: Array<{ body: unknown; method: string; url: string }> = [];
+  const fetchImpl: typeof fetch = async (url, init) => {
+    calls.push({
+      body: init?.body ? JSON.parse(String(init.body)) : null,
+      method: init?.method ?? "GET",
+      url: String(url),
+    });
+    if (String(url).endsWith("/repos/owner/repo/installation")) {
+      return jsonResponse({ id: 456 });
+    }
+    if (String(url).endsWith("/app/installations/456/access_tokens")) {
+      return jsonResponse({ expires_at: new Date(Date.now() + 60_000).toISOString(), token: "installation-token" });
+    }
+    if (String(url).endsWith("/repos/owner/repo/pulls")) {
+      assert.equal((init?.headers as Record<string, string>).authorization, "Bearer installation-token");
+      assert.deepEqual(JSON.parse(String(init?.body)), {
+        base: "main",
+        body: "Installs @open-feedback-factory/sdk",
+        head: "off/work-1",
+        title: "Add feedback SDK",
+      });
+      return jsonResponse({ html_url: "https://github.com/owner/repo/pull/42" });
+    }
+    return new Response("not found", { status: 404 });
+  };
+
+  const client = new GitHubClient({
+    appId: "123",
+    appPrivateKey: normalizePrivateKey(pem.replace(/\n/g, "\\n")),
+    cwd: "/repo",
+    fetch: fetchImpl,
+    mode: "app",
+    owner: "owner",
+    repo: "repo",
+  });
+
+  const url = await client.createPullRequest({
+    base: "main",
+    body: "Installs @open-feedback-factory/sdk",
+    head: "off/work-1",
+    title: "Add feedback SDK",
+  });
+
+  assert.equal(url, "https://github.com/owner/repo/pull/42");
+  assert.deepEqual(
+    calls.map((call) => `${call.method} ${call.url}`),
+    [
+      "GET https://api.github.com/repos/owner/repo/installation",
+      "POST https://api.github.com/app/installations/456/access_tokens",
+      "POST https://api.github.com/repos/owner/repo/pulls",
+    ],
+  );
+});
+
 test("GitHubClient app mode deletes generated branches with installation tokens", async () => {
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
