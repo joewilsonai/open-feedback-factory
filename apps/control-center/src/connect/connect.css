@@ -1,0 +1,302 @@
+/* Connect onboarding — scoped styles, OFF console brand (charcoal/lime/paper).
+   Tokens (--off-ink, --off-lime, --off-paper, --off-line) come from styles.css.
+   No opacity-based entrance animations: content never depends on motion to show. */
+
+.connect-panel {
+  --waiting: #b7791f;
+  --waiting-soft: rgba(183, 121, 31, 0.12);
+  grid-column: 1 / -1;
+}
+
+.connect-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.connect-preview {
+  margin: 14px 0 0;
+  padding: 9px 13px;
+  border-radius: 10px;
+  background: var(--waiting-soft);
+  border: 1px solid rgba(183, 121, 31, 0.32);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: rgba(35, 35, 35, 0.72);
+}
+.connect-preview strong {
+  color: var(--waiting);
+  font-weight: 700;
+}
+
+/* Stepper */
+.connect-steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.connect-steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(35, 35, 35, 0.45);
+}
+.connect-steps li::after {
+  content: '';
+  width: 18px;
+  height: 1.5px;
+  margin-left: 4px;
+  background: var(--off-line);
+}
+.connect-steps li:last-child::after {
+  display: none;
+}
+.connect-steps li[data-state='current'] {
+  color: var(--off-ink);
+}
+.connect-steps li[data-state='done'] {
+  color: var(--off-lime-dark);
+}
+.connect-step-dot {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--off-line);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.connect-steps li[data-state='current'] .connect-step-dot {
+  border-color: var(--off-ink);
+  background: var(--off-ink);
+  color: #fff;
+}
+.connect-steps li[data-state='done'] .connect-step-dot {
+  border-color: var(--off-lime);
+  background: var(--off-lime);
+  color: var(--off-ink);
+}
+
+/* Body */
+.connect-body {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.connect-lead {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: rgba(35, 35, 35, 0.82);
+}
+.connect-lead strong {
+  color: var(--off-ink);
+}
+.connect-explain {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: rgba(35, 35, 35, 0.7);
+}
+
+.connect-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.connect-gh {
+  width: 17px;
+  height: 17px;
+  margin-right: 7px;
+  vertical-align: -3px;
+}
+.button-link.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Status banner (step 2) */
+.connect-status {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--off-line);
+  background: var(--off-paper);
+}
+.connect-status strong {
+  font-size: 14px;
+}
+.connect-status small {
+  grid-column: 2;
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: 0;
+  color: rgba(35, 35, 35, 0.6);
+}
+.connect-status-dot {
+  grid-row: span 2;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(35, 35, 35, 0.3);
+}
+.connect-status--connected {
+  background: var(--off-lime-soft);
+  border-color: rgba(132, 204, 22, 0.4);
+}
+.connect-status--connected .connect-status-dot {
+  background: var(--off-lime);
+}
+.connect-status--target_missing,
+.connect-status--error {
+  background: rgba(201, 106, 79, 0.1);
+  border-color: rgba(201, 106, 79, 0.32);
+}
+.connect-status--target_missing .connect-status-dot,
+.connect-status--error .connect-status-dot {
+  background: #c96a4f;
+}
+
+/* Target + repos */
+.connect-target {
+  padding: 14px 16px;
+  border: 1px solid var(--off-line);
+  border-radius: 12px;
+}
+.connect-target-name {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--off-ink);
+  text-decoration: none;
+}
+.connect-target-name:hover {
+  color: var(--off-lime-dark);
+}
+.connect-repos ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.connect-repos li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--off-line);
+  border-radius: 10px;
+  font-size: 13px;
+}
+.connect-repos li[data-target='true'] {
+  border-color: rgba(132, 204, 22, 0.5);
+  background: var(--off-lime-soft);
+}
+.connect-repo-name {
+  flex: 1;
+  font-weight: 600;
+}
+.connect-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(35, 35, 35, 0.08);
+  color: rgba(35, 35, 35, 0.6);
+}
+.connect-tag.lime {
+  background: var(--off-lime);
+  color: var(--off-ink);
+}
+
+/* Handoff result */
+.connect-result {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--off-line);
+}
+.connect-result strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+.connect-result p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: rgba(35, 35, 35, 0.72);
+}
+.connect-result--blocked {
+  background: var(--waiting-soft);
+  border-color: rgba(183, 121, 31, 0.4);
+}
+.connect-result--blocked strong {
+  color: var(--waiting);
+}
+.connect-result--queued {
+  background: var(--off-lime-soft);
+  border-color: rgba(132, 204, 22, 0.4);
+}
+.connect-blockers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.connect-blockers li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.connect-blocker-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--waiting);
+}
+.connect-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.connect-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(35, 35, 35, 0.55);
+  font-style: italic;
+}
+.connect-error {
+  margin: 0;
+  font-size: 13px;
+  color: #c96a4f;
+  font-weight: 500;
+}

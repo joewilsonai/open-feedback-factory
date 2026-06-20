@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { ConnectOnboarding } from "./connect/ConnectOnboarding";
 import "./styles.css";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -703,6 +704,7 @@ export function App() {
       </section>
 
       <section className="console-grid">
+        <ConnectOnboarding />
         <HostedDemoAlphaPanel doctor={doctor} feedbackCount={snapshot.counts.feedbackSignals} openWorkCount={snapshot.counts.openWorkItems} />
         <AdminAccessPanel
           adminAuthBlocked={adminAuthBlocked}
