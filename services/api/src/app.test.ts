@@ -1288,6 +1288,10 @@ test("admin connect SDK install handoff queues a real SDK install work item and 
   assert.equal(issueInputs.length, 1);
   assert.match(issueInputs[0]?.body ?? "", /Raw user feedback stays/);
   assert.match(issueInputs[0]?.body ?? "", /owner\/alpha/);
+  assert.match(issueInputs[0]?.body ?? "", /@open-feedback-factory\/sdk@0\.1\.0/);
+  assert.match(issueInputs[0]?.body ?? "", /https:\/\/api\.openfeedbackfactory\.com/);
+  assert.match(issueInputs[0]?.body ?? "", /createOpenFeedbackClient/);
+  assert.match(issueInputs[0]?.body ?? "", /mountFeedbackLauncher/);
   assert.doesNotMatch(JSON.stringify(body), /private-secret|installation-token|sk-test-secret/);
   assert.doesNotMatch(JSON.stringify(issueInputs), /private-secret|installation-token|sk-test-secret/);
 

@@ -1,4 +1,11 @@
-import { evaluateAutoMerge, routeFeedback, sanitizeFeedback, type FeedbackInput, type WorkRiskTier } from "@open-feedback-factory/core";
+import {
+  estimateFeatureCost,
+  evaluateAutoMerge,
+  routeFeedback,
+  sanitizeFeedback,
+  type FeedbackInput,
+  type WorkRiskTier,
+} from "@open-feedback-factory/core";
 import type { AgentRunLedgerRow, WorkItemDetail, WorkItemRow } from "@open-feedback-factory/db";
 import { CodexCliRunner } from "@open-feedback-factory/runner";
 import type { GitHubAccessibleRepository, GitHubIssueInput, GitHubPullRequestEvidence } from "@open-feedback-factory/runner";
@@ -547,9 +554,7 @@ async function queueSdkInstallHandoff(
   target: ReturnType<typeof githubTarget>,
 ): Promise<{ issueUrl: string | null; missing: string[]; summary: string; workItemId: string }> {
   const feedback: FeedbackInput = {
-    message:
-      `Install @open-feedback-factory/sdk@0.1.0 in ${target.fullName}, add the feedback launcher, ` +
-      "wire it to the hosted OFF API, and keep existing app behavior unchanged.",
+    message: sdkInstallSummary(target.fullName),
     metadata: {
       appName: target.fullName,
       surface: "connect_sdk_install",
@@ -570,6 +575,11 @@ async function queueSdkInstallHandoff(
     action: "create_work_item",
     category: "feature_request",
     clusterKey: sdkInstallClusterKey(target.fullName),
+    costEstimate: estimateFeatureCost({
+      model: "gpt-5.5",
+      riskTier: "guarded_review",
+      signalCount: 2,
+    }),
     riskTier: "guarded_review",
     shouldCreateIssue: true,
     title: "Install Open Feedback Factory SDK",
@@ -644,6 +654,18 @@ async function queueSdkInstallHandoff(
       workItemId: intake.workItemId,
     };
   }
+}
+
+function sdkInstallSummary(repositoryFullName: string): string {
+  return [
+    `Install @open-feedback-factory/sdk@0.1.0 in ${repositoryFullName}.`,
+    "Use the real SDK exports createOpenFeedbackClient and mountFeedbackLauncher.",
+    "Configure the client with apiBaseUrl https://api.openfeedbackfactory.com.",
+    "Add a floating end-user suggestion launcher to the app shell without replacing existing app UI.",
+    "Use a safe source such as sprout_demo_sdk_launcher and privacy-safe metadata only.",
+    "Do not add any private or operator-only configuration to the client app.",
+    "Keep existing app behavior unchanged and run the relevant app checks before opening a PR.",
+  ].join("\n");
 }
 
 async function sdkInstallWorkerMissing(deps: AppDeps): Promise<string[]> {
