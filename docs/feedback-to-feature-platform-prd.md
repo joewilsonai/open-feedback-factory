@@ -26,11 +26,11 @@ As of 2026-06-19:
   as an interim proof app rather than the final demo.
 - The next durable demo app should be a clean SDK-less plant-care app that
   stands in for a customer's product.
-- The highest-leverage next slice is preparing
-  `@open-feedback-factory/sdk` for public npm distribution while holding the
-  actual publish step for Joe's explicit go.
+- `@open-feedback-factory/sdk@0.1.0` is published on public npm.
+- The highest-leverage next slice is proving the SDK-install PR path against a
+  clean SDK-less demo repo using that public package.
 - The product must not claim durable package install or normal Vercel rebuilds
-  until the SDK is actually available through a public package path.
+  until a real worker-created install PR is merged and the target app redeploys.
 
 Beta users should be able to ask for improvements from inside a product and
 receive a real answer: shipped, already available, planned, needs more signal,

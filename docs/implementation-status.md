@@ -43,7 +43,7 @@ reasons.
 | RLS / workspace isolation tests | DONE | Postgres integration tests verify RLS scaffolding and cross-workspace blocking | 2026-06-19 |
 | SDK feedback API | DONE | Browser SDK can submit feedback, read status, and record feature usage | 2026-06-19 |
 | SDK floating launcher | DONE | Real launcher opens in-app UI and shows user-visible tracking receipt without control-center access | 2026-06-19 |
-| SDK public npm distribution | PARTIAL | Package metadata, `dist` exports, README, `npm pack --dry-run`, and local tarball import proof are prepared; actual `npm publish --access public` is held for Joe | 2026-06-20 |
+| SDK public npm distribution | DONE | `@open-feedback-factory/sdk@0.1.0` is live on public npm; install proof now belongs to the SDK-install PR demo lane | 2026-06-20 |
 | SDK CDN distribution | NOT-STARTED | Planned option only | 2026-06-19 |
 | API service | DONE | SDK, admin, runner, GitHub, health, doctor, release, rate-limit, and guardrail tests pass | 2026-06-19 |
 | Admin token gate | DONE | `/admin/*` requires token when configured and `/doctor` never exposes token values | 2026-06-19 |
@@ -108,5 +108,7 @@ The demo story is:
 6. OFF sanitizes, routes, estimates, builds, opens a PR, records assumptions and
    costs, waits for release proof, and updates the user-facing status.
 
-Until the SDK is actually published to npm, any SDK-install demo using a private
-git dependency or prebuilt Vercel deploy must be labeled interim.
+The SDK is now published to public npm. Any SDK-install demo must install from
+that public package path and remain labeled incomplete until a live worker opens
+the real install PR, the PR is merged, and the target app redeploys with the
+launcher.

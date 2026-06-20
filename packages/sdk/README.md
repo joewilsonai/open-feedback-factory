@@ -4,8 +4,8 @@ Browser SDK for collecting in-app feedback, tracking feature usage, and showing
 request status back to the user without giving them access to the operator
 control center.
 
-The package is prepared for public npm distribution, but publishing is held for
-Joe's explicit approval.
+The package is published on public npm as
+`@open-feedback-factory/sdk@0.1.0`.
 
 ## Install
 
@@ -92,8 +92,7 @@ passwords, tokens, or secrets. Only primitive metadata values are sent.
 Do not place private user content, credentials, API keys, database URLs, or raw
 debug logs in SDK metadata.
 
-## Publish Hold
+## Package Status
 
-This package is staged with npm metadata, build output, exports, and a dry-run
-pack check. The actual `npm publish --access public` step is intentionally held
-for Joe.
+This package has npm metadata, build output, exports, and a dry-run pack check,
+and `@open-feedback-factory/sdk@0.1.0` is live in the public npm registry.
