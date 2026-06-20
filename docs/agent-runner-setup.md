@@ -153,8 +153,41 @@ When network access is enabled, the Codex network proxy is configured with the
 allowed and denied domain lists, local binding disabled by default, and upstream
 proxy use disabled by default. This is the supported V1 hardening layer for
 package installs and API calls during agent work. It is not a substitute for
-review gates, protected-path policy, repository target checks, or future
-fine-grained command allow/deny playbooks.
+review gates, protected-path policy, repository target checks, or command
+policy rules.
+
+## Codex Command Policy
+
+The worker can also generate temporary Codex execpolicy rules for command
+prefixes that would need to run outside the sandbox. This uses Codex's native
+`.rules` engine, not an OFF shell parser. The generated file lives at
+`RUNNER_WORKSPACE/.codex/rules/off-worker.generated.rules` only for the
+duration of the Codex run, and the runner passes a project-trust config override
+so Codex loads those project-local rules. The file is deleted before the worker
+collects changed files, so it should not be committed to the target repo.
+
+Configure semicolon-separated command prefixes:
+
+```bash
+CODEX_COMMAND_ALLOW_PREFIXES="gh pr view;git status"
+CODEX_COMMAND_PROMPT_PREFIXES="git push"
+CODEX_COMMAND_DENY_PREFIXES="gh repo delete;rm -rf /"
+```
+
+Each prefix is split on spaces into argv tokens. Do not put shell scripts,
+redirections, environment-variable assignments, or secrets in these variables.
+For example, use `gh pr view`, not `bash -lc "gh pr view"`.
+
+Decision semantics follow Codex execpolicy:
+
+- `allow` lets a matching outside-sandbox command prefix run without a prompt.
+- `prompt` requires review before the matching outside-sandbox command can run;
+  in noninteractive `approval_policy=never` runs this behaves as a blocked path.
+- `forbidden` blocks the matching outside-sandbox command without prompting.
+
+These rules complement the sandbox. They do not claim to inspect every command
+that can already run inside the workspace sandbox. Keep protected-path policy,
+target-repo checks, cost caps, and PR review gates enabled.
 
 ## Manual One-Item Run
 

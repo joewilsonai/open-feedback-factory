@@ -82,6 +82,10 @@ export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike =
     console.error(`Codex sandbox policy is unsafe: ${runtimeConfig.codexSandboxPolicyError}; leaving work queued.`);
     return false;
   }
+  if (runtimeConfig.codexCommandPolicyError) {
+    console.error(`Codex command policy is invalid: ${runtimeConfig.codexCommandPolicyError}; leaving work queued.`);
+    return false;
+  }
   if (runtimeConfig.codexAuthMode === "api_key" && !runtimeConfig.openAiApiKey) return false;
   if (runtimeConfig.runsInContainer && runtimeConfig.codexAuthMode === "cli") {
     console.error("Docker worker cannot use host Codex CLI auth; switch to CODEX_AUTH_MODE=api_key or use the host worker.");
@@ -110,6 +114,7 @@ export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike =
     effort: runtimeConfig.codexEffort,
     manageGit: runtimeConfig.codexManageGit,
     model: runtimeConfig.codexModel,
+    commandPolicy: runtimeConfig.codexCommandPolicy,
     pricing: runtimeConfig.codexPricing,
     sandboxPolicy: runtimeConfig.codexSandboxPolicy,
     timeoutMs: runtimeConfig.codexTimeoutMs,
@@ -338,6 +343,7 @@ function buildRunnerAssumptionRecord(result: RunnerResult, config: WorkerConfig)
       `auth=${config.codexAuthMode}`,
       `sandbox=${config.codexSandboxPolicy.mode}`,
       `network=${config.codexSandboxPolicy.networkAccess ? "allowlisted" : "off"}`,
+      `commandPolicy=${config.codexCommandPolicy.rules.length ? `${config.codexCommandPolicy.rules.length} execpolicy rules` : "off"}`,
     ],
     humanQuestions: [],
     impactAreas: unresolved ? ["merge_safety"] : ["none"],
