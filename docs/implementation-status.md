@@ -61,6 +61,7 @@ reasons.
 | Hosted API-key worker | DEFERRED | Supported as a paid/managed future lane and shown as the OpenAI API-key path, but not default alpha path because Joe wants subscription/free local worker path first | 2026-06-19 |
 | Delegated Codex subscription auth for hosted workers | NOT-STARTED | `/doctor` / control center explicitly state this is not supported without a trusted runner or provider-supported delegated token path; do not imply hosted Plus/Pro subscription delegation exists | 2026-06-19 |
 | Safe auto-merge policy | DONE | Guardrail policy, protected paths, diff/check/provenance/cost assumptions, and reviewer-decision requirements are tested | 2026-06-19 |
+| Explicit merge modes | DONE | `merge_mode` is persisted, visible in doctor/control center, defaults to implement-only, and auto-merge requires `agent_reviewed_auto_merge` plus every guardrail | 2026-06-20 |
 | Public/demo auto-merge | DEFERRED | Must wait for full review, release, rollback, and user-status proof gates | 2026-06-19 |
 | Release marker | DONE | API can mark implemented work released and update user status after proof | 2026-06-19 |
 | Automatic deployment/release detection | PARTIAL | Product rule exists; V1 still relies on explicit release marker unless app-specific deployment proof is added | 2026-06-19 |

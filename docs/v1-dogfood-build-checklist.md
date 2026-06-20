@@ -238,6 +238,9 @@ docker compose up --build
 - Codex produces a real result with actual usage capture.
 - Cost estimate and actual/token-only actual are recorded honestly.
 - Auto approval and auto-merge are separate and visibly explained.
+- Merge mode is explicit and persisted: implement-only is the default, and
+  agent-reviewed auto-merge must be selected before any merge automation can
+  pass.
 - Safe auto-merge is possible only when every gate passes.
 - Cost caps, max diff lines, protected paths, and policy-level auto-merge
   allowance are live control-center policy, with the env auto-merge switch as a

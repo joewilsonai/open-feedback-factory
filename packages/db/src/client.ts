@@ -5,6 +5,7 @@ import {
   type AgentAssumptionRecord,
   type FeatureCostEstimate,
   type FeedbackInput,
+  type MergeMode,
   type SanitizedFeedback,
   type UserClarificationQuestion,
   type UserFeedbackState,
@@ -1406,6 +1407,42 @@ export class OpenFeedbackStore {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultCap;
   }
 
+  async getMergeMode(defaultMode: MergeMode): Promise<MergeMode> {
+    const result = await this.pool.query<{ mode: string | null }>(
+      `select value ->> 'mode' as mode
+       from policy_configs
+       where key = 'merge_mode'
+       limit 1`,
+    );
+    return mergeModeFromValue(result.rows[0]?.mode) ?? defaultMode;
+  }
+
+  async setMergeMode(mode: MergeMode, actor = "operator"): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("begin");
+      await client.query(
+        `insert into policy_configs (id, key, value)
+         values ($1, 'merge_mode', $2)
+         on conflict (key) do update
+         set value = excluded.value,
+             updated_at = now()`,
+        [`policy_${randomUUID()}`, JSON.stringify({ mode })],
+      );
+      await client.query(
+        `insert into audit_events (id, actor, event, target_type, target_id, metadata)
+         values ($1, $2, 'merge_mode_updated', 'policy_config', 'merge_mode', $3)`,
+        [`audit_${randomUUID()}`, actor, JSON.stringify({ mode })],
+      );
+      await client.query("commit");
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async getMergeGuardrailPolicy(defaultPolicy: MergeGuardrailPolicy): Promise<MergeGuardrailPolicy> {
     const result = await this.pool.query<{ value: Record<string, unknown> | null }>(
       `select value
@@ -2011,5 +2048,12 @@ function approvalModeFromValue(value: string | null | undefined): ApprovalMode |
 
 function codexAuthModeFromValue(value: string | null | undefined): CodexAuthMode | null {
   if (value === "api_key" || value === "cli") return value;
+  return null;
+}
+
+function mergeModeFromValue(value: string | null | undefined): MergeMode | null {
+  if (value === "agent_reviewed_auto_merge" || value === "human_exception_required" || value === "implement_only") {
+    return value;
+  }
   return null;
 }

@@ -63,6 +63,9 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(await store.getMaxFeatureCostUsd(5), 5);
     await store.setMaxFeatureCostUsd(2.25, "db-test");
     assert.equal(await store.getMaxFeatureCostUsd(5), 2.25);
+    assert.equal(await store.getMergeMode("implement_only"), "implement_only");
+    await store.setMergeMode("agent_reviewed_auto_merge", "db-test");
+    assert.equal(await store.getMergeMode("implement_only"), "agent_reviewed_auto_merge");
     const heartbeat = await store.recordWorkerHeartbeat({
       codexAuthMode: "cli",
       runnerMode: "codex",

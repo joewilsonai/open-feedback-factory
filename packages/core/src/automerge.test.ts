@@ -13,6 +13,7 @@ const safeInput: AutoMergeInput = {
   costCapUsd: 5,
   diffLineCount: 40,
   maxDiffLineCount: 120,
+  mergeMode: "agent_reviewed_auto_merge",
   protectedPathFragments: ["auth", "billing", "privacy", "migrations"],
   redactionWarnings: 0,
   releaseHealthy: true,
@@ -25,6 +26,22 @@ test("evaluateAutoMerge approves the narrow safe lane", () => {
     eligible: true,
     reasons: [],
   });
+});
+
+test("evaluateAutoMerge blocks modes that forbid autonomous merge", () => {
+  const implementOnly = evaluateAutoMerge({
+    ...safeInput,
+    mergeMode: "implement_only",
+  });
+  const humanException = evaluateAutoMerge({
+    ...safeInput,
+    mergeMode: "human_exception_required",
+  });
+
+  assert.equal(implementOnly.eligible, false);
+  assert.equal(implementOnly.reasons.includes("merge_mode_implement_only"), true);
+  assert.equal(humanException.eligible, false);
+  assert.equal(humanException.reasons.includes("merge_mode_human_exception_required"), true);
 });
 
 test("evaluateAutoMerge blocks protected paths and failed checks", () => {
