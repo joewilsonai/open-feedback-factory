@@ -178,6 +178,55 @@ test("runWorkerOnce leaves work queued for Docker workers in cli auth mode", asy
   assert.deepEqual(calls.map((call) => call.url), ["http://api.test/doctor", "http://api.test/runner/heartbeat"]);
 });
 
+test("readWorkerConfig parses Codex sandbox network allowlists", () => {
+  const config = readWorkerConfig({
+    API_BASE_URL: "http://api.test",
+    CODEX_NETWORK_ACCESS: "true",
+    CODEX_NETWORK_ALLOWED_DOMAINS: "registry.npmjs.org, api.github.com",
+    CODEX_NETWORK_DENIED_DOMAINS: "metadata.google.internal",
+    CODEX_RUNNER_MODE: "codex",
+    CODEX_SANDBOX_MODE: "workspace-write",
+  });
+
+  assert.deepEqual(config.codexSandboxPolicy, {
+    allowLocalNetwork: false,
+    allowLoginShell: false,
+    allowUpstreamProxy: false,
+    approvalPolicy: "never",
+    mode: "workspace-write",
+    networkAccess: true,
+    networkAllowedDomains: ["registry.npmjs.org", "api.github.com"],
+    networkDeniedDomains: ["metadata.google.internal"],
+    webSearch: "disabled",
+  });
+  assert.equal(config.codexSandboxPolicyError, undefined);
+});
+
+test("runWorkerOnce leaves work queued when Codex sandbox policy is unsafe", async () => {
+  const calls: Array<{ body: unknown; url: string }> = [];
+  const config = readWorkerConfig({
+    API_BASE_URL: "http://api.test",
+    CODEX_CLI: process.execPath,
+    CODEX_RUNNER_MODE: "codex",
+    CODEX_SANDBOX_MODE: "danger-full-access",
+  });
+  const fetchImpl: FetchLike = async (url, init) => {
+    calls.push({ body: init?.body ? JSON.parse(String(init.body)) : null, url });
+    if (String(url).endsWith("/doctor")) {
+      return jsonResponse({ approvalMode: "auto", codexAuthMode: "cli" });
+    }
+    if (String(url).endsWith("/runner/heartbeat")) {
+      return jsonResponse({ workerConnection: { status: "online" } });
+    }
+    if (String(url).endsWith("/runner/jobs/claim")) return jsonResponse({ job });
+    return new Response("not found", { status: 404 });
+  };
+
+  assert.match(config.codexSandboxPolicyError ?? "", /danger-full-access/i);
+  assert.equal(await runWorkerOnce(config, fetchImpl), false);
+  assert.deepEqual(calls.map((call) => call.url), ["http://api.test/doctor", "http://api.test/runner/heartbeat"]);
+});
+
 test("runWorkerOnce leaves work queued when Codex CLI is missing", async () => {
   const calls: Array<{ body: unknown; url: string }> = [];
   const config = readWorkerConfig({

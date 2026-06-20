@@ -129,6 +129,33 @@ describe hosted Plus/Pro subscription delegation as available until OpenAI or
 another supported provider exposes an appropriate delegated token path for that
 account type.
 
+## Codex Sandbox And Network Policy
+
+The runner starts Codex with conservative noninteractive defaults:
+
+```bash
+CODEX_SANDBOX_MODE=workspace-write
+CODEX_APPROVAL_POLICY=never
+CODEX_NETWORK_ACCESS=false
+CODEX_NETWORK_ALLOWED_DOMAINS=
+CODEX_NETWORK_DENIED_DOMAINS=
+CODEX_NETWORK_ALLOW_LOCAL=false
+CODEX_NETWORK_ALLOW_UPSTREAM_PROXY=false
+```
+
+`danger-full-access` is refused before the worker claims a job. Network access
+is off unless `CODEX_NETWORK_ACCESS=true` and
+`CODEX_NETWORK_ALLOWED_DOMAINS` contains explicit hostnames. The worker rejects
+global wildcards such as `*`, and local/private hosts are blocked unless
+`CODEX_NETWORK_ALLOW_LOCAL=true` is deliberately set for a trusted local test.
+
+When network access is enabled, the Codex network proxy is configured with the
+allowed and denied domain lists, local binding disabled by default, and upstream
+proxy use disabled by default. This is the supported V1 hardening layer for
+package installs and API calls during agent work. It is not a substitute for
+review gates, protected-path policy, repository target checks, or future
+fine-grained command allow/deny playbooks.
+
 ## Manual One-Item Run
 
 Use this when approval mode is manual:

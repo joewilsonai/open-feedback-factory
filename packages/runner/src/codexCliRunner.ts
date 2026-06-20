@@ -5,6 +5,26 @@ import { spawn } from "node:child_process";
 import type { WorkItemRow } from "@open-feedback-factory/db";
 import type { CodexPricing, CodexStructuredResult, CodexUsage, RunnerResult, WorkRunner } from "./types.js";
 
+export type CodexApprovalPolicy = "never" | "on-request" | "untrusted";
+export type CodexSandboxMode = "read-only" | "workspace-write";
+export type CodexWebSearchMode = "cached" | "disabled" | "live";
+
+export interface CodexRunnerSandboxPolicy {
+  allowLocalNetwork: boolean;
+  allowLoginShell: boolean;
+  allowUpstreamProxy: boolean;
+  approvalPolicy: CodexApprovalPolicy;
+  mode: CodexSandboxMode;
+  networkAccess: boolean;
+  networkAllowedDomains: string[];
+  networkDeniedDomains: string[];
+  webSearch: CodexWebSearchMode;
+}
+
+export type CodexRunnerSandboxPolicyInput = Partial<Omit<CodexRunnerSandboxPolicy, "mode">> & {
+  mode?: CodexSandboxMode | "danger-full-access" | string;
+};
+
 export interface CodexCliRunnerOptions {
   branchPrefix?: string;
   cli?: string;
@@ -14,6 +34,7 @@ export interface CodexCliRunnerOptions {
   manageGit?: boolean;
   model?: string;
   pricing?: CodexPricing;
+  sandboxPolicy?: CodexRunnerSandboxPolicyInput;
   timeoutMs?: number;
 }
 
@@ -33,6 +54,7 @@ export class CodexCliRunner implements WorkRunner {
       cwd: this.options.cwd,
       effort: this.options.effort ?? "extra-high",
       model,
+      sandboxPolicy: this.options.sandboxPolicy,
       schemaPath,
     });
 
@@ -99,8 +121,12 @@ export function buildCodexExecArgs(input: {
   cwd: string;
   effort: string;
   model: string;
+  sandboxPolicy?: CodexRunnerSandboxPolicyInput;
   schemaPath: string;
 }): string[] {
+  const sandboxPolicy = normalizeCodexSandboxPolicy(input.sandboxPolicy);
+  const configArgs = buildCodexSandboxConfigArgs(sandboxPolicy);
+
   return [
     "exec",
     "--json",
@@ -108,9 +134,10 @@ export function buildCodexExecArgs(input: {
     input.model,
     "-c",
     `model_reasoning_effort="${normalizeCodexEffort(input.effort)}"`,
+    ...configArgs,
     "--ignore-user-config",
     "--sandbox",
-    "workspace-write",
+    sandboxPolicy.mode,
     "--cd",
     input.cwd,
     "--output-schema",
@@ -151,6 +178,140 @@ export function normalizeCodexEffort(value: string): string {
   const normalized = value.trim().toLowerCase();
   if (normalized === "extra-high" || normalized === "extra_high" || normalized === "x-high") return "xhigh";
   return normalized;
+}
+
+export function normalizeCodexSandboxPolicy(
+  input: CodexRunnerSandboxPolicyInput | undefined = {},
+): CodexRunnerSandboxPolicy {
+  const mode = input.mode ?? "workspace-write";
+  if (mode === "danger-full-access") {
+    throw new Error("Codex runner refuses danger-full-access sandbox mode.");
+  }
+  if (mode !== "workspace-write" && mode !== "read-only") {
+    throw new Error(`Unsupported Codex sandbox mode: ${String(mode)}`);
+  }
+
+  const approvalPolicy = input.approvalPolicy ?? "never";
+  if (!isCodexApprovalPolicy(approvalPolicy)) {
+    throw new Error(`Unsupported Codex approval policy: ${String(approvalPolicy)}`);
+  }
+
+  const webSearch = input.webSearch ?? "disabled";
+  if (!isCodexWebSearchMode(webSearch)) {
+    throw new Error(`Unsupported Codex web search mode: ${String(webSearch)}`);
+  }
+
+  const allowLocalNetwork = input.allowLocalNetwork ?? false;
+  const networkAccess = input.networkAccess ?? false;
+  const networkAllowedDomains = normalizeNetworkDomains(
+    input.networkAllowedDomains ?? [],
+    "allow",
+    allowLocalNetwork,
+  );
+  const networkDeniedDomains = normalizeNetworkDomains(
+    input.networkDeniedDomains ?? [],
+    "deny",
+    true,
+  );
+
+  if (networkAccess && networkAllowedDomains.length === 0) {
+    throw new Error("Codex network access requires an explicit allowed-domain list.");
+  }
+
+  return {
+    allowLocalNetwork,
+    allowLoginShell: input.allowLoginShell ?? false,
+    allowUpstreamProxy: input.allowUpstreamProxy ?? false,
+    approvalPolicy,
+    mode,
+    networkAccess,
+    networkAllowedDomains,
+    networkDeniedDomains,
+    webSearch,
+  };
+}
+
+function buildCodexSandboxConfigArgs(policy: CodexRunnerSandboxPolicy): string[] {
+  const args = [
+    "-c",
+    `approval_policy="${policy.approvalPolicy}"`,
+    "-c",
+    `allow_login_shell=${booleanConfig(policy.allowLoginShell)}`,
+    "-c",
+    `web_search="${policy.webSearch}"`,
+  ];
+
+  if (policy.mode === "workspace-write") {
+    args.push("-c", `sandbox_workspace_write.network_access=${booleanConfig(policy.networkAccess)}`);
+  }
+
+  if (!policy.networkAccess) {
+    args.push("-c", "features.network_proxy.enabled=false");
+    return args;
+  }
+
+  args.push("-c", "features.network_proxy.enabled=true");
+  args.push("-c", `features.network_proxy.domains=${formatNetworkProxyDomains(policy)}`);
+  args.push("-c", `features.network_proxy.allow_local_binding=${booleanConfig(policy.allowLocalNetwork)}`);
+  args.push("-c", `features.network_proxy.allow_upstream_proxy=${booleanConfig(policy.allowUpstreamProxy)}`);
+  return args;
+}
+
+function normalizeNetworkDomains(
+  values: string[],
+  action: "allow" | "deny",
+  allowLocalNetwork: boolean,
+): string[] {
+  const normalized: string[] = [];
+  for (const value of values) {
+    const domain = value.trim().toLowerCase();
+    if (!domain) continue;
+    if (isGlobalNetworkPattern(domain)) {
+      throw new Error("Codex runner refuses global network access; use explicit hostnames.");
+    }
+    if (!/^[a-z0-9.*_-]+(?::[0-9]+)?$/.test(domain)) {
+      throw new Error(`Invalid Codex network ${action} domain: ${value}`);
+    }
+    if (action === "allow" && !allowLocalNetwork && isLocalOrPrivateNetworkHost(domain)) {
+      throw new Error(`Codex network allowlist cannot include local/private host ${domain} unless local network is enabled.`);
+    }
+    if (!normalized.includes(domain)) normalized.push(domain);
+  }
+  return normalized;
+}
+
+function formatNetworkProxyDomains(policy: CodexRunnerSandboxPolicy): string {
+  const entries = [
+    ...policy.networkAllowedDomains.map((domain) => `"${domain}" = "allow"`),
+    ...policy.networkDeniedDomains.map((domain) => `"${domain}" = "deny"`),
+  ];
+  return `{ ${entries.join(", ")} }`;
+}
+
+function isCodexApprovalPolicy(value: unknown): value is CodexApprovalPolicy {
+  return value === "never" || value === "on-request" || value === "untrusted";
+}
+
+function isCodexWebSearchMode(value: unknown): value is CodexWebSearchMode {
+  return value === "cached" || value === "disabled" || value === "live";
+}
+
+function isGlobalNetworkPattern(value: string): boolean {
+  return value === "*" || value === "*.*" || value === "0.0.0.0/0" || value === "::/0";
+}
+
+function isLocalOrPrivateNetworkHost(value: string): boolean {
+  const host = value.replace(/^\*\./, "").replace(/:\d+$/, "");
+  if (host === "localhost" || host.endsWith(".localhost")) return true;
+  if (host === "::1" || host === "[::1]") return true;
+  if (host === "metadata.google.internal" || host.endsWith(".metadata.google.internal")) return true;
+  if (/^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) || /^169\.254\./.test(host)) return true;
+  const classB = /^172\.(\d{1,2})\./.exec(host);
+  return Boolean(classB && Number(classB[1]) >= 16 && Number(classB[1]) <= 31);
+}
+
+function booleanConfig(value: boolean): string {
+  return value ? "true" : "false";
 }
 
 export function parseCodexJsonlOutput(output: string): {
