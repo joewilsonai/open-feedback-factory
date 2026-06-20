@@ -16,10 +16,10 @@ DONE / PARTIAL / NOT-STARTED / DEFERRED map.
 | Landing | `https://openfeedbackfactory.com` | Public narrative and entry point |
 | Control center | `https://app.openfeedbackfactory.com/ops/` | Operator view for the lifecycle |
 | API | `https://api.openfeedbackfactory.com` | Feedback, admin, runner, and GitHub APIs |
-| Current proof app | `https://launchbrief-demo.vercel.app` | Verified real-SDK proof; not the final demo concept |
-| Current proof app repo | `https://github.com/joewilsonai/launchbrief-demo` | Real repo that currently imports the SDK |
-| Next demo app | `https://sprout-demo-chi.vercel.app` | Clean SDK-less consumer app that stands in for a user's product |
-| Next demo app repo | `https://github.com/joewilsonai/sprout-demo` | Real repo OFF should connect, inspect, and mutate |
+| Current demo app | `https://sprout-demo-chi.vercel.app` | Clean SDK-less consumer app that stands in for a user's product |
+| Current demo app repo | `https://github.com/joewilsonai/sprout-demo` | Real repo OFF should connect, inspect, and mutate |
+| Interim proof app | `https://launchbrief-demo.vercel.app` | Verified real-SDK proof; not the final demo concept |
+| Interim proof app repo | `https://github.com/joewilsonai/launchbrief-demo` | Real repo that currently imports the SDK |
 
 ## Important Constraint
 
@@ -68,13 +68,13 @@ remains the star.
 
 ## Current State
 
-- LaunchBrief repo exists and is private.
-- LaunchBrief production deployment is live on Vercel.
-- LaunchBrief uses the real `@open-feedback-factory/sdk` at runtime and proved
-  the in-app launcher path.
-- LaunchBrief is an interim proof app, not the final demo app.
 - The durable demo now uses Sprout, a clean plant-care repo that starts
   SDK-less.
+- Sprout production deployment is live on Vercel.
+- Sprout repo exists and is private.
+- LaunchBrief uses the real `@open-feedback-factory/sdk` at runtime and proved
+  the in-app launcher path, but it is an interim proof app, not the final demo
+  app.
 - Durable SDK installation needs public npm distribution for
   `@open-feedback-factory/sdk`. The package is prepared for npm distribution,
   but the actual publish step is on hold for Joe's explicit go.

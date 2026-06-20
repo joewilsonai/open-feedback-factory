@@ -26,8 +26,8 @@ Vercel:
 | Landing | `https://openfeedbackfactory.com` | Public landing page |
 | API | `https://api.openfeedbackfactory.com` | Feedback intake, admin API, runner API, GitHub App setup, doctor/health |
 | Control center | `https://app.openfeedbackfactory.com/ops/` | Private operator UI |
-| Current proof app | `https://launchbrief-demo.vercel.app` | LaunchBrief app using the real SDK; interim proof, not final demo |
-| Next demo app | TBD plant-care app URL | Clean SDK-less consumer app that OFF should connect and mutate |
+| Current demo app | `https://sprout-demo-chi.vercel.app` | Clean SDK-less consumer app that OFF should connect and mutate |
+| Interim proof app | `https://launchbrief-demo.vercel.app` | LaunchBrief app using the real SDK; proof only, not final demo |
 | Worker | Railway private service | Deployed but disabled; alpha implementation lane is local host Codex CLI worker |
 | Postgres | Railway private service | Hosted V1 database |
 
@@ -133,17 +133,23 @@ provider-supported delegated subscription token flow.
 
 ## Hosted Demo Alpha
 
-The current proof app is LaunchBrief:
+The current active demo app is Sprout:
+
+- app: `https://sprout-demo-chi.vercel.app`;
+- repo: `https://github.com/joewilsonai/sprout-demo`.
+
+Sprout is a clean plant-care repo that starts without the OFF SDK installed.
+The demo should show OFF connecting to that repo and creating a real PR that
+adds the SDK launcher from the public npm package.
+
+LaunchBrief remains an interim proof app:
 
 - app: `https://launchbrief-demo.vercel.app`;
 - repo: `https://github.com/joewilsonai/launchbrief-demo`.
 
-LaunchBrief now uses the real OFF SDK and is only an interim proof app. The
-durable hosted demo should use a new clean plant-care repo that starts without
-the OFF SDK installed. The demo should show OFF connecting to that repo and
-creating a real PR that adds the SDK launcher from the public npm package. Keep
-Daybook available as an internal SDK smoke app, but do not use it as the main
-demo story.
+LaunchBrief now uses the real OFF SDK and proves the SDK can run in production,
+but it is not the durable demo story. Keep Daybook available as an internal SDK
+smoke app, but do not use it as the main demo story.
 
 See [Hosted Demo Alpha](./hosted-demo-alpha.md).
 

@@ -1,8 +1,8 @@
 const githubUrl = "https://github.com/joewilsonai/open-feedback-factory";
-const demoRepoUrl = "https://github.com/joewilsonai/launchbrief-demo";
+const demoRepoUrl = "https://github.com/joewilsonai/sprout-demo";
 const betaMailto =
   "mailto:hello@openfeedbackfactory.com?subject=Open%20Feedback%20Factory%20private%20beta";
-const hostedDemoUrl = "https://launchbrief-demo.vercel.app";
+const hostedDemoUrl = "https://sprout-demo-chi.vercel.app";
 const hostedControlCenterUrl = "https://app.openfeedbackfactory.com/ops/";
 
 const lifecycle = [
@@ -89,7 +89,7 @@ export function App() {
           </div>
           <div className="hero-proof" aria-label="Live product proof">
             <span className="signal live">live hosted control center</span>
-            <span>LaunchBrief feedback launcher was installed by a real PR</span>
+            <span>Sprout is live and intentionally SDK-less for the install-PR demo</span>
           </div>
         </div>
       </section>
@@ -167,8 +167,8 @@ export function App() {
           </p>
           <div className="control-links">
             <a href={hostedControlCenterUrl}>Private hosted control center</a>
-            <a href={hostedDemoUrl}>Hosted LaunchBrief app</a>
-            <a href={demoRepoUrl}>LaunchBrief repo</a>
+            <a href={hostedDemoUrl}>Hosted Sprout app</a>
+            <a href={demoRepoUrl}>Sprout repo</a>
           </div>
         </div>
         <div className="operator-panel" aria-label="Control center states">
