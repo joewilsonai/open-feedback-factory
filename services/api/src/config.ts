@@ -1,5 +1,7 @@
 import {
+  buildConfigCompatibilityReport,
   normalizeWorkCadencePolicy,
+  type ConfigCompatibilityReport,
   type WorkCadenceInterval,
   type WorkCadenceMode,
   type WorkCadencePolicy,
@@ -23,6 +25,7 @@ export interface ApiConfig {
   codexApiKeyConfigured: boolean;
   codexRunnerMode: "codex" | "disabled";
   codexSecretsPath: string;
+  configCompatibility: ConfigCompatibilityReport;
   controlCenterUrl: string;
   databaseUrl: string;
   githubMode: "app" | "disabled" | "gh";
@@ -69,6 +72,10 @@ export function readConfig(env = process.env): ApiConfig {
     codexApiKeyConfigured: Boolean(env.OPENAI_API_KEY),
     codexRunnerMode: env.CODEX_RUNNER_MODE === "codex" ? "codex" : "disabled",
     codexSecretsPath: env.CODEX_SECRETS_PATH ?? ".off/secrets.env",
+    configCompatibility: buildConfigCompatibilityReport({
+      configuredVersion: configSchemaVersionFromEnv(env),
+      env,
+    }),
     controlCenterUrl: stripTrailingSlash(env.CONTROL_CENTER_URL ?? `http://localhost:${env.CONTROL_CENTER_PORT ?? 5173}`),
     databaseUrl: env.DATABASE_URL ?? env.DOCKER_DATABASE_URL ?? "",
     githubMode: githubModeFromEnv(env.GITHUB_MODE),
@@ -108,6 +115,13 @@ export function readConfig(env = process.env): ApiConfig {
       threshold: numberFromEnv(env.WORK_CADENCE_THRESHOLD),
     }),
   };
+}
+
+function configSchemaVersionFromEnv(env: NodeJS.ProcessEnv): number | undefined {
+  const raw = env.OFF_CONFIG_SCHEMA_VERSION ?? env.OFF_CONFIG_VERSION;
+  if (!raw) return undefined;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function githubModeFromEnv(value: string | undefined): ApiConfig["githubMode"] {

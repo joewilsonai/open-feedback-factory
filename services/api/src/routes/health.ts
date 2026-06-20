@@ -37,6 +37,7 @@ export async function registerHealthRoutes(app: FastifyInstance, deps: AppDeps):
       codexRunnerMode: deps.config.codexRunnerMode,
       codexSecretStorageWritable: codexApiKeyStatus.writable,
       codexSecretsPath: codexApiKeyStatus.path,
+      configCompatibility: deps.config.configCompatibility,
       controlCenterUrl: deps.config.controlCenterUrl,
       databaseConfigured: Boolean(deps.config.databaseUrl),
       githubAppConfigured: Boolean(

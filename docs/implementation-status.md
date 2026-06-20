@@ -35,6 +35,7 @@ reasons.
 | User-facing status model | DONE | Supports planned, grouped, in-progress, implemented, shipped, not planned, already available, blocked, and needs-more-signal copy | 2026-06-19 |
 | Cost estimates | DONE | Estimates exist in core/API; exact actual dollars require usage plus configured pricing | 2026-06-19 |
 | Budget caps | DONE | API exposes and enforces per-work-item, daily, monthly, and per-run token budget caps before model spend | 2026-06-20 |
+| Versioned config / upgrade safety | PARTIAL | Core compatibility report, `/doctor` visibility, `.env.example` schema version, and conservative `pnpm config:migrate` command exist; automated multi-version migrations and rollback tooling are not complete | 2026-06-20 |
 | Actual token/cost capture | PARTIAL | Runner parses Codex JSONL usage and can price when rates exist; live dogfood cost proof still needed for the next demo loop | 2026-06-19 |
 | Assumption records | DONE | Assumptions can be stored, displayed, and can block auto-merge when unresolved safety/cost/release issues remain | 2026-06-19 |
 | Learning records | PARTIAL | Data model and product rules exist; recursive improvement loop still needs richer control-center workflows and eval feedback | 2026-06-19 |
