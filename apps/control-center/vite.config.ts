@@ -1,8 +1,8 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import { allowedHosts, envValue } from "../../scripts/vite-dev-config.mjs";
+import { allowedHosts, apiProxyTarget } from "../../scripts/vite-dev-config.mjs";
 
-const apiProxyTarget = envValue("VITE_DEV_API_PROXY_TARGET", "http://127.0.0.1:4100");
+const apiTarget = apiProxyTarget();
 const apiProxyPaths = ["/admin", "/doctor", "/github", "/health", "/runner", "/sdk"];
 
 export default defineConfig({
@@ -21,6 +21,6 @@ export default defineConfig({
     allowedHosts: allowedHosts(),
     host: "127.0.0.1",
     port: 5173,
-    proxy: Object.fromEntries(apiProxyPaths.map((path) => [path, apiProxyTarget])),
+    proxy: Object.fromEntries(apiProxyPaths.map((path) => [path, apiTarget])),
   },
 });
