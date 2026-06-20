@@ -1,0 +1,145 @@
+/* Codebase health / readiness — scoped, OFF console brand.
+   Tokens (--off-ink, --off-lime, --off-paper, --off-line) come from styles.css.
+   No opacity-based entrance animations: content never depends on motion to show. */
+
+.health-panel {
+  --ok: #4d7c0f;
+  --ok-soft: rgba(132, 204, 22, 0.14);
+  --warn: #b7791f;
+  --warn-soft: rgba(183, 121, 31, 0.12);
+  --muted: rgba(35, 35, 35, 0.4);
+  grid-column: 1 / -1;
+}
+
+.health-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--off-line);
+  border-radius: 12px;
+  background: var(--warn-soft);
+}
+.health-summary[data-ready="true"] {
+  background: var(--ok-soft);
+  border-color: rgba(132, 204, 22, 0.4);
+}
+.health-score {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.health-score strong {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+}
+.health-score span {
+  font-size: 13px;
+  color: rgba(35, 35, 35, 0.6);
+}
+.health-summary p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: rgba(35, 35, 35, 0.8);
+}
+
+.health-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.health-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--off-line);
+  border-radius: 11px;
+  background: var(--off-paper);
+}
+.health-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.health-item[data-state="ready"] .health-dot {
+  background: var(--off-lime);
+}
+.health-item[data-state="attention"] .health-dot {
+  background: var(--warn);
+}
+.health-item[data-state="off"] .health-dot {
+  background: var(--muted);
+}
+.health-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.health-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.health-row strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+.health-state {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(35, 35, 35, 0.07);
+  color: var(--muted);
+}
+.health-item[data-state="ready"] .health-state {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.health-item[data-state="attention"] .health-state {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.health-detail {
+  font-size: 13px;
+  color: rgba(35, 35, 35, 0.7);
+}
+.health-rec {
+  font-size: 12.5px;
+  color: var(--off-ink);
+  font-weight: 500;
+  margin-top: 2px;
+}
+.health-note {
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(35, 35, 35, 0.55);
+  font-style: italic;
+}
+.health-note code {
+  font-style: normal;
+  background: rgba(35, 35, 35, 0.06);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+.health-empty {
+  margin-top: 16px;
+  font-size: 13px;
+  color: rgba(35, 35, 35, 0.5);
+}
