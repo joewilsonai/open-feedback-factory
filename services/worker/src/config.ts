@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import type { CodexPricing } from "@open-feedback-factory/runner";
+import {
+  normalizeCodexSandboxPolicy,
+  type CodexApprovalPolicy,
+  type CodexPricing,
+  type CodexRunnerSandboxPolicy,
+  type CodexRunnerSandboxPolicyInput,
+} from "@open-feedback-factory/runner";
 
 export interface WorkerConfig {
   apiBaseUrl: string;
@@ -11,6 +17,8 @@ export interface WorkerConfig {
   codexManageGit: boolean;
   codexModel: string;
   codexPricing?: CodexPricing;
+  codexSandboxPolicy: CodexRunnerSandboxPolicy;
+  codexSandboxPolicyError?: string;
   codexSecretsPath: string;
   codexTimeoutMs: number;
   githubMode: "app" | "disabled" | "gh";
@@ -34,6 +42,7 @@ export interface WorkerConfig {
 }
 
 export function readWorkerConfig(env = process.env): WorkerConfig {
+  const codexSandbox = readCodexSandboxPolicy(env);
   return {
     apiBaseUrl: trimTrailingSlash(
       env.WORKER_API_BASE_URL ?? env.API_BASE_URL ?? env.VITE_API_BASE_URL ?? "http://localhost:4100",
@@ -45,6 +54,8 @@ export function readWorkerConfig(env = process.env): WorkerConfig {
     codexManageGit: env.CODEX_MANAGE_GIT === "true",
     codexModel: env.CODEX_MODEL ?? "gpt-5.5",
     codexPricing: readCodexPricing(env),
+    codexSandboxPolicy: codexSandbox.policy,
+    codexSandboxPolicyError: codexSandbox.error,
     codexSecretsPath: env.CODEX_SECRETS_PATH ?? ".off/secrets.env",
     codexTimeoutMs: Number(env.CODEX_TIMEOUT_MS ?? 5 * 60_000),
     githubMode: githubModeFromEnv(env.GITHUB_MODE),
@@ -98,6 +109,51 @@ function readCodexPricing(env: NodeJS.ProcessEnv): CodexPricing | undefined {
     outputUsdPerMillion,
     reasoningOutputUsdPerMillion,
   };
+}
+
+function readCodexSandboxPolicy(env: NodeJS.ProcessEnv): {
+  error?: string;
+  policy: CodexRunnerSandboxPolicy;
+} {
+  const input: CodexRunnerSandboxPolicyInput = {
+    allowLocalNetwork: env.CODEX_NETWORK_ALLOW_LOCAL === "true",
+    allowLoginShell: false,
+    allowUpstreamProxy: env.CODEX_NETWORK_ALLOW_UPSTREAM_PROXY === "true",
+    approvalPolicy: codexApprovalPolicyFromEnv(env.CODEX_APPROVAL_POLICY),
+    mode: codexSandboxModeFromEnv(env.CODEX_SANDBOX_MODE),
+    networkAccess: env.CODEX_NETWORK_ACCESS === "true",
+    networkAllowedDomains: csvFromEnv(env.CODEX_NETWORK_ALLOWED_DOMAINS),
+    networkDeniedDomains: csvFromEnv(env.CODEX_NETWORK_DENIED_DOMAINS),
+    webSearch: "disabled",
+  };
+
+  try {
+    return { policy: normalizeCodexSandboxPolicy(input) };
+  } catch (error) {
+    const safePolicy = normalizeCodexSandboxPolicy();
+    return {
+      error: error instanceof Error ? error.message : String(error),
+      policy: safePolicy,
+    };
+  }
+}
+
+function codexSandboxModeFromEnv(value: string | undefined): CodexRunnerSandboxPolicyInput["mode"] {
+  if (value === "read-only" || value === "workspace-write" || value === "danger-full-access") return value;
+  return "workspace-write";
+}
+
+function codexApprovalPolicyFromEnv(value: string | undefined): CodexApprovalPolicy {
+  if (value === "on-request" || value === "untrusted") return value;
+  return "never";
+}
+
+function csvFromEnv(value: string | undefined): string[] {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function numberFromEnv(value: string | undefined): number | undefined {

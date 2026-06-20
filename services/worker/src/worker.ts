@@ -78,6 +78,10 @@ export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike =
   if (config.runnerMode !== "codex") return false;
   const runtimeConfig = await resolveRuntimeConfig(config, fetchImpl);
   await sendHeartbeat(runtimeConfig, fetchImpl);
+  if (runtimeConfig.codexSandboxPolicyError) {
+    console.error(`Codex sandbox policy is unsafe: ${runtimeConfig.codexSandboxPolicyError}; leaving work queued.`);
+    return false;
+  }
   if (runtimeConfig.codexAuthMode === "api_key" && !runtimeConfig.openAiApiKey) return false;
   if (runtimeConfig.runsInContainer && runtimeConfig.codexAuthMode === "cli") {
     console.error("Docker worker cannot use host Codex CLI auth; switch to CODEX_AUTH_MODE=api_key or use the host worker.");
@@ -107,6 +111,7 @@ export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike =
     manageGit: runtimeConfig.codexManageGit,
     model: runtimeConfig.codexModel,
     pricing: runtimeConfig.codexPricing,
+    sandboxPolicy: runtimeConfig.codexSandboxPolicy,
     timeoutMs: runtimeConfig.codexTimeoutMs,
   });
 
@@ -327,7 +332,13 @@ function buildRunnerAssumptionRecord(result: RunnerResult, config: WorkerConfig)
     checksRun: result.checksRun,
     checksSkipped: result.checksSkipped,
     confidence: result.status === "succeeded" ? "medium" : "low",
-    defaultsUsed: [`model=${config.codexModel}`, `runner=${config.runnerMode}`, `auth=${config.codexAuthMode}`],
+    defaultsUsed: [
+      `model=${config.codexModel}`,
+      `runner=${config.runnerMode}`,
+      `auth=${config.codexAuthMode}`,
+      `sandbox=${config.codexSandboxPolicy.mode}`,
+      `network=${config.codexSandboxPolicy.networkAccess ? "allowlisted" : "off"}`,
+    ],
     humanQuestions: [],
     impactAreas: unresolved ? ["merge_safety"] : ["none"],
     notes: result.userMessage,

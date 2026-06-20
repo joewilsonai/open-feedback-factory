@@ -57,6 +57,16 @@ test("buildCodexExecArgs uses local codex exec json mode with output schema", ()
       "gpt-5.5",
       "-c",
       'model_reasoning_effort="xhigh"',
+      "-c",
+      'approval_policy="never"',
+      "-c",
+      "allow_login_shell=false",
+      "-c",
+      'web_search="disabled"',
+      "-c",
+      "sandbox_workspace_write.network_access=false",
+      "-c",
+      "features.network_proxy.enabled=false",
       "--ignore-user-config",
       "--sandbox",
       "workspace-write",
@@ -66,6 +76,70 @@ test("buildCodexExecArgs uses local codex exec json mode with output schema", ()
       "/tmp/schema.json",
       "-",
     ],
+  );
+});
+
+test("buildCodexExecArgs enables network proxy only for explicit domain allowlists", () => {
+  const args = buildCodexExecArgs({
+    cwd: "/repo",
+    effort: "high",
+    model: "gpt-5.5",
+    sandboxPolicy: {
+      networkAccess: true,
+      networkAllowedDomains: ["registry.npmjs.org", "api.github.com"],
+      networkDeniedDomains: ["metadata.google.internal"],
+    },
+    schemaPath: "/tmp/schema.json",
+  });
+
+  assert.deepEqual(
+    args.slice(args.indexOf("-c"), args.indexOf("--ignore-user-config")),
+    [
+      "-c",
+      'model_reasoning_effort="high"',
+      "-c",
+      'approval_policy="never"',
+      "-c",
+      "allow_login_shell=false",
+      "-c",
+      'web_search="disabled"',
+      "-c",
+      "sandbox_workspace_write.network_access=true",
+      "-c",
+      "features.network_proxy.enabled=true",
+      "-c",
+      'features.network_proxy.domains={ "registry.npmjs.org" = "allow", "api.github.com" = "allow", "metadata.google.internal" = "deny" }',
+      "-c",
+      "features.network_proxy.allow_local_binding=false",
+      "-c",
+      "features.network_proxy.allow_upstream_proxy=false",
+    ],
+  );
+});
+
+test("buildCodexExecArgs rejects dangerous sandbox or broad network policies", () => {
+  assert.throws(
+    () =>
+      buildCodexExecArgs({
+        cwd: "/repo",
+        effort: "high",
+        model: "gpt-5.5",
+        sandboxPolicy: { mode: "danger-full-access" as never },
+        schemaPath: "/tmp/schema.json",
+      }),
+    /danger-full-access/i,
+  );
+
+  assert.throws(
+    () =>
+      buildCodexExecArgs({
+        cwd: "/repo",
+        effort: "high",
+        model: "gpt-5.5",
+        sandboxPolicy: { networkAccess: true, networkAllowedDomains: ["*"] },
+        schemaPath: "/tmp/schema.json",
+      }),
+    /global network access/i,
   );
 });
 
