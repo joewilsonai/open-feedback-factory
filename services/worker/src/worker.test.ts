@@ -236,6 +236,47 @@ test("runWorkerOnce picks api key auth from API settings even when env defaults 
   );
 });
 
+test("runWorkerOnce blocks targeted jobs when the configured GitHub repo does not match", async () => {
+  const calls: Array<{ body: unknown; url: string }> = [];
+  const targetedJob = {
+    ...job,
+    runnerTarget: {
+      owner: "owner",
+      repo: "alpha",
+      repositoryFullName: "owner/alpha",
+      source: "github_artifact",
+    },
+  };
+  const config = readWorkerConfig({
+    API_BASE_URL: "http://api.test",
+    CODEX_CLI: process.execPath,
+    CODEX_RUNNER_MODE: "codex",
+    GITHUB_OWNER: "owner",
+    GITHUB_REPO: "beta",
+    WORKER_WORK_ITEM_ID: "work_test",
+  });
+  const fetchImpl: FetchLike = async (url, init) => {
+    calls.push({ body: init?.body ? JSON.parse(String(init.body)) : null, url });
+    if (String(url).endsWith("/doctor")) {
+      return jsonResponse({ approvalMode: "auto", codexAuthMode: "cli" });
+    }
+    if (String(url).endsWith("/runner/heartbeat")) {
+      return jsonResponse({ workerConnection: { status: "online" } });
+    }
+    if (String(url).endsWith("/runner/jobs/claim")) return jsonResponse({ job: targetedJob });
+    if (String(url).endsWith(`/runner/jobs/${job.id}/complete`)) return jsonResponse({ runId: "run_test" });
+    return new Response("not found", { status: 404 });
+  };
+
+  assert.equal(await runWorkerOnce(config, fetchImpl), true);
+  const completion = calls.find((call) => call.url.endsWith(`/runner/jobs/${job.id}/complete`));
+  const completionBody = completion?.body as { assumptions: Array<Record<string, unknown>>; status: string; summary: string };
+
+  assert.equal(completionBody.status, "blocked");
+  assert.match(completionBody.summary, /runner target mismatch/i);
+  assert.match(JSON.stringify(completionBody.assumptions), /owner\/alpha/);
+});
+
 function jsonResponse(value: unknown): Response {
   return new Response(JSON.stringify(value), {
     headers: { "content-type": "application/json" },

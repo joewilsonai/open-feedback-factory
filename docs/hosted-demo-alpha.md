@@ -75,12 +75,12 @@ remains the star.
 - LaunchBrief uses the real `@open-feedback-factory/sdk` at runtime and proved
   the in-app launcher path, but it is an interim proof app, not the final demo
   app.
-- Durable SDK installation needs public npm distribution for
-  `@open-feedback-factory/sdk`. The package is prepared for npm distribution,
-  but the actual publish step is on hold for Joe's explicit go.
-- The SDK-install handoff endpoint now verifies GitHub App repo access and
-  blocks truthfully on `sdk_publish_held` with no fake work item, issue, or PR
-  evidence until the package publish and worker lane are real.
+- Durable SDK installation can use the public
+  `@open-feedback-factory/sdk@0.1.0` package.
+- The SDK-install handoff endpoint verifies GitHub App repo access, keeps
+  missing prerequisites honest, and queues a real work item plus sanitized
+  GitHub issue once npm publish and repo access are present. It still returns
+  `prUrl: null` until a live worker creates the PR.
 - OFF hosted control center has a Hosted Demo Alpha panel that links to the app
   and repo and derives setup readiness from `/doctor`.
 - Hosted Railway workers remain disabled for alpha.
@@ -89,6 +89,9 @@ remains the star.
   subscription instead of per-token API-key spend.
 - The local worker must receive the hosted `RUNNER_TOKEN` through its ignored
   environment file before it can claim hosted work items.
+- Targeted repo jobs carry runner target metadata. The local worker must be
+  configured for that repo and checkout; otherwise it blocks before running
+  Codex so it cannot mutate the OFF repo by accident.
 
 ## Definition of Done
 
@@ -101,7 +104,7 @@ remains the star.
 | Plant repo is connected to the OFF GitHub App | Done | Hosted repo-scope verification returned `targetAccessible: true` for `joewilsonai/sprout-demo` |
 | SDK-install handoff blocks honestly when prerequisites are missing | Done | API tests cover `sdk_publish_held` and missing-repo blockers with null work item, issue, and PR fields |
 | OFF creates a real sanitized issue or work item for SDK install | Partial | Backend now queues a real SDK-install work item and sanitized GitHub issue once npm publish and repo access are present; PR creation still waits for a live worker |
-| Local host Codex CLI worker can claim hosted work after manual approval | Needs work | Requires hosted `RUNNER_TOKEN` sync and live proof |
+| Local host Codex CLI worker can claim hosted work after manual approval | Needs work | Target-repo guard is covered; still requires hosted `RUNNER_TOKEN` sync and live proof |
 | Worker opens a real PR that installs SDK from npm | Needs work | Blocked on live worker proof for the queued SDK-install item |
 | PR includes assumptions, checks, and cost evidence | Needs work | Must be proven in plant-app run |
 | Merged/redeployed app sends real feedback through installed launcher | Needs work | LaunchBrief proves runtime path; plant-app flow pending |

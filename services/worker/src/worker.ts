@@ -6,14 +6,23 @@ import { readOpenAiApiKey, readWorkerConfig, type WorkerConfig } from "./config.
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
-export async function claimJob(config: WorkerConfig, fetchImpl: FetchLike = fetch): Promise<WorkItemRow | null> {
+interface RunnerTarget {
+  owner: string;
+  repo: string;
+  repositoryFullName: string;
+  source: string;
+}
+
+type WorkerJob = WorkItemRow & { runnerTarget?: RunnerTarget };
+
+export async function claimJob(config: WorkerConfig, fetchImpl: FetchLike = fetch): Promise<WorkerJob | null> {
   const response = await fetchImpl(`${config.apiBaseUrl}/runner/jobs/claim`, {
     body: JSON.stringify({ workItemId: config.workItemId, workerName: config.workerName }),
     headers: runnerHeaders(config),
     method: "POST",
   });
   if (!response.ok) throw new Error(`Failed to claim runner job: ${response.status} ${await response.text()}`);
-  const body = (await response.json()) as { job?: WorkItemRow | null };
+  const body = (await response.json()) as { job?: WorkerJob | null };
   return body.job ?? null;
 }
 
@@ -83,6 +92,13 @@ export async function runWorkerOnce(config: WorkerConfig, fetchImpl: FetchLike =
   if (!job) return false;
   console.log(`Claimed ${job.id}: ${job.title}`);
 
+  const targetBlock = validateRunnerTarget(runtimeConfig, job);
+  if (targetBlock) {
+    const runId = await completeJob(runtimeConfig, job.id, targetBlock, null, fetchImpl);
+    console.log(`Blocked ${job.id}: ${targetBlock.summary} (${runId}).`);
+    return true;
+  }
+
   const runner = new CodexCliRunner({
     cli: runtimeConfig.codexCli,
     cwd: runtimeConfig.runnerWorkspace,
@@ -128,6 +144,106 @@ export async function startWorkerLoop(config = readWorkerConfig(), fetchImpl: Fe
     if (config.runOnce) return;
     if (!worked) await sleep(config.pollIntervalMs);
   } while (true);
+}
+
+function validateRunnerTarget(config: WorkerConfig, job: WorkerJob): RunnerResult | null {
+  const target = normalizedRunnerTarget(job.runnerTarget);
+  if (!target) return null;
+
+  const configuredRepository = `${config.githubOwner}/${config.githubRepo}`;
+  if (configuredRepository.toLowerCase() !== target.repositoryFullName.toLowerCase()) {
+    return runnerTargetBlockedResult({
+      configuredRepository,
+      job,
+      reason:
+        `Work item targets ${target.repositoryFullName}, but this worker is configured for ${configuredRepository}.`,
+      target,
+    });
+  }
+
+  const remote = gitOriginRemote(config.runnerWorkspace);
+  if (remote && !gitRemoteMatchesTarget(remote, target)) {
+    return runnerTargetBlockedResult({
+      configuredRepository,
+      job,
+      reason:
+        `Work item targets ${target.repositoryFullName}, but ${config.runnerWorkspace} remote origin is ${remote}.`,
+      target,
+    });
+  }
+
+  return null;
+}
+
+function normalizedRunnerTarget(value: unknown): RunnerTarget | null {
+  if (!value || typeof value !== "object") return null;
+  const target = value as Record<string, unknown>;
+  if (
+    typeof target.owner !== "string" ||
+    typeof target.repo !== "string" ||
+    typeof target.repositoryFullName !== "string" ||
+    typeof target.source !== "string"
+  ) {
+    return null;
+  }
+  return {
+    owner: target.owner,
+    repo: target.repo,
+    repositoryFullName: target.repositoryFullName,
+    source: target.source,
+  };
+}
+
+function runnerTargetBlockedResult(input: {
+  configuredRepository: string;
+  job: WorkItemRow;
+  reason: string;
+  target: RunnerTarget;
+}): RunnerResult {
+  return {
+    assumptions: [
+      input.reason,
+      "The worker did not run Codex because running in the wrong repository could mutate the wrong codebase.",
+    ],
+    branchName: null,
+    changedFiles: [],
+    checksRun: ["Verified runner target repository before starting Codex."],
+    checksSkipped: ["Implementation and GitHub PR publication skipped because runner target validation failed."],
+    costActual: {
+      amountUsd: 0,
+      confidence: "high",
+      model: "none",
+    },
+    output: JSON.stringify({
+      configuredRepository: input.configuredRepository,
+      targetRepository: input.target.repositoryFullName,
+      type: "runner.target_mismatch",
+      workItemId: input.job.id,
+    }),
+    status: "blocked",
+    summary: `Runner target mismatch for ${input.job.id}.`,
+    userMessage:
+      "The worker did not start because it is not pointed at the repository this work item targets. Update the worker repo settings and try again.",
+  };
+}
+
+function gitOriginRemote(cwd: string): string | null {
+  const result = spawnSync("git", ["-C", cwd, "config", "--get", "remote.origin.url"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  if (result.status !== 0) return null;
+  const remote = result.stdout.trim();
+  return remote || null;
+}
+
+function gitRemoteMatchesTarget(remote: string, target: RunnerTarget): boolean {
+  const normalizedRemote = remote.toLowerCase().replace(/\.git$/, "");
+  const normalizedTarget = target.repositoryFullName.toLowerCase();
+  return (
+    normalizedRemote.endsWith(`/${normalizedTarget}`) ||
+    normalizedRemote.endsWith(`:${normalizedTarget}`)
+  );
 }
 
 async function runSafely(run: Promise<RunnerResult>, job: WorkItemRow, config: WorkerConfig): Promise<RunnerResult> {

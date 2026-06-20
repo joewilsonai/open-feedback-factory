@@ -1376,6 +1376,65 @@ test("admin connect SDK install handoff keeps worker offline when runner mode is
   await app.close();
 });
 
+test("runner claim includes SDK install target repository from sanitized GitHub artifact metadata", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({
+    config: {
+      ...config,
+      githubAppId: "app-123",
+      githubAppPrivateKey: "private-secret",
+      githubMode: "app",
+      githubOwner: "owner",
+      githubRepo: "alpha",
+      sdkPackagePublished: true,
+    },
+    githubClient: {
+      createIssue: async () => "https://github.com/owner/alpha/issues/42",
+      listInstallationRepositories: async () => ({
+        repositories: [
+          {
+            fullName: "owner/alpha",
+            htmlUrl: "https://github.com/owner/alpha",
+            name: "alpha",
+            owner: "owner",
+            permissions: { pull: true, push: true },
+            private: true,
+          },
+        ],
+        totalCount: 1,
+        truncated: false,
+      }),
+    },
+    store,
+  });
+
+  const handoff = await app.inject({
+    method: "POST",
+    payload: { repositoryFullName: "owner/alpha" },
+    url: "/admin/connect/sdk-install-pr",
+  });
+  assert.equal(handoff.statusCode, 202);
+
+  const claim = await app.inject({
+    method: "POST",
+    payload: { workItemId: "work_1", workerName: "targeted-worker" },
+    url: "/runner/jobs/claim",
+  });
+  const body = claim.json();
+
+  assert.equal(claim.statusCode, 200);
+  assert.equal(body.job.id, "work_1");
+  assert.deepEqual(body.job.runnerTarget, {
+    owner: "owner",
+    repo: "alpha",
+    repositoryFullName: "owner/alpha",
+    source: "github_artifact",
+  });
+  assert.doesNotMatch(JSON.stringify(body), /private-secret|installation-token|sk-test-secret/);
+
+  await app.close();
+});
+
 test("admin connect SDK install handoff requires the configured admin token", async () => {
   const app = await buildApp({
     config: { ...config, adminToken: "admin-test-token" },
