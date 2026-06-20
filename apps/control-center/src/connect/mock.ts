@@ -56,6 +56,8 @@ const connectedProof: RepositoryProof = {
 }
 
 export const mockConnectApi: ConnectApi = {
+  isPreview: true,
+
   getSetupUrl() {
     return 'https://github.com/apps/open-feedback-factory/installations/new'
   },
@@ -67,15 +69,15 @@ export const mockConnectApi: ConnectApi = {
 
   async requestSdkInstallPr(repositoryFullName: string): Promise<HandoffResult> {
     await delay(1100)
-    // npm publish is HELD → the SDK-install handoff is staged, not shipped.
+    // npm publish is HELD → the handoff is blocked. No fabricated work item /
+    // issue / PR: there is no real staged evidence to point at yet.
     return {
       status: 'blocked',
-      workItemId: 'wi_demo_sdk_install',
-      issueUrl: `https://github.com/${repositoryFullName}/issues`,
       missing: ['sdk_publish_held'],
       summary:
-        'OFF staged the SDK-install plan for this repo. The install PR is held until ' +
-        '@open-feedback-factory/sdk is published to npm — that publish is waiting on your go.',
+        `OFF can’t open the SDK-install PR for ${repositoryFullName} yet: ` +
+        '@open-feedback-factory/sdk has to be published to npm first, and that publish is held ' +
+        'for your go. Once it’s published, the handoff runs automatically.',
     }
   },
 }

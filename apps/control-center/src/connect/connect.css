@@ -16,6 +16,21 @@
   flex-wrap: wrap;
 }
 
+.connect-preview {
+  margin: 14px 0 0;
+  padding: 9px 13px;
+  border-radius: 10px;
+  background: var(--waiting-soft);
+  border: 1px solid rgba(183, 121, 31, 0.32);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: rgba(35, 35, 35, 0.72);
+}
+.connect-preview strong {
+  color: var(--waiting);
+  font-weight: 700;
+}
+
 /* Stepper */
 .connect-steps {
   display: flex;

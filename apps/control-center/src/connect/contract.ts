@@ -67,6 +67,9 @@ export interface HandoffResult {
 }
 
 export interface ConnectApi {
+  /** True when this is sample/preview data, not a live backend connection.
+   *  The UI must visibly label preview data so it is never mistaken for real. */
+  isPreview: boolean
   /** Setup URL for the GitHub App install/manifest flow (from /doctor); null when not configured. */
   getSetupUrl(): string | null
   /** GET /admin/github/repositories */

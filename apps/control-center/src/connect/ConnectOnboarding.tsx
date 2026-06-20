@@ -174,7 +174,7 @@ function HandoffStep({ proof }: { proof: RepositoryProof }) {
   return (
     <div className="connect-body">
       <div className={`connect-result connect-result--${result.status}`}>
-        <strong>{blocked ? 'Staged — waiting on you' : 'Queued'}</strong>
+        <strong>{blocked ? 'Held — waiting on you' : 'Queued'}</strong>
         <p>{result.summary}</p>
       </div>
 
@@ -225,6 +225,13 @@ export function ConnectOnboarding() {
         </div>
         <Stepper step={step} />
       </div>
+
+      {connectApi.isPreview && (
+        <p className="connect-preview" role="note">
+          <strong>Preview</strong> — sample data showing the flow, not a live connection. The live
+          console reads repositories and handoff state from your connected GitHub App.
+        </p>
+      )}
 
       {step === 1 && (
         <ConnectStep
