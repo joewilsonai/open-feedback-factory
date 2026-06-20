@@ -1,11 +1,13 @@
-import { evaluateAutoMerge, type WorkRiskTier } from "@open-feedback-factory/core";
+import { evaluateAutoMerge, routeFeedback, sanitizeFeedback, type FeedbackInput, type WorkRiskTier } from "@open-feedback-factory/core";
 import type { AgentRunLedgerRow, WorkItemDetail, WorkItemRow } from "@open-feedback-factory/db";
 import { CodexCliRunner } from "@open-feedback-factory/runner";
-import type { GitHubAccessibleRepository, GitHubPullRequestEvidence } from "@open-feedback-factory/runner";
+import type { GitHubAccessibleRepository, GitHubIssueInput, GitHubPullRequestEvidence } from "@open-feedback-factory/runner";
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
 import { buildGithubClient } from "../githubClient.js";
 import { getCodexApiKeyStatus, readCodexApiKey, removeCodexApiKey, saveCodexApiKey } from "../secrets.js";
+import { buildWorkerConnection } from "./health.js";
+import { buildSanitizedGithubIssueInput } from "./sdk.js";
 
 interface AutoMergeEvidence {
   branchTrusted: boolean;
@@ -97,14 +99,17 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AppDeps): 
       );
     }
 
-    return reply.code(409).send(
-      blockedSdkInstallHandoff({
-        github,
-        missing: ["worker_offline"],
-        repositoryFullName: target.fullName,
-        summary: "SDK-install PR creation is not wired to a live worker yet.",
-      }),
-    );
+    const handoff = await queueSdkInstallHandoff(deps, target);
+    return reply.code(202).send({
+      github,
+      issueUrl: handoff.issueUrl,
+      missing: handoff.missing,
+      prUrl: null,
+      repositoryFullName: target.fullName,
+      status: "queued",
+      summary: handoff.summary,
+      workItemId: handoff.workItemId,
+    });
   });
 
   app.patch<{ Body: { maxFeatureCostUsd?: unknown } }>("/admin/settings/cost-cap", async (request, reply) => {
@@ -535,6 +540,145 @@ function blockedSdkInstallHandoff(input: {
     summary: input.summary,
     workItemId: null,
   };
+}
+
+async function queueSdkInstallHandoff(
+  deps: AppDeps,
+  target: ReturnType<typeof githubTarget>,
+): Promise<{ issueUrl: string | null; missing: string[]; summary: string; workItemId: string }> {
+  const feedback: FeedbackInput = {
+    message:
+      `Install @open-feedback-factory/sdk@0.1.0 in ${target.fullName}, add the feedback launcher, ` +
+      "wire it to the hosted OFF API, and keep existing app behavior unchanged.",
+    metadata: {
+      appName: target.fullName,
+      surface: "connect_sdk_install",
+      url: target.url,
+    },
+    severity: "medium",
+    source: "connect_sdk_install",
+    userId: "control-center",
+  };
+  const sanitized = sanitizeFeedback(feedback);
+  const routed = routeFeedback({
+    model: "gpt-5.5",
+    sanitized,
+    signalCount: 2,
+  });
+  const decision: ReturnType<typeof routeFeedback> = {
+    ...routed,
+    action: "create_work_item",
+    category: "feature_request",
+    clusterKey: sdkInstallClusterKey(target.fullName),
+    riskTier: "guarded_review",
+    shouldCreateIssue: true,
+    title: "Install Open Feedback Factory SDK",
+    userMessage:
+      "OFF queued the SDK install request for this repository. It is not shipped yet and no PR exists until a worker opens one.",
+    userStatus: "planned",
+  };
+
+  const intake = await deps.store.createFeedbackIntake({ decision, feedback, sanitized });
+  if (!intake.workItemId) {
+    throw new Error("SDK install handoff did not create or find a work item");
+  }
+
+  const existingIssueUrl = await existingGithubIssueUrl(deps, intake.workItemId);
+  const workerMissing = await sdkInstallWorkerMissing(deps);
+  if (existingIssueUrl) {
+    return {
+      issueUrl: existingIssueUrl,
+      missing: workerMissing,
+      summary: "SDK-install work is already queued with a sanitized GitHub issue. A PR has not been opened yet.",
+      workItemId: intake.workItemId,
+    };
+  }
+
+  try {
+    const github = githubIssueClient(deps, target);
+    const issueUrl = await github.createIssue(
+      buildSanitizedGithubIssueInput({
+        category: decision.category,
+        clusterKey: decision.clusterKey,
+        riskTier: decision.riskTier,
+        summary: sanitized.sanitizedMessage,
+        title: decision.title,
+        workItemId: intake.workItemId,
+      }),
+    );
+    await deps.store.recordGithubArtifact({
+      artifactNumber: githubNumberFromUrl(issueUrl),
+      artifactType: "issue",
+      metadata: {
+        clusterKey: decision.clusterKey,
+        handoff: "sdk_install",
+        repositoryFullName: target.fullName,
+        riskTier: decision.riskTier,
+      },
+      url: issueUrl,
+      workItemId: intake.workItemId,
+    });
+    return {
+      issueUrl,
+      missing: workerMissing,
+      summary: "SDK-install work is queued with a sanitized GitHub issue. A PR has not been opened yet.",
+      workItemId: intake.workItemId,
+    };
+  } catch {
+    await deps.store.recordAgentRun({
+      agentName: "github-issue-writer",
+      metadata: {
+        handoff: "sdk_install",
+        repositoryFullName: target.fullName,
+      },
+      runType: "github_issue",
+      status: "failed",
+      summary: "GitHub issue creation failed during SDK-install handoff.",
+      workItemId: intake.workItemId,
+    });
+    return {
+      issueUrl: null,
+      missing: ["github_issue_creation_failed", ...workerMissing],
+      summary:
+        "SDK-install work is queued, but the sanitized GitHub issue could not be created. A PR has not been opened yet.",
+      workItemId: intake.workItemId,
+    };
+  }
+}
+
+async function sdkInstallWorkerMissing(deps: AppDeps): Promise<string[]> {
+  const heartbeat = await deps.store.getLatestWorkerHeartbeat();
+  const workerConnection = buildWorkerConnection(heartbeat);
+  return deps.config.codexRunnerMode === "codex" && workerConnection.status === "online" ? [] : ["worker_offline"];
+}
+
+async function existingGithubIssueUrl(deps: AppDeps, workItemId: string): Promise<string | null> {
+  const detail = await deps.store.getWorkItemDetail(workItemId);
+  const issue = detail?.githubArtifacts.find((artifact) => artifact.artifactType === "issue");
+  return issue?.url ?? null;
+}
+
+function githubIssueClient(
+  deps: AppDeps,
+  target: ReturnType<typeof githubTarget>,
+): { createIssue(input: GitHubIssueInput): Promise<string> } {
+  const createIssue = deps.githubClient?.createIssue;
+  if (createIssue) {
+    return {
+      createIssue: (input) => createIssue(input),
+    };
+  }
+  return buildGithubClient(deps.config, target);
+}
+
+function sdkInstallClusterKey(repositoryFullName: string): string {
+  return `setup.sdk-install.${repositoryFullName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+}
+
+function githubNumberFromUrl(url: string): number | undefined {
+  const lastSegment = url.split("/").filter(Boolean).at(-1);
+  const number = Number(lastSegment);
+  return Number.isInteger(number) ? number : undefined;
 }
 
 function safeGithubRepository(repository: GitHubAccessibleRepository): GitHubAccessibleRepository {

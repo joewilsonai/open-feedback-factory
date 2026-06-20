@@ -69,7 +69,7 @@ reasons.
 | Daybook local demo app | DONE | Real local demo app exercises SDK/API path | 2026-06-19 |
 | LaunchBrief proof app | DONE | Live app uses the real SDK at runtime; this is proof only, not the final demo concept | 2026-06-19 |
 | Final plant-care demo app | DONE | Sprout exists at `https://sprout-demo-chi.vercel.app`, starts SDK-less, and was live-gated across Today, My Plants, and detail views | 2026-06-20 |
-| OFF SDK-install PR demo | PARTIAL | Clean Sprout repo exists, SDK package is prepared, and backend handoff blocks truthfully on `sdk_publish_held`; durable proof still requires Joe-approved npm publish and a real SDK-install PR | 2026-06-20 |
+| OFF SDK-install PR demo | PARTIAL | Clean Sprout repo exists, `@open-feedback-factory/sdk@0.1.0` is published, Sprout repo access is verified, and backend handoff queues a real work item plus sanitized GitHub issue; durable proof still requires a live worker-created SDK-install PR | 2026-06-20 |
 | Full plant-app feedback-to-feature demo | NOT-STARTED | Needs repo connect, SDK-install PR, merge/redeploy, beta feedback, agent PR, release proof, user status, and usage attribution | 2026-06-19 |
 | Hosted landing page | DONE | `openfeedbackfactory.com` is live with current OFF brand | 2026-06-19 |
 | Hosted API/control center stack | PARTIAL | Hosted services exist; final demo needs plant-app flow and local-worker claim proof | 2026-06-19 |

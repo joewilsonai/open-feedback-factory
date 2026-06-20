@@ -1225,6 +1225,157 @@ test("admin connect SDK install handoff blocks when the GitHub App cannot access
   await app.close();
 });
 
+test("admin connect SDK install handoff queues a real SDK install work item and sanitized issue", async () => {
+  const store = new MemoryStore();
+  const issueInputs: Array<{ body: string; labels: string[]; title: string }> = [];
+  const githubClient = {
+    createIssue: async (input: { body: string; labels: string[]; title: string }) => {
+      issueInputs.push(input);
+      return "https://github.com/owner/alpha/issues/42";
+    },
+    listInstallationRepositories: async () => ({
+      repositories: [
+        {
+          fullName: "owner/alpha",
+          htmlUrl: "https://github.com/owner/alpha",
+          name: "alpha",
+          owner: "owner",
+          permissions: { pull: true, push: true },
+          private: true,
+        },
+      ],
+      totalCount: 1,
+      truncated: false,
+    }),
+  };
+  const app = await buildApp({
+    config: {
+      ...config,
+      githubAppId: "app-123",
+      githubAppPrivateKey: "private-secret",
+      githubMode: "app",
+      githubOwner: "owner",
+      githubRepo: "alpha",
+      sdkPackagePublished: true,
+    },
+    githubClient,
+    store,
+  });
+
+  const response = await app.inject({
+    method: "POST",
+    payload: { repositoryFullName: "owner/alpha" },
+    url: "/admin/connect/sdk-install-pr",
+  });
+  const body = response.json();
+
+  assert.equal(response.statusCode, 202);
+  assert.equal(body.status, "queued");
+  assert.equal(body.repositoryFullName, "owner/alpha");
+  assert.deepEqual(body.missing, ["worker_offline"]);
+  assert.equal(body.workItemId, "work_1");
+  assert.equal(body.issueUrl, "https://github.com/owner/alpha/issues/42");
+  assert.equal(body.prUrl, null);
+  assert.equal(body.github.targetAccessible, true);
+  assert.match(body.summary, /queued/i);
+  assert.match(body.summary, /PR has not been opened/i);
+
+  assert.equal(store.workItems.length, 1);
+  assert.equal(store.workItems[0]?.title, "Install Open Feedback Factory SDK");
+  assert.equal(store.workItems[0]?.githubIssueUrl, "https://github.com/owner/alpha/issues/42");
+  assert.equal(store.githubArtifactRows.length, 1);
+  assert.equal(store.githubArtifactRows[0]?.artifactType, "issue");
+  assert.equal(issueInputs.length, 1);
+  assert.match(issueInputs[0]?.body ?? "", /Raw user feedback stays/);
+  assert.match(issueInputs[0]?.body ?? "", /owner\/alpha/);
+  assert.doesNotMatch(JSON.stringify(body), /private-secret|installation-token|sk-test-secret/);
+  assert.doesNotMatch(JSON.stringify(issueInputs), /private-secret|installation-token|sk-test-secret/);
+
+  const duplicate = await app.inject({
+    method: "POST",
+    payload: { repositoryFullName: "owner/alpha" },
+    url: "/admin/connect/sdk-install-pr",
+  });
+  const duplicateBody = duplicate.json();
+
+  assert.equal(duplicate.statusCode, 202);
+  assert.equal(duplicateBody.workItemId, "work_1");
+  assert.equal(duplicateBody.issueUrl, "https://github.com/owner/alpha/issues/42");
+  assert.equal(issueInputs.length, 1);
+  assert.equal(store.workItems.length, 1);
+  assert.equal(store.githubArtifactRows.length, 1);
+
+  await app.close();
+});
+
+test("admin connect SDK install handoff keeps worker offline when runner mode is enabled without heartbeat", async () => {
+  const store = new MemoryStore();
+  const app = await buildApp({
+    config: {
+      ...config,
+      codexRunnerMode: "codex",
+      githubAppId: "app-123",
+      githubAppPrivateKey: "private-secret",
+      githubMode: "app",
+      githubOwner: "owner",
+      githubRepo: "alpha",
+      sdkPackagePublished: true,
+    },
+    githubClient: {
+      createIssue: async () => "https://github.com/owner/alpha/issues/42",
+      listInstallationRepositories: async () => ({
+        repositories: [
+          {
+            fullName: "owner/alpha",
+            htmlUrl: "https://github.com/owner/alpha",
+            name: "alpha",
+            owner: "owner",
+            permissions: { pull: true, push: true },
+            private: true,
+          },
+        ],
+        totalCount: 1,
+        truncated: false,
+      }),
+    },
+    store,
+  });
+
+  const response = await app.inject({
+    method: "POST",
+    payload: { repositoryFullName: "owner/alpha" },
+    url: "/admin/connect/sdk-install-pr",
+  });
+  const body = response.json();
+
+  assert.equal(response.statusCode, 202);
+  assert.equal(body.status, "queued");
+  assert.deepEqual(body.missing, ["worker_offline"]);
+  assert.equal(body.prUrl, null);
+
+  store.workerHeartbeat = {
+    codexAuthMode: "cli",
+    lastSeenAt: new Date().toISOString(),
+    runnerMode: "codex",
+    status: "idle",
+    workerKind: "host",
+    workerName: "test-worker",
+  };
+  const online = await app.inject({
+    method: "POST",
+    payload: { repositoryFullName: "owner/alpha" },
+    url: "/admin/connect/sdk-install-pr",
+  });
+  const onlineBody = online.json();
+
+  assert.equal(online.statusCode, 202);
+  assert.deepEqual(onlineBody.missing, []);
+  assert.equal(onlineBody.workItemId, "work_1");
+  assert.equal(onlineBody.issueUrl, "https://github.com/owner/alpha/issues/42");
+
+  await app.close();
+});
+
 test("admin connect SDK install handoff requires the configured admin token", async () => {
   const app = await buildApp({
     config: { ...config, adminToken: "admin-test-token" },

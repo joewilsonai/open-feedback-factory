@@ -21,8 +21,8 @@ status map.
 | Control-center UI tests | Done for current internal UI | Final plant-app onboarding state still needs tests once implemented |
 | LaunchBrief live proof | Done as interim proof | Proved real SDK runtime path; not the final demo target |
 | Plant-care demo E2E | Partial | Sprout exists and is live-gated SDK-less; still needs OFF SDK-install PR, merge/redeploy, feedback request, implementation PR, release/user status |
-| Public npm SDK install test | Partial | Local tarball install/import proof exists; public registry install remains held until Joe approves npm publish |
-| SDK-install handoff honesty | Partial | API tests cover repo-access proof plus blocked `sdk_publish_held` with no fake work item, issue, or PR evidence; real plant-app PR still pending |
+| Public npm SDK install test | Partial | `@open-feedback-factory/sdk@0.1.0` is live on npm; still needs a real target-app install PR and CI/runtime proof |
+| SDK-install handoff honesty | Partial | API tests cover repo-access proof, blocked `sdk_publish_held`, and queued work-item plus sanitized-issue creation with `prUrl: null`; real plant-app PR still pending |
 | Hosted control plane to local worker proof | Needs work | Must prove hosted `RUNNER_TOKEN` sync and real local CLI claim against hosted API |
 
 ## Test Principles

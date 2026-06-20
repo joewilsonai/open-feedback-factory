@@ -1,6 +1,6 @@
 import cors from "@fastify/cors";
 import { type AgentAssumptionRecord, type FeedbackInput, type UserFeedbackStatus } from "@open-feedback-factory/core";
-import type { GitHubInstallationRepositoryList } from "@open-feedback-factory/runner";
+import type { GitHubInstallationRepositoryList, GitHubIssueInput } from "@open-feedback-factory/runner";
 import type {
   ControlRoomSnapshot,
   MergeGuardrailPolicy,
@@ -107,6 +107,7 @@ export interface AppStore {
 }
 
 export interface AppGithubClient {
+  createIssue?(input: GitHubIssueInput): Promise<string>;
   listInstallationRepositories(): Promise<GitHubInstallationRepositoryList>;
 }
 
