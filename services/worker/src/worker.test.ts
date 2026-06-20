@@ -202,6 +202,43 @@ test("readWorkerConfig parses Codex sandbox network allowlists", () => {
   assert.equal(config.codexSandboxPolicyError, undefined);
 });
 
+test("readWorkerConfig parses Codex command prefix policy", () => {
+  const config = readWorkerConfig({
+    API_BASE_URL: "http://api.test",
+    CODEX_COMMAND_ALLOW_PREFIXES: "gh pr view; git status",
+    CODEX_COMMAND_DENY_PREFIXES: "gh repo delete",
+    CODEX_COMMAND_PROMPT_PREFIXES: "git push",
+    CODEX_RUNNER_MODE: "codex",
+  });
+
+  assert.deepEqual(config.codexCommandPolicy, {
+    rules: [
+      {
+        decision: "allow",
+        justification: "Operator allowlisted this outside-sandbox command prefix for the OFF Codex worker.",
+        pattern: ["gh", "pr", "view"],
+      },
+      {
+        decision: "allow",
+        justification: "Operator allowlisted this outside-sandbox command prefix for the OFF Codex worker.",
+        pattern: ["git", "status"],
+      },
+      {
+        decision: "prompt",
+        justification:
+          "Operator requires review before this outside-sandbox command prefix can run in the OFF Codex worker.",
+        pattern: ["git", "push"],
+      },
+      {
+        decision: "forbidden",
+        justification:
+          "Operator denied this outside-sandbox command prefix for the OFF Codex worker. Use a safer repository-scoped alternative.",
+        pattern: ["gh", "repo", "delete"],
+      },
+    ],
+  });
+});
+
 test("runWorkerOnce leaves work queued when Codex sandbox policy is unsafe", async () => {
   const calls: Array<{ body: unknown; url: string }> = [];
   const config = readWorkerConfig({
@@ -223,6 +260,31 @@ test("runWorkerOnce leaves work queued when Codex sandbox policy is unsafe", asy
   };
 
   assert.match(config.codexSandboxPolicyError ?? "", /danger-full-access/i);
+  assert.equal(await runWorkerOnce(config, fetchImpl), false);
+  assert.deepEqual(calls.map((call) => call.url), ["http://api.test/doctor", "http://api.test/runner/heartbeat"]);
+});
+
+test("runWorkerOnce leaves work queued when Codex command policy is invalid", async () => {
+  const calls: Array<{ body: unknown; url: string }> = [];
+  const config = readWorkerConfig({
+    API_BASE_URL: "http://api.test",
+    CODEX_CLI: process.execPath,
+    CODEX_COMMAND_DENY_PREFIXES: "git push\nrm -rf",
+    CODEX_RUNNER_MODE: "codex",
+  });
+  const fetchImpl: FetchLike = async (url, init) => {
+    calls.push({ body: init?.body ? JSON.parse(String(init.body)) : null, url });
+    if (String(url).endsWith("/doctor")) {
+      return jsonResponse({ approvalMode: "auto", codexAuthMode: "cli" });
+    }
+    if (String(url).endsWith("/runner/heartbeat")) {
+      return jsonResponse({ workerConnection: { status: "online" } });
+    }
+    if (String(url).endsWith("/runner/jobs/claim")) return jsonResponse({ job });
+    return new Response("not found", { status: 404 });
+  };
+
+  assert.match(config.codexCommandPolicyError ?? "", /single-line|single command argument token|invalid command token/i);
   assert.equal(await runWorkerOnce(config, fetchImpl), false);
   assert.deepEqual(calls.map((call) => call.url), ["http://api.test/doctor", "http://api.test/runner/heartbeat"]);
 });

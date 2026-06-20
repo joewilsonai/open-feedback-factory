@@ -88,7 +88,8 @@ remains the star.
   to the hosted API. This lets the demo use a developer's signed-in Codex
   subscription instead of per-token API-key spend.
 - The local worker must receive the hosted `RUNNER_TOKEN` through its ignored
-  environment file before it can claim hosted work items.
+  environment file before it can claim hosted work items. Host-worker install
+  commands fail fast for hosted APIs when the token is missing.
 - Targeted repo jobs carry runner target metadata. The local worker must be
   configured for that repo and checkout; otherwise it blocks before running
   Codex so it cannot mutate the OFF repo by accident.
@@ -104,7 +105,7 @@ remains the star.
 | Plant repo is connected to the OFF GitHub App | Done | Hosted repo-scope verification returned `targetAccessible: true` for `joewilsonai/sprout-demo` |
 | SDK-install handoff blocks honestly when prerequisites are missing | Done | API tests cover `sdk_publish_held` and missing-repo blockers with null work item, issue, and PR fields |
 | OFF creates a real sanitized issue or work item for SDK install | Partial | Backend now queues a real SDK-install work item and sanitized GitHub issue once npm publish and repo access are present; PR creation still waits for a live worker |
-| Local host Codex CLI worker can claim hosted work after manual approval | Needs work | Target-repo guard is covered; still requires hosted `RUNNER_TOKEN` sync and live proof |
+| Local host Codex CLI worker can claim hosted work after manual approval | Needs work | Target-repo guard and hosted-token preflight are covered; still requires hosted `RUNNER_TOKEN` sync and live proof |
 | Worker opens a real PR that installs SDK from npm | Needs work | Blocked on live worker proof for the queued SDK-install item |
 | PR includes assumptions, checks, and cost evidence | Needs work | Must be proven in plant-app run |
 | Merged/redeployed app sends real feedback through installed launcher | Needs work | LaunchBrief proves runtime path; plant-app flow pending |

@@ -1,0 +1,115 @@
+name: Open Feedback Factory worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      work_item_id:
+        description: "Optional OFF work item id for a targeted manual run."
+        required: false
+        type: string
+      repository_full_name:
+        description: "Target app repository, for example owner/app-repo."
+        required: true
+        type: string
+      repository_ref:
+        default: main
+        description: "Target app base branch."
+        required: true
+        type: string
+      off_runner_repository:
+        default: joewilsonai/open-feedback-factory
+        description: "Repository that contains the OFF worker package."
+        required: true
+        type: string
+      off_runner_ref:
+        default: main
+        description: "OFF runner repository ref to execute."
+        required: true
+        type: string
+
+jobs:
+  run-off-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    env:
+      CODEX_AUTH_MODE: api_key
+      CODEX_CLI: codex
+      CODEX_EFFORT: extra-high
+      CODEX_MODEL: gpt-5.5
+      CODEX_RUNNER_MODE: codex
+      GITHUB_CREATE_PR: "true"
+      GITHUB_MODE: gh
+      GITHUB_PR_BASE: ${{ inputs.repository_ref }}
+      OFF_API_BASE_URL: ${{ secrets.OFF_API_BASE_URL }}
+      OFF_RUNNER_TOKEN: ${{ secrets.OFF_RUNNER_TOKEN }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      RUNNER_TOKEN: ${{ secrets.OFF_RUNNER_TOKEN }}
+      WORKER_API_BASE_URL: ${{ secrets.OFF_API_BASE_URL }}
+      WORKER_RUN_ONCE: "true"
+      WORKER_WORK_ITEM_ID: ${{ inputs.work_item_id }}
+
+    steps:
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          test -n "$OFF_API_BASE_URL" || { echo "OFF_API_BASE_URL secret is required"; exit 1; }
+          test -n "$RUNNER_TOKEN" || { echo "OFF_RUNNER_TOKEN secret is required"; exit 1; }
+          test -n "$OPENAI_API_KEY" || { echo "OPENAI_API_KEY secret is required for the GitHub Actions API-key lane"; exit 1; }
+
+      - name: Check out OFF worker
+        uses: actions/checkout@v4
+        with:
+          path: off
+          ref: ${{ inputs.off_runner_ref }}
+          repository: ${{ inputs.off_runner_repository }}
+
+      - name: Check out target app repository
+        uses: actions/checkout@v4
+        with:
+          path: target-app
+          ref: ${{ inputs.repository_ref }}
+          repository: ${{ inputs.repository_full_name }}
+          token: ${{ secrets.OFF_TARGET_REPO_TOKEN || github.token }}
+
+      - name: Derive target repository settings
+        shell: bash
+        env:
+          REPOSITORY_FULL_NAME: ${{ inputs.repository_full_name }}
+        run: |
+          case "$REPOSITORY_FULL_NAME" in
+            */*) ;;
+            *) echo "repository_full_name must look like owner/repo"; exit 1 ;;
+          esac
+          echo "GITHUB_OWNER=${REPOSITORY_FULL_NAME%%/*}" >> "$GITHUB_ENV"
+          echo "GITHUB_REPO=${REPOSITORY_FULL_NAME#*/}" >> "$GITHUB_ENV"
+          echo "RUNNER_WORKSPACE=${GITHUB_WORKSPACE}/target-app" >> "$GITHUB_ENV"
+          echo "WORKER_NAME=github-actions-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.1
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          cache: pnpm
+          cache-dependency-path: off/pnpm-lock.yaml
+          node-version: 24
+
+      - name: Install OFF worker dependencies
+        working-directory: off
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Codex CLI
+        run: npm install -g @openai/codex
+
+      - name: Run one OFF worker claim
+        working-directory: off
+        env:
+          GH_TOKEN: ${{ secrets.OFF_TARGET_REPO_TOKEN || github.token }}
+        run: pnpm --filter @open-feedback-factory/worker start

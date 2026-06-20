@@ -79,19 +79,20 @@ guarded PR path without pretending that anything shipped.
 
 ## SDK Package Status
 
-The web SDK package is prepared for public npm distribution under
-`@open-feedback-factory/sdk`: it builds to `packages/sdk/dist`, exports
-declaration files, has package-local install docs, and passes `npm pack`
-dry-run plus a disposable tarball import smoke test.
+The web SDK package is live on public npm as
+`@open-feedback-factory/sdk@0.1.0`: it builds to `packages/sdk/dist`, exports
+declaration files, has package-local install docs, passed `npm pack` dry-run
+plus a disposable tarball import smoke test, and is installable through the
+normal npm registry.
 
-The actual `npm publish --access public` step is intentionally held for Joe.
-Until that hold is lifted, any SDK-install demo that does not install from the
-public npm registry must be labeled interim.
+The next proof point is not publishing. It is a real SDK-install PR against the
+clean Sprout demo repo, followed by merge/redeploy proof that the launcher is
+running from the public package in the target app.
 
-The admin SDK-install handoff endpoint is wired to stay honest while that hold
-is in place: `POST /admin/connect/sdk-install-pr` verifies GitHub App repo
-access and then returns a blocked state with no work item, issue, or PR URL
-until the SDK publish and worker/PR lane are real.
+The admin SDK-install handoff endpoint is wired to stay honest:
+`POST /admin/connect/sdk-install-pr` verifies GitHub App repo access, queues a
+real work item and sanitized GitHub issue only when prerequisites are present,
+and still returns no PR URL until a live worker actually creates one.
 
 Future/V2: requester-first rollout can expose a shipped feature first to the
 users or cohort who asked for it, collect lightweight feedback, watch health
@@ -184,6 +185,9 @@ requests.
 
 `RUNNER_TOKEN` protects `/runner/*` claim and completion routes. Docker and host
 workers read the same `.env` value and send it as `x-off-runner-token`.
+Generated host-worker commands refuse to start against a hosted API if
+`RUNNER_TOKEN` is missing, which keeps a misconfigured subscription worker from
+silently failing every claim.
 
 ## Approval And Credential Modes
 
@@ -250,6 +254,10 @@ branch and open a pull request after a successful Codex run.
 Set the optional `CODEX_*_USD_PER_1M` rate variables to convert captured Codex
 JSON usage totals into actual dollar cost records. Without rates, V1 records
 actual tokens and keeps the configured estimate as the dollar amount.
+
+GitHub Actions can also run a manual one-item worker through the copyable
+template in [docs/github-actions-runner.md](docs/github-actions-runner.md).
+That lane uses API-key auth in CI, not a developer's local Codex subscription.
 
 Set `WORKER_WORK_ITEM_ID=work_...` with `WORKER_RUN_ONCE=true` to run one
 specific queued item. This is useful for demos, retries, and Codex PR smoke

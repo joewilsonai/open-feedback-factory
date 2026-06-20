@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import {
+  normalizeCodexCommandPolicy,
   normalizeCodexSandboxPolicy,
   type CodexApprovalPolicy,
+  type CodexCommandPolicy,
   type CodexPricing,
   type CodexRunnerSandboxPolicy,
   type CodexRunnerSandboxPolicyInput,
@@ -13,6 +15,8 @@ export interface WorkerConfig {
   approvalMode: "auto" | "manual";
   codexAuthMode: "api_key" | "cli";
   codexCli: string;
+  codexCommandPolicy: CodexCommandPolicy;
+  codexCommandPolicyError?: string;
   codexEffort: string;
   codexManageGit: boolean;
   codexModel: string;
@@ -43,6 +47,7 @@ export interface WorkerConfig {
 
 export function readWorkerConfig(env = process.env): WorkerConfig {
   const codexSandbox = readCodexSandboxPolicy(env);
+  const codexCommandPolicy = readCodexCommandPolicy(env);
   return {
     apiBaseUrl: trimTrailingSlash(
       env.WORKER_API_BASE_URL ?? env.API_BASE_URL ?? env.VITE_API_BASE_URL ?? "http://localhost:4100",
@@ -50,6 +55,8 @@ export function readWorkerConfig(env = process.env): WorkerConfig {
     approvalMode: env.APPROVAL_MODE === "auto" ? "auto" : "manual",
     codexAuthMode: env.CODEX_AUTH_MODE === "api_key" ? "api_key" : "cli",
     codexCli: env.CODEX_CLI ?? "codex",
+    codexCommandPolicy: codexCommandPolicy.policy,
+    codexCommandPolicyError: codexCommandPolicy.error,
     codexEffort: env.CODEX_EFFORT ?? "extra-high",
     codexManageGit: env.CODEX_MANAGE_GIT === "true",
     codexModel: env.CODEX_MODEL ?? "gpt-5.5",
@@ -77,6 +84,26 @@ export function readWorkerConfig(env = process.env): WorkerConfig {
     workItemId: env.WORKER_WORK_ITEM_ID || undefined,
     openAiApiKey: readOpenAiApiKey(env.OPENAI_API_KEY, env.CODEX_SECRETS_PATH ?? ".off/secrets.env"),
   };
+}
+
+function readCodexCommandPolicy(env: NodeJS.ProcessEnv): {
+  error?: string;
+  policy: CodexCommandPolicy;
+} {
+  try {
+    return {
+      policy: normalizeCodexCommandPolicy({
+        allowPrefixes: commandPrefixListFromEnv(env.CODEX_COMMAND_ALLOW_PREFIXES),
+        denyPrefixes: commandPrefixListFromEnv(env.CODEX_COMMAND_DENY_PREFIXES),
+        promptPrefixes: commandPrefixListFromEnv(env.CODEX_COMMAND_PROMPT_PREFIXES),
+      }),
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : String(error),
+      policy: normalizeCodexCommandPolicy(),
+    };
+  }
 }
 
 function trimTrailingSlash(value: string): string {
@@ -154,6 +181,18 @@ function csvFromEnv(value: string | undefined): string[] {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function commandPrefixListFromEnv(value: string | undefined): string[][] {
+  if (!value) return [];
+  if (/[\r\n]/.test(value)) {
+    throw new Error("Codex command policy env values must be single-line semicolon-separated prefixes.");
+  }
+  return value
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => item.split(/\s+/));
 }
 
 function numberFromEnv(value: string | undefined): number | undefined {

@@ -117,6 +117,14 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(claimed?.id, intake.workItemId);
     assert.equal(claimed?.status, "in_progress");
 
+    const preRecordedArtifactId = await store.recordGithubArtifact({
+      artifactNumber: 123,
+      artifactType: "pull_request",
+      metadata: { action: "opened", event: "pull_request" },
+      url: "https://github.com/joewilsonai/open-feedback-factory/pull/123",
+      workItemId: claimed?.id ?? "",
+    });
+
     const runId = await store.completeWorkItemRun({
       agentName: "db-test-worker",
       assumptions: [
@@ -210,7 +218,13 @@ test("OpenFeedbackStore creates feedback, work item, status, and usage", { skip:
     assert.equal(detail?.costRecords.some((cost) => cost.phase === "estimate"), true);
     assert.equal(detail?.costRecords.some((cost) => cost.phase === "actual" && cost.amountUsd === 1.25), true);
     assert.equal(detail?.assumptions[0]?.notes, "A release-health assumption should block auto-merge until resolved.");
-    assert.equal(detail?.githubArtifacts.some((artifact) => artifact.url.endsWith("/pull/123")), true);
+    const pullRequestArtifacts =
+      detail?.githubArtifacts.filter((artifact) => artifact.url.endsWith("/pull/123")) ?? [];
+    assert.equal(pullRequestArtifacts.length, 1);
+    assert.equal(pullRequestArtifacts[0]?.id, preRecordedArtifactId);
+    assert.equal(pullRequestArtifacts[0]?.artifactNumber, 123);
+    assert.equal(pullRequestArtifacts[0]?.metadata.event, "pull_request");
+    assert.equal(pullRequestArtifacts[0]?.metadata.agentRunId, runId);
     assert.equal(detail?.releaseEvents[0]?.status, "shipped");
     assert.equal(detail?.releaseEvents[0]?.metadata.featureId, "dashboard-focus-meter");
     assert.equal(detail?.usageAttribution[0]?.featureId, "dashboard-focus-meter");
@@ -463,9 +477,14 @@ async function cleanupDatabaseTestRows(url: string): Promise<void> {
           or user_id = 'user-1'`,
     );
     await client.query(`delete from audit_events where target_id = 'max_feature_cost_usd'`);
+    await client.query(`delete from audit_events where target_id = 'merge_mode'`);
     await client.query(`delete from audit_events where target_id = 'merge_guardrails'`);
-    await client.query(`delete from policy_configs where key = 'max_feature_cost_usd'`);
-    await client.query(`delete from policy_configs where key = 'merge_guardrails'`);
+    await client.query(`delete from audit_events where target_id = 'cost_budget'`);
+    await client.query(`delete from audit_events where target_id = 'work_cadence'`);
+    await client.query(
+      `delete from policy_configs where key = any($1::text[])`,
+      [["cost_budget", "max_feature_cost_usd", "merge_guardrails", "merge_mode", "work_cadence"]],
+    );
     await client.query(`delete from worker_heartbeats where worker_name like 'db-worker-%'`);
     await client.query("commit");
   } catch (error) {

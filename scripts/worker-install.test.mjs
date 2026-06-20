@@ -29,6 +29,18 @@ test("host worker command sources env and applies worker defaults", () => {
   assert.doesNotMatch(command, /OPENAI_API_KEY=|GITHUB_APP_PRIVATE_KEY=/);
 });
 
+test("host worker command fails fast for hosted APIs without runner token", () => {
+  const command = buildHostWorkerCommand({
+    apiBaseUrl: "https://api.openfeedbackfactory.com",
+    repoRoot: "/tmp/open-feedback-factory",
+  });
+
+  assert.match(command, /RUNNER_TOKEN/);
+  assert.match(command, /hosted API/i);
+  assert.match(command, /WORKER_API_BASE_URL/);
+  assert.doesNotMatch(command, /runner-test-token|RUNNER_TOKEN=|OPENAI_API_KEY=|GITHUB_APP_PRIVATE_KEY=/);
+});
+
 test("macOS LaunchAgent render keeps secrets out of the service file", () => {
   const plist = renderLaunchAgent({
     apiBaseUrl: "http://localhost:4100",

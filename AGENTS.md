@@ -227,6 +227,13 @@ The worker reads live approval/auth settings from `/doctor` before claiming
 work. Do not force a stale `CODEX_AUTH_MODE` in a host worker command when the
 control center has the current mode.
 
+Optional `CODEX_COMMAND_ALLOW_PREFIXES`, `CODEX_COMMAND_PROMPT_PREFIXES`, and
+`CODEX_COMMAND_DENY_PREFIXES` values generate temporary Codex execpolicy rules
+inside `RUNNER_WORKSPACE/.codex/rules/` for outside-sandbox command approvals.
+Treat these as Codex-native command policy, not a homegrown shell parser, and
+do not claim they inspect every in-sandbox command. See
+[docs/agent-runner-setup.md](docs/agent-runner-setup.md).
+
 For a real local Codex subscription run, prefer running the worker on the host
 so it can use the signed-in Codex CLI:
 

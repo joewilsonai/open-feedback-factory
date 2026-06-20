@@ -43,7 +43,7 @@ reasons.
 | RLS / workspace isolation tests | DONE | Postgres integration tests verify RLS scaffolding and cross-workspace blocking | 2026-06-19 |
 | SDK feedback API | DONE | Browser SDK can submit feedback, read status, and record feature usage | 2026-06-19 |
 | SDK floating launcher | DONE | Real launcher opens in-app UI and shows user-visible tracking receipt without control-center access | 2026-06-19 |
-| SDK public npm distribution | PARTIAL | Package metadata, `dist` exports, README, `npm pack --dry-run`, and local tarball import proof are prepared; actual `npm publish --access public` is held for Joe | 2026-06-20 |
+| SDK public npm distribution | DONE | `@open-feedback-factory/sdk@0.1.0` is live on public npm; install proof now belongs to the SDK-install PR demo lane | 2026-06-20 |
 | SDK CDN distribution | NOT-STARTED | Planned option only | 2026-06-19 |
 | API service | DONE | SDK, admin, runner, GitHub, health, doctor, release, rate-limit, and guardrail tests pass | 2026-06-19 |
 | Admin token gate | DONE | `/admin/*` requires token when configured and `/doctor` never exposes token values | 2026-06-19 |
@@ -59,8 +59,9 @@ reasons.
 | Branch and PR creation | PARTIAL | Runner/GitHub client seams exist; next durable proof is a real SDK-install PR in the clean plant-care repo | 2026-06-19 |
 | Branch cleanup | DONE | GitHub client branch cleanup path is tested | 2026-06-19 |
 | Codex CLI runner | DONE | Runner builds `codex exec --json` args, parses structured JSONL, captures usage, and handles disabled/missing CLI states honestly | 2026-06-19 |
-| Runner sandbox/network controls | PARTIAL | Runner defaults to Codex `workspace-write` with approval `never`, login shell off, web search disabled, and network off; explicit allowlisted network proxy config is tested, and unsafe sandbox/global-network settings leave work queued before claim. Fine-grained command allow/deny playbooks remain future work | 2026-06-20 |
-| Local subscription worker | PARTIAL | Host worker path exists, sends token-gated heartbeats, and `/doctor` / control center expose online/stale/offline worker liveness plus the trusted host worker + `codex login --device-auth` path; hosted-control-plane to local-worker claim still needs `RUNNER_TOKEN` sync and live proof | 2026-06-19 |
+| Runner sandbox/network/command controls | DONE | Runner defaults to Codex `workspace-write` with approval `never`, login shell off, web search disabled, and network off; explicit allowlisted network proxy config is tested, unsafe sandbox/global-network settings leave work queued before claim, and optional Codex execpolicy command prefix rules are generated from `CODEX_COMMAND_*_PREFIXES`, tested, and scoped honestly to outside-sandbox command approvals | 2026-06-20 |
+| Local subscription worker | PARTIAL | Host worker path exists, sends token-gated heartbeats, and `/doctor` / control center expose online/stale/offline worker liveness plus the trusted host worker + `codex login --device-auth` path; generated host-worker commands now fail fast when pointed at a hosted API without `RUNNER_TOKEN`, but hosted-control-plane to local-worker claim still needs token sync and live proof | 2026-06-20 |
+| GitHub Actions worker | PARTIAL | Copyable `workflow_dispatch` template exists for a manual one-item API-key worker with secret-backed OFF API, runner token, OpenAI key, target checkout, and PR publication; still needs live install/run proof before calling this lane active | 2026-06-20 |
 | Hosted API-key worker | DEFERRED | Supported as a paid/managed future lane and shown as the OpenAI API-key path, but not default alpha path because Joe wants subscription/free local worker path first | 2026-06-19 |
 | Delegated Codex subscription auth for hosted workers | NOT-STARTED | `/doctor` / control center explicitly state this is not supported without a trusted runner or provider-supported delegated token path; do not imply hosted Plus/Pro subscription delegation exists | 2026-06-19 |
 | Safe auto-merge policy | DONE | Guardrail policy, protected paths, diff/check/provenance/cost assumptions, and reviewer-decision requirements are tested | 2026-06-19 |
@@ -107,5 +108,7 @@ The demo story is:
 6. OFF sanitizes, routes, estimates, builds, opens a PR, records assumptions and
    costs, waits for release proof, and updates the user-facing status.
 
-Until the SDK is actually published to npm, any SDK-install demo using a private
-git dependency or prebuilt Vercel deploy must be labeled interim.
+The SDK is now published to public npm. Any SDK-install demo must install from
+that public package path and remain labeled incomplete until a live worker opens
+the real install PR, the PR is merged, and the target app redeploys with the
+launcher.
