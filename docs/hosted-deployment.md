@@ -147,6 +147,11 @@ worker runs in Railway or another container, it cannot use a developer's local
 Codex CLI subscription session; it must either use API-key auth or a future
 provider-supported delegated subscription token flow.
 
+A manual GitHub Actions worker is available as an optional API-key lane via
+[github-actions-runner.md](github-actions-runner.md). Treat it as prepared until
+a real repo has the workflow, secrets, target checkout, and successful worker
+run evidence.
+
 ## Hosted Demo Alpha
 
 The current active demo app is Sprout:

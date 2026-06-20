@@ -279,6 +279,12 @@ and skipped checks, and posts the run result back to the API.
 Those records appear in the control center work-item evidence ledger alongside
 GitHub artifacts, release proof, user notifications, and audit events.
 
+For teams that cannot keep a trusted host worker online, OFF also includes a
+manual GitHub Actions worker template. See
+[github-actions-runner.md](github-actions-runner.md). This lane uses
+`CODEX_AUTH_MODE=api_key` in CI and should remain partial until a real workflow
+run proves claim, implementation, PR publication, and completion recording.
+
 The runner's final structured result must include:
 
 - `outcome`;
