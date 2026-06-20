@@ -74,11 +74,21 @@ developer machine and point it at the hosted API:
 WORKER_API_BASE_URL=https://api.openfeedbackfactory.com
 CODEX_AUTH_MODE=cli
 CODEX_RUNNER_MODE=codex
+GITHUB_OWNER=joewilsonai
+GITHUB_REPO=sprout-demo
+RUNNER_WORKSPACE=/path/to/sprout-demo
 ```
 
 If the hosted API requires `RUNNER_TOKEN`, put that token in the worker's
 ignored environment file before starting the host worker. Do not paste it into
 GitHub, prompts, PRs, screenshots, or logs.
+
+For repo-specific jobs such as the hosted SDK-install handoff, the claimed job
+includes a target repository. Configure `GITHUB_OWNER`, `GITHUB_REPO`, and
+`RUNNER_WORKSPACE` for that repository. The worker checks the target before
+running Codex and blocks if the job targets a different repo or if the checkout
+remote points somewhere else. This prevents a hosted Sprout install request from
+accidentally mutating the OFF repo checkout.
 
 Generic hosted/container workers cannot use a developer's local Codex
 subscription session. Those workers should stay disabled or use the Docker
@@ -107,6 +117,8 @@ GITHUB_CREATE_PR=true \
 GITHUB_MODE=gh \
 GITHUB_PR_BASE=codex/open-feedback-factory-v1 \
 WORKER_API_BASE_URL=http://localhost:4100 \
+GITHUB_OWNER=joewilsonai \
+GITHUB_REPO=open-feedback-factory \
 RUNNER_WORKSPACE=/path/to/open-feedback-factory \
 CODEX_SECRETS_PATH="$PWD/.off/secrets.env" \
 CODEX_MODEL=gpt-5.5 \

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { AgentAssumptionRecord } from "@open-feedback-factory/core";
+import type { WorkItemRow } from "@open-feedback-factory/db";
 import type { AppDeps } from "../app.js";
 import { buildWorkerConnection } from "./health.js";
 
@@ -34,7 +35,7 @@ export async function registerRunnerRoutes(app: FastifyInstance, deps: AppDeps):
       request.body?.workItemId,
       maxFeatureCostUsd,
     );
-    return { approvalMode, job };
+    return { approvalMode, job: job ? await withRunnerTarget(deps, job) : null };
   });
 
   app.post<{
@@ -64,6 +65,40 @@ export async function registerRunnerRoutes(app: FastifyInstance, deps: AppDeps):
 
     return { runId, status: request.body.status ?? "succeeded" };
   });
+}
+
+async function withRunnerTarget(deps: AppDeps, job: WorkItemRow) {
+  const runnerTarget = await runnerTargetForWorkItem(deps, job.id);
+  return runnerTarget ? { ...job, runnerTarget } : job;
+}
+
+async function runnerTargetForWorkItem(deps: AppDeps, workItemId: string) {
+  const detail = await deps.store.getWorkItemDetail(workItemId);
+  const artifact = detail?.githubArtifacts.find(
+    (item) => typeof item.metadata.repositoryFullName === "string" && item.metadata.handoff === "sdk_install",
+  );
+  const repositoryFullName = artifact?.metadata.repositoryFullName;
+  if (typeof repositoryFullName !== "string") return null;
+  const parsed = parseRepositoryFullName(repositoryFullName);
+  if (!parsed) return null;
+  return {
+    owner: parsed.owner,
+    repo: parsed.repo,
+    repositoryFullName: parsed.fullName,
+    source: "github_artifact",
+  };
+}
+
+function parseRepositoryFullName(value: string): { fullName: string; owner: string; repo: string } | null {
+  const match = value.trim().match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/);
+  if (!match) return null;
+  const [, owner, repo] = match;
+  if (!owner || !repo) return null;
+  return {
+    fullName: `${owner}/${repo}`,
+    owner,
+    repo,
+  };
 }
 
 function normalizeHeartbeat(body: Record<string, unknown> | undefined) {
