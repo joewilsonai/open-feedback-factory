@@ -33,7 +33,7 @@ test("semantic clustering stays disabled without an Anthropic key even when enab
 
 test("semantic clustering model + timeout fall back to safe defaults", () => {
   const def = semantic({ SEMANTIC_CLUSTERING: "auto", ANTHROPIC_API_KEY: KEY });
-  assert.equal(def.model, "claude-haiku-4-5-20251001");
+  assert.equal(def.model, "claude-sonnet-4-6");
   assert.equal(def.timeoutMs, 4000);
 
   const custom = semantic({

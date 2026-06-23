@@ -57,6 +57,66 @@ test("generic-fallback paraphrases collapse onto the classifier's canonical key"
   assert.equal(calls.length, 2, "both generic-fallback messages consult the classifier");
 });
 
+test("resolveClusterKey offers existing clusters and reuses a returned key", async () => {
+  let seenExisting: unknown = "unset";
+  const classifier: IntentClassifier = {
+    async classify(_message, existing) {
+      seenExisting = existing;
+      return { clusterKey: "feature.intent.watering-reminders", title: "Watering reminders" };
+    },
+  };
+  const resolved = await resolveClusterKey(
+    { sanitizedMessage: "ping me to water the plants", privacyRisk: "low" },
+    {
+      classifier,
+      getExistingClusters: async () => [
+        { clusterKey: "feature.intent.watering-reminders", title: "Watering reminders" },
+      ],
+    },
+  );
+  assert.deepEqual(seenExisting, [
+    { clusterKey: "feature.intent.watering-reminders", title: "Watering reminders" },
+  ]);
+  assert.equal(resolved.clusterKey, "feature.intent.watering-reminders");
+  assert.equal(resolved.source, "semantic");
+});
+
+test("existing-cluster loader is NOT called on the deterministic (precise) path", async () => {
+  let loaderCalled = false;
+  await resolveClusterKey(
+    { sanitizedMessage: "please add dark mode", privacyRisk: "low" },
+    {
+      classifier: classifierReturning({ clusterKey: "x" }),
+      getExistingClusters: async () => {
+        loaderCalled = true;
+        return [];
+      },
+    },
+  );
+  assert.equal(loaderCalled, false, "dedicated buckets must not pay for the cluster lookup");
+});
+
+test("a failing existing-cluster loader still classifies with empty context", async () => {
+  let seenExisting: unknown = "unset";
+  const classifier: IntentClassifier = {
+    async classify(_message, existing) {
+      seenExisting = existing;
+      return { clusterKey: "new-intent" };
+    },
+  };
+  const resolved = await resolveClusterKey(
+    { sanitizedMessage: "some uncategorized widget request", privacyRisk: "low" },
+    {
+      classifier,
+      getExistingClusters: async () => {
+        throw new Error("db unavailable");
+      },
+    },
+  );
+  assert.deepEqual(seenExisting, []);
+  assert.equal(resolved.clusterKey, "feature.intent.new-intent");
+});
+
 test("classifier only ever receives the sanitized message text", async () => {
   const calls: string[] = [];
   const classifier = classifierReturning({ clusterKey: "intent-x" }, calls);

@@ -13,6 +13,15 @@ export interface IntentClassification {
 }
 
 /**
+ * An intent cluster that already exists, passed to the classifier so it can
+ * REUSE a matching one instead of minting a near-duplicate sibling intent.
+ */
+export interface ExistingCluster {
+  clusterKey: string;
+  title?: string;
+}
+
+/**
  * Swappable semantic-clustering backend. Implementations turn a sanitized
  * feedback message into a canonical intent so that paraphrases of the same
  * request ("send me a watering reminder" / "push notifications for watering")
@@ -27,7 +36,10 @@ export interface IntentClassification {
  *    thrown errors and timeouts so intake never breaks on a model hiccup.
  */
 export interface IntentClassifier {
-  classify(sanitizedMessage: string): Promise<IntentClassification | null>;
+  classify(
+    sanitizedMessage: string,
+    existingClusters?: ExistingCluster[],
+  ): Promise<IntentClassification | null>;
 }
 
 export type ClusterSource = "deterministic" | "semantic";
@@ -43,6 +55,13 @@ export interface ResolvedCluster {
 
 export interface ResolveClusterKeyOptions {
   classifier?: IntentClassifier;
+  /**
+   * Lazily loads the existing intent clusters to offer the classifier for
+   * reuse. Called ONLY when the classifier is about to run (generic-fallback,
+   * eligible feedback) so dedicated buckets never pay for the lookup. Loader
+   * errors are swallowed — the classifier just runs without reuse context.
+   */
+  getExistingClusters?: () => Promise<ExistingCluster[]>;
   /**
    * Hard cap (ms) on the classifier call. Owned by the seam — not the
    * implementation — so a misbehaving classifier that never settles can never
@@ -97,10 +116,22 @@ export async function resolveClusterKey(
     return base;
   }
 
+  // Offer existing intents so the classifier reuses a match instead of minting
+  // a near-duplicate sibling. Loaded lazily and defensively — a failed lookup
+  // just means classifying without reuse context, never a broken intake.
+  let existingClusters: ExistingCluster[] = [];
+  if (options.getExistingClusters) {
+    try {
+      existingClusters = await options.getExistingClusters();
+    } catch {
+      existingClusters = [];
+    }
+  }
+
   let classification: IntentClassification | null = null;
   try {
     classification = await withTimeout(
-      classifier.classify(sanitized.sanitizedMessage),
+      classifier.classify(sanitized.sanitizedMessage, existingClusters),
       options.timeoutMs ?? DEFAULT_RESOLVE_TIMEOUT_MS,
     );
   } catch {

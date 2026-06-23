@@ -498,6 +498,27 @@ export class OpenFeedbackStore {
     return result.rows.map(feedbackClusterFromRow);
   }
 
+  // Semantic intent clusters only, for the intake classifier's reuse context.
+  // Filters `feature.intent.%` in SQL BEFORE the limit, so the reuse candidates
+  // never get crowded out of a latest-N window by deterministic clusters.
+  async listSemanticIntentClusters(limit = 80): Promise<Array<{ clusterKey: string; title: string }>> {
+    const result = await this.pool.query(
+      `select cluster_key, title
+       from feedback_clusters
+       where cluster_key like 'feature.intent.%'
+       order by latest_signal_at desc
+       limit $1`,
+      [limit],
+    );
+    return result.rows.map((row) => {
+      const record = row as Record<string, unknown>;
+      return {
+        clusterKey: String(record.cluster_key),
+        title: typeof record.title === "string" ? record.title : "",
+      };
+    });
+  }
+
   async listWorkItems(): Promise<WorkItemRow[]> {
     const result = await this.pool.query(
       `select wi.id, wi.cluster_key, wi.title, wi.summary, wi.category, wi.risk_tier, wi.status, wi.user_status,

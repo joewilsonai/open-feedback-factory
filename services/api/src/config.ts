@@ -134,11 +134,12 @@ function configSchemaVersionFromEnv(env: NodeJS.ProcessEnv): number | undefined 
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-// Default model pinned per ~/.claude/REFERENCES.md (cheapest tier, fits per-signal
-// classification). SEMANTIC_CLUSTERING=off hard-disables; "auto"/"on" enable when
+// Default model pinned per ~/.claude/REFERENCES.md. Sonnet 4.6 is used over Haiku
+// for sharper, more consistent intent reuse (it judges each new signal against the
+// existing intents). SEMANTIC_CLUSTERING=off hard-disables; "auto"/"on" enable when
 // an Anthropic key is present, so the feature degrades to deterministic clustering
 // with zero config when no key is set.
-const DEFAULT_SEMANTIC_CLUSTER_MODEL = "claude-haiku-4-5-20251001";
+const DEFAULT_SEMANTIC_CLUSTER_MODEL = "claude-sonnet-4-6";
 
 function semanticClusteringFromEnv(env: NodeJS.ProcessEnv): SemanticClusteringConfig {
   const apiKey = env.ANTHROPIC_API_KEY || undefined;
