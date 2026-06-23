@@ -45,6 +45,11 @@ export async function registerSdkRoutes(app: FastifyInstance, deps: AppDeps): Pr
       getExistingClusters: () => deps.store.listSemanticIntentClusters(80),
     });
     const clusterKey = resolvedCluster.clusterKey;
+    if (resolvedCluster.attempted && resolvedCluster.source === "deterministic") {
+      // The classifier ran but fell back (timeout/error/no answer). Surface it —
+      // a high rate means the model is slow/unavailable and reuse is degrading.
+      console.warn("[off] semantic classifier fell back to deterministic clustering");
+    }
     const previousSignalCount = await deps.store.getFeedbackClusterSignalCount(clusterKey);
     const workCadence = await deps.store.getWorkCadencePolicy(deps.config.workCadence);
     const decision = routeFeedback({

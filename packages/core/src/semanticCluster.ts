@@ -51,6 +51,12 @@ export interface ResolvedCluster {
   source: ClusterSource;
   /** Whether the deterministic layer considered its key high-confidence. */
   precise: boolean;
+  /**
+   * Whether the classifier was actually invoked. `attempted && source ===
+   * "deterministic"` means the classifier ran but fell back (timeout/error/no
+   * answer) — the signal callers use to surface otherwise-silent fallbacks.
+   */
+  attempted: boolean;
 }
 
 export interface ResolveClusterKeyOptions {
@@ -98,6 +104,7 @@ export async function resolveClusterKey(
     clusterKey: deterministic.clusterKey,
     source: "deterministic",
     precise: deterministic.precise,
+    attempted: false,
   };
 
   const { classifier } = options;
@@ -115,6 +122,9 @@ export async function resolveClusterKey(
   if (ineligible) {
     return base;
   }
+
+  // From here the classifier is actually invoked, so fallbacks are "attempted".
+  const attemptedFallback: ResolvedCluster = { ...base, attempted: true };
 
   // Offer existing intents so the classifier reuses a match instead of minting
   // a near-duplicate sibling. Loaded lazily and defensively — a failed lookup
@@ -136,16 +146,16 @@ export async function resolveClusterKey(
     );
   } catch {
     // Thrown error, rejection, or timeout — keep the deterministic key.
-    return base;
+    return attemptedFallback;
   }
 
   if (!classification) {
-    return base;
+    return attemptedFallback;
   }
 
   const slug = normalizeIntentSlug(classification.clusterKey);
   if (!slug) {
-    return base;
+    return attemptedFallback;
   }
 
   return {
@@ -153,6 +163,7 @@ export async function resolveClusterKey(
     title: normalizeTitle(classification.title),
     source: "semantic",
     precise: deterministic.precise,
+    attempted: true,
   };
 }
 
