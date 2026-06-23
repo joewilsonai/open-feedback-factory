@@ -59,6 +59,7 @@ export interface AppStore {
   getCostBudget(defaultBudget: CostBudgetPolicy): Promise<CostBudgetPolicy>;
   getCostBudgetUsage(): Promise<CostBudgetUsage>;
   getFeedbackClusterSignalCount(clusterKey: string): Promise<number>;
+  listSemanticIntentClusters(limit?: number): Promise<Array<{ clusterKey: string; title: string }>>;
   getIntegrationSecretsVault(): Promise<IntegrationSecretsVaultRecord>;
   getMaxFeatureCostUsd(defaultCap: number): Promise<number>;
   getMergeMode(defaultMode: ApiConfig["mergeMode"]): Promise<MergeMode>;

@@ -34,8 +34,16 @@ export async function registerSdkRoutes(app: FastifyInstance, deps: AppDeps): Pr
     const sanitized = sanitizeFeedback(feedback);
     // Resolve the cluster key once (semantic when a classifier is configured and
     // the deterministic layer hit its brittle generic fallback) and reuse it for
-    // both the signal-count lookup and the routing decision so they agree.
-    const resolvedCluster = await resolveClusterKey(sanitized, { classifier: deps.intentClassifier });
+    // both the signal-count lookup and the routing decision so they agree. The
+    // classifier is offered the existing semantic intents so it reuses a match
+    // instead of minting a near-duplicate; the lookup runs lazily, only when the
+    // classifier is actually about to run.
+    const resolvedCluster = await resolveClusterKey(sanitized, {
+      classifier: deps.intentClassifier,
+      // Semantic intents only, filtered + limited in SQL (never crowded out of a
+      // latest-N window by deterministic clusters).
+      getExistingClusters: () => deps.store.listSemanticIntentClusters(80),
+    });
     const clusterKey = resolvedCluster.clusterKey;
     const previousSignalCount = await deps.store.getFeedbackClusterSignalCount(clusterKey);
     const workCadence = await deps.store.getWorkCadencePolicy(deps.config.workCadence);

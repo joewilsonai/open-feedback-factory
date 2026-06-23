@@ -329,10 +329,12 @@ crashes, copy edits, Daybook features) group instantly with no model call. For
 everything else — the brittle path where "send me a watering reminder" and
 "push notifications for watering" would otherwise scatter into separate
 one-signal clusters — an optional semantic classifier groups requests by
-canonical intent so paraphrases accumulate demand together. Only the sanitized
-message is sent to the model; blocked or secret-bearing feedback never is; and
-any model error or timeout falls back to the deterministic key, so intake never
-breaks. It is off until `ANTHROPIC_API_KEY` is configured.
+canonical intent so paraphrases accumulate demand together. It is shown the
+intents that already exist and reuses a matching one rather than minting a
+near-duplicate sibling. Only the sanitized message is sent to the model;
+blocked, secret-bearing, or protected-area feedback never is; and any model
+error or timeout falls back to the deterministic key, so intake never breaks.
+It is off until `ANTHROPIC_API_KEY` is configured.
 
 Operators can also record explicit not-planned or blocked decisions from the
 control center. That updates the work item, writes a user-safe notification for

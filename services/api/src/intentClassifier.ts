@@ -1,4 +1,4 @@
-import type { IntentClassification, IntentClassifier } from "@open-feedback-factory/core";
+import type { ExistingCluster, IntentClassification, IntentClassifier } from "@open-feedback-factory/core";
 
 /**
  * Anthropic-backed semantic intent classifier.
@@ -23,11 +23,25 @@ const SYSTEM_PROMPT = [
   "that differently-worded requests for the same thing group together.",
   "Ignore incidental wording, names, and tone; capture the underlying feature",
   "request or issue.",
+  "You will be given the intents that ALREADY exist. If the feedback expresses",
+  "the same underlying need as one of them, you MUST return that intent's EXACT",
+  "clusterKey verbatim — do not invent a near-duplicate. Only create a new short",
+  "kebab-case slug when none of the existing intents fit.",
   "Respond with ONLY a compact JSON object and nothing else:",
-  '{"clusterKey":"<2-5 word kebab-case slug>","title":"<short human title>"}',
+  '{"clusterKey":"<existing clusterKey, or a new 2-5 word kebab-case slug>","title":"<short human title>"}',
   'Example: feedback "can you ping me when it is time to water?" ->',
   '{"clusterKey":"watering-reminders","title":"Watering reminders"}',
 ].join(" ");
+
+function buildUserContent(message: string, existingClusters: ExistingCluster[]): string {
+  if (!existingClusters.length) {
+    return `No intents exist yet.\n\nFeedback: ${message}`;
+  }
+  const list = existingClusters
+    .map((c) => `- ${c.clusterKey}${c.title ? ` (${c.title})` : ""}`)
+    .join("\n");
+  return `Existing intents (reuse the exact clusterKey if one matches):\n${list}\n\nFeedback: ${message}`;
+}
 
 export interface AnthropicIntentClassifierOptions {
   apiKey: string;
@@ -44,7 +58,7 @@ export function createAnthropicIntentClassifier(
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   return {
-    async classify(sanitizedMessage) {
+    async classify(sanitizedMessage, existingClusters = []) {
       const trimmed = sanitizedMessage.trim();
       if (!trimmed) {
         return null;
@@ -66,7 +80,7 @@ export function createAnthropicIntentClassifier(
             max_tokens: DEFAULT_MAX_TOKENS,
             temperature: 0,
             system: SYSTEM_PROMPT,
-            messages: [{ role: "user", content: trimmed }],
+            messages: [{ role: "user", content: buildUserContent(trimmed, existingClusters) }],
           }),
         });
 

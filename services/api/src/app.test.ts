@@ -336,6 +336,14 @@ class MemoryStore implements AppStore {
     return this.feedbackClusters.get(clusterKey)?.signalCount ?? 0;
   }
 
+  async listSemanticIntentClusters(limit = 80) {
+    return [...this.feedbackClusters.values()]
+      .filter((cluster) => cluster.clusterKey.startsWith("feature.intent."))
+      .sort((a, b) => (b.latestSignalAt ?? "").localeCompare(a.latestSignalAt ?? ""))
+      .slice(0, limit)
+      .map((cluster) => ({ clusterKey: cluster.clusterKey, title: cluster.title }));
+  }
+
   async claimNextWorkItem(_workerName?: string, workItemId?: string, maxFeatureCostUsd?: number) {
     const item = this.workItems.find(
       (workItem) =>
@@ -951,6 +959,42 @@ test("API intake still succeeds when the semantic classifier fails", async () =>
   });
   assert.equal(res.statusCode, 201);
   assert.ok(res.json().status.state);
+
+  await app.close();
+});
+
+test("classifier reuse context contains only semantic intents, not deterministic clusters", async () => {
+  const store = new MemoryStore();
+  const intentClassifier = {
+    async classify() {
+      return { clusterKey: "feature.intent.watering-reminders", title: "Watering reminders" };
+    },
+  };
+  const app = await buildApp({ config, store, intentClassifier });
+
+  // Deterministic precise bucket → feature.theme.dark-mode (classifier never runs).
+  await app.inject({
+    method: "POST",
+    payload: { message: "please add dark mode", source: "demo", userId: "ctx-1" },
+    url: "/sdk/feedback",
+  });
+  // Generic fallback → semantic feature.intent.watering-reminders via the classifier.
+  await app.inject({
+    method: "POST",
+    payload: { message: "remind me to water my plants", source: "demo", userId: "ctx-2" },
+    url: "/sdk/feedback",
+  });
+
+  const reuseContext = await store.listSemanticIntentClusters();
+  assert.ok(
+    reuseContext.every((c) => c.clusterKey.startsWith("feature.intent.")),
+    "only feature.intent.* clusters are offered for reuse",
+  );
+  assert.ok(reuseContext.some((c) => c.clusterKey === "feature.intent.watering-reminders"));
+  assert.ok(
+    !reuseContext.some((c) => c.clusterKey === "feature.theme.dark-mode"),
+    "deterministic clusters must not pollute the reuse context",
+  );
 
   await app.close();
 });

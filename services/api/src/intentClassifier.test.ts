@@ -49,9 +49,31 @@ test("classifier sends only the sanitized message with correct auth headers", as
   const body = JSON.parse(String(capturedInit?.body));
   assert.equal(body.model, "claude-haiku-4-5-20251001");
   assert.equal(body.temperature, 0);
-  assert.deepEqual(body.messages, [
-    { role: "user", content: "ping me when it is time to water my plants" },
+  assert.equal(body.messages.length, 1);
+  assert.equal(body.messages[0].role, "user");
+  assert.match(body.messages[0].content, /ping me when it is time to water my plants/);
+});
+
+test("classifier offers existing intents for reuse in the prompt", async () => {
+  let capturedContent = "";
+  const classifier = createAnthropicIntentClassifier({
+    apiKey: "k",
+    model: "claude-sonnet-4-6",
+    fetchImpl: async (_url, init) => {
+      const body = JSON.parse(String(init?.body)) as { messages: Array<{ content: string }> };
+      capturedContent = body.messages[0]?.content ?? "";
+      return anthropicTextResponse('{"clusterKey":"feature.intent.watering-reminders"}');
+    },
+  });
+
+  const result = await classifier.classify("ping me to water the plants", [
+    { clusterKey: "feature.intent.watering-reminders", title: "Watering reminders" },
   ]);
+
+  assert.deepEqual(result, { clusterKey: "feature.intent.watering-reminders", title: undefined });
+  assert.match(capturedContent, /feature\.intent\.watering-reminders/);
+  assert.match(capturedContent, /Watering reminders/);
+  assert.match(capturedContent, /ping me to water the plants/);
 });
 
 test("classifier returns null on a non-200 response", async () => {
