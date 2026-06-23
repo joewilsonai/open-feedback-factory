@@ -149,12 +149,16 @@ function semanticClusteringFromEnv(env: NodeJS.ProcessEnv): SemanticClusteringCo
   // clustering on the deterministic path. A privacy-affecting call should never
   // turn on by accident.
   const modeEnables = mode === "auto" || mode === "on";
-  const timeout = Number(env.SEMANTIC_CLUSTER_TIMEOUT_MS ?? 4000);
+  // 12s default: Sonnet's p50 is ~1.4s but its tail reaches ~6s+, and a 4s cap
+  // silently dropped ~half of prod calls to the deterministic fallback. Most
+  // feedback still resolves fast; only the slow tail waits longer (and only on
+  // the generic-fallback path). Moving the call off the hot path is the v3 fix.
+  const timeout = Number(env.SEMANTIC_CLUSTER_TIMEOUT_MS ?? 12000);
   return {
     enabled: modeEnables && Boolean(apiKey),
     apiKey,
     model: env.SEMANTIC_CLUSTER_MODEL || DEFAULT_SEMANTIC_CLUSTER_MODEL,
-    timeoutMs: Number.isFinite(timeout) && timeout > 0 ? timeout : 4000,
+    timeoutMs: Number.isFinite(timeout) && timeout > 0 ? timeout : 12000,
   };
 }
 

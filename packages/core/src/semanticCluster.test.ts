@@ -31,6 +31,7 @@ test("dedicated (precise) buckets win without ever calling the classifier", asyn
   assert.equal(resolved.clusterKey, "feature.theme.dark-mode");
   assert.equal(resolved.source, "deterministic");
   assert.equal(resolved.precise, true);
+  assert.equal(resolved.attempted, false);
   assert.deepEqual(calls, [], "classifier must not be called for precise buckets");
 });
 
@@ -211,6 +212,7 @@ test("a throwing classifier never breaks intake — falls back deterministically
   );
 
   assert.equal(resolved.source, "deterministic");
+  assert.equal(resolved.attempted, true, "fell back, but the classifier was attempted");
   assert.ok(resolved.clusterKey.startsWith("feedback."));
 });
 
