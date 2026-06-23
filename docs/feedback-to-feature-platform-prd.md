@@ -217,7 +217,11 @@ need an estimate before work starts and actual cost after it finishes.
 2. The SDK sends the signal to the product API.
 3. The API stores raw feedback privately and creates a sanitized summary.
 4. Triage clusters similar feedback and assigns category, priority, risk, and
-   decision state.
+   decision state. Clustering is hybrid: deterministic dedicated buckets group
+   the obvious cases for free, and an optional semantic classifier groups the
+   long tail by canonical intent so differently-worded requests for the same
+   feature accumulate demand together instead of scattering. Only the sanitized
+   summary is ever sent to the classifier, and never blocked feedback.
 5. If safe and actionable, the system creates or updates a GitHub issue.
 6. A planner turns the issue into a PR-sized implementation plan.
 7. An agent runner creates an isolated workspace, implements the change, runs

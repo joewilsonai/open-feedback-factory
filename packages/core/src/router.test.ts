@@ -19,6 +19,20 @@ test("routeFeedback sends dark mode through the safe implementation lane", () =>
   assert.match(decision.userMessage, /not shipped yet/i);
 });
 
+test("routeFeedback uses a pre-resolved clusterKey when provided", () => {
+  const sanitized = sanitizeFeedback({
+    message: "send me a watering reminder when my plants need water",
+    source: "demo",
+  });
+
+  const withInjected = routeFeedback({ sanitized, clusterKey: "feature.intent.watering-reminders" });
+  assert.equal(withInjected.clusterKey, "feature.intent.watering-reminders");
+
+  // Without an injected key it falls back to the deterministic key.
+  const deterministic = routeFeedback({ sanitized });
+  assert.ok(deterministic.clusterKey.startsWith("feedback."));
+});
+
 test("routeFeedback holds safe work until threshold cadence has enough demand", () => {
   const sanitized = sanitizeFeedback({
     message: "Please add dark mode to settings",

@@ -32,6 +32,7 @@ reasons.
 | Product thesis and PRD | DONE | PRD exists and is rendered to HTML; it remains the aspirational vision, not the implementation audit snapshot | 2026-06-19 |
 | Core sanitizer | DONE | Redacts private contact and obvious secret data in deterministic tests | 2026-06-19 |
 | Core clustering and routing | DONE | Handles safe work, blocked/private work, needs-more-signal, repeated-demand promotion, and clarification questions | 2026-06-19 |
+| Semantic clustering (intent grouping) | DONE | Hybrid: deterministic dedicated buckets stay free/instant; the brittle generic fallback is grouped by canonical intent via a Haiku classifier behind a swappable `IntentClassifier` seam. Sanitized-only input, blocked feedback never sent, model errors/timeouts fall back to deterministic. Off until `ANTHROPIC_API_KEY` is set (`SEMANTIC_CLUSTERING=auto`) | 2026-06-23 |
 | User-facing status model | DONE | Supports planned, grouped, in-progress, implemented, shipped, not planned, already available, blocked, and needs-more-signal copy | 2026-06-19 |
 | Cost estimates | DONE | Estimates exist in core/API; exact actual dollars require usage plus configured pricing | 2026-06-19 |
 | Budget caps | DONE | API exposes and enforces per-work-item, daily, monthly, and per-run token budget caps before model spend | 2026-06-20 |

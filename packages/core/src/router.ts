@@ -11,14 +11,33 @@ import type {
 
 export interface RouteFeedbackInput {
   activeUserCount?: number;
+  /**
+   * Pre-resolved cluster key. When provided (e.g. by the semantic clusterer in
+   * the intake path), it is used verbatim so the signal-count lookup and the
+   * routing decision agree on one key. Falls back to the deterministic key.
+   */
+  clusterKey?: string;
   model?: string;
   sanitized: SanitizedFeedback;
   signalCount?: number;
   workCadence?: WorkCadencePolicyInput;
 }
 
+const PROTECTED_AREA_PATTERN = /billing|auth|password|privacy|delete all|export.*private|legal|encryption/;
+
+/**
+ * True when a message touches a protected product area (auth, billing, privacy,
+ * legal, encryption, bulk deletion/export). The router blocks these from agent
+ * work; the intake layer also uses it to keep such content away from any
+ * external model (e.g. the semantic classifier) — the model is an agent-like
+ * boundary, so blocked content must not reach it either.
+ */
+export function isProtectedAreaMessage(message: string): boolean {
+  return PROTECTED_AREA_PATTERN.test(message.toLowerCase());
+}
+
 export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
-  const clusterKey = clusterKeyForFeedback(input.sanitized);
+  const clusterKey = input.clusterKey ?? clusterKeyForFeedback(input.sanitized);
   const message = input.sanitized.sanitizedMessage.toLowerCase();
   const clarificationQuestions = buildEndUserClarificationQuestions(input.sanitized);
   const signalCount = input.signalCount ?? 1;
@@ -39,7 +58,7 @@ export function routeFeedback(input: RouteFeedbackInput): WorkRoutingDecision {
     });
   }
 
-  if (/billing|auth|password|privacy|delete all|export.*private|legal|encryption/.test(message)) {
+  if (isProtectedAreaMessage(message)) {
     return decision({
       action: "blocked",
       category: categoryFor(message, "privacy"),

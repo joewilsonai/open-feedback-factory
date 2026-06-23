@@ -324,6 +324,16 @@ routes repeated unclear requests into a guarded work item once the V1 threshold
 is reached. The control center's demand-memory panel shows these clusters,
 their latest safe decision, and whether they have promoted into work.
 
+Matching uses a hybrid clusterer. Deterministic dedicated buckets (dark mode,
+crashes, copy edits, Daybook features) group instantly with no model call. For
+everything else — the brittle path where "send me a watering reminder" and
+"push notifications for watering" would otherwise scatter into separate
+one-signal clusters — an optional semantic classifier groups requests by
+canonical intent so paraphrases accumulate demand together. Only the sanitized
+message is sent to the model; blocked or secret-bearing feedback never is; and
+any model error or timeout falls back to the deterministic key, so intake never
+breaks. It is off until `ANTHROPIC_API_KEY` is configured.
+
 Operators can also record explicit not-planned or blocked decisions from the
 control center. That updates the work item, writes a user-safe notification for
 matching requesters, and stores an audit event so rejected work is explained

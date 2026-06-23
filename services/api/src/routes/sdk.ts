@@ -1,4 +1,4 @@
-import { clusterKeyForFeedback, routeFeedback, sanitizeFeedback, type FeedbackInput } from "@open-feedback-factory/core";
+import { resolveClusterKey, routeFeedback, sanitizeFeedback, type FeedbackInput } from "@open-feedback-factory/core";
 import type { GitHubIssueInput } from "@open-feedback-factory/runner";
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../app.js";
@@ -32,10 +32,15 @@ export async function registerSdkRoutes(app: FastifyInstance, deps: AppDeps): Pr
       userId: request.body.userId,
     };
     const sanitized = sanitizeFeedback(feedback);
-    const clusterKey = clusterKeyForFeedback(sanitized);
+    // Resolve the cluster key once (semantic when a classifier is configured and
+    // the deterministic layer hit its brittle generic fallback) and reuse it for
+    // both the signal-count lookup and the routing decision so they agree.
+    const resolvedCluster = await resolveClusterKey(sanitized, { classifier: deps.intentClassifier });
+    const clusterKey = resolvedCluster.clusterKey;
     const previousSignalCount = await deps.store.getFeedbackClusterSignalCount(clusterKey);
     const workCadence = await deps.store.getWorkCadencePolicy(deps.config.workCadence);
     const decision = routeFeedback({
+      clusterKey,
       model: "gpt-5.5",
       sanitized,
       signalCount: previousSignalCount + 1,

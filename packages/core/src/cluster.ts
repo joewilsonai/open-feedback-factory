@@ -26,7 +26,24 @@ const STOP_WORDS = new Set([
   "with",
 ]);
 
-export function clusterKeyForFeedback(input: Pick<SanitizedFeedback, "sanitizedMessage">): string {
+/**
+ * The deterministic clustering result.
+ *
+ * `precise` marks whether the key came from a high-confidence dedicated bucket
+ * (a hand-written synonym/intent rule like dark-mode, crash, daybook) or from
+ * the generic first-N-words fallback. The fallback is brittle — paraphrases of
+ * the same request scatter into separate one-signal clusters — so it is the
+ * only path a semantic classifier should be allowed to override. See
+ * {@link resolveClusterKey} in ./semanticCluster.ts.
+ */
+export interface DeterministicCluster {
+  clusterKey: string;
+  precise: boolean;
+}
+
+export function deterministicCluster(
+  input: Pick<SanitizedFeedback, "sanitizedMessage">,
+): DeterministicCluster {
   let normalized = input.sanitizedMessage.toLowerCase();
   normalized = normalized.replace(/\[[^\]]+\]/g, " ");
   normalized = normalized.replace(/[^a-z0-9\s]/g, " ");
@@ -36,30 +53,43 @@ export function clusterKeyForFeedback(input: Pick<SanitizedFeedback, "sanitizedM
   }
 
   if (hasThemeColorIntent(normalized)) {
-    return "feature.theme.color-options";
+    return { clusterKey: "feature.theme.color-options", precise: true };
   }
 
   if (/\bdark mode\b/.test(normalized)) {
-    return "feature.theme.dark-mode";
+    return { clusterKey: "feature.theme.dark-mode", precise: true };
   }
 
   if (/\bcopy\b/.test(normalized)) {
     const copyWords = wordsForCluster(normalized).filter((word) => !STOP_WORDS.has(word)).slice(0, 8);
-    return copyWords.length ? `safe.copy.${copyWords.join("-")}` : "safe.copy";
+    return {
+      clusterKey: copyWords.length ? `safe.copy.${copyWords.join("-")}` : "safe.copy",
+      precise: true,
+    };
   }
 
   if (/\bcrash\b/.test(normalized)) {
-    return "bug.crash";
+    return { clusterKey: "bug.crash", precise: true };
   }
 
   if (/\b(todo|due date|pinned note|notes?)\b/.test(normalized)) {
     const words = wordsForCluster(normalized).filter((word) => !STOP_WORDS.has(word)).slice(0, 8);
-    return words.length ? `feature.daybook.${words.join("-")}` : "feature.daybook";
+    return {
+      clusterKey: words.length ? `feature.daybook.${words.join("-")}` : "feature.daybook",
+      precise: true,
+    };
   }
 
   const words = wordsForCluster(normalized).slice(0, 8);
 
-  return words.length ? `feedback.${words.join("-")}` : "feedback.uncategorized";
+  return {
+    clusterKey: words.length ? `feedback.${words.join("-")}` : "feedback.uncategorized",
+    precise: false,
+  };
+}
+
+export function clusterKeyForFeedback(input: Pick<SanitizedFeedback, "sanitizedMessage">): string {
+  return deterministicCluster(input).clusterKey;
 }
 
 function hasThemeColorIntent(value: string): boolean {

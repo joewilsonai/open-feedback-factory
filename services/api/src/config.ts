@@ -54,6 +54,15 @@ export interface ApiConfig {
   sdkPackagePublished: boolean;
   workCadence: WorkCadencePolicy;
   secretsVaultKey?: string;
+  semanticClustering: SemanticClusteringConfig;
+}
+
+export interface SemanticClusteringConfig {
+  /** True only when enabled by env AND an Anthropic API key is present. */
+  enabled: boolean;
+  apiKey?: string;
+  model: string;
+  timeoutMs: number;
 }
 
 export function readConfig(env = process.env): ApiConfig {
@@ -106,6 +115,7 @@ export function readConfig(env = process.env): ApiConfig {
     sdkRateLimitMax: Number(env.SDK_RATE_LIMIT_MAX ?? 120),
     sdkPackagePublished: env.SDK_PACKAGE_PUBLISHED === "true",
     secretsVaultKey: env.SECRETS_VAULT_KEY || env.OFF_SECRETS_VAULT_KEY || undefined,
+    semanticClustering: semanticClusteringFromEnv(env),
     workCadence: normalizeWorkCadencePolicy({
       hourUtc: numberFromEnv(env.WORK_CADENCE_HOUR_UTC),
       interval: workCadenceIntervalFromEnv(env.WORK_CADENCE_INTERVAL),
@@ -122,6 +132,29 @@ function configSchemaVersionFromEnv(env: NodeJS.ProcessEnv): number | undefined 
   if (!raw) return undefined;
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+// Default model pinned per ~/.claude/REFERENCES.md (cheapest tier, fits per-signal
+// classification). SEMANTIC_CLUSTERING=off hard-disables; "auto"/"on" enable when
+// an Anthropic key is present, so the feature degrades to deterministic clustering
+// with zero config when no key is set.
+const DEFAULT_SEMANTIC_CLUSTER_MODEL = "claude-haiku-4-5-20251001";
+
+function semanticClusteringFromEnv(env: NodeJS.ProcessEnv): SemanticClusteringConfig {
+  const apiKey = env.ANTHROPIC_API_KEY || undefined;
+  const mode = (env.SEMANTIC_CLUSTERING ?? "auto").trim().toLowerCase();
+  // Fail closed: only an explicit "auto"/"on" enables the external model call.
+  // Anything else — "off", "false", "0", "disabled", a typo, or empty — keeps
+  // clustering on the deterministic path. A privacy-affecting call should never
+  // turn on by accident.
+  const modeEnables = mode === "auto" || mode === "on";
+  const timeout = Number(env.SEMANTIC_CLUSTER_TIMEOUT_MS ?? 4000);
+  return {
+    enabled: modeEnables && Boolean(apiKey),
+    apiKey,
+    model: env.SEMANTIC_CLUSTER_MODEL || DEFAULT_SEMANTIC_CLUSTER_MODEL,
+    timeoutMs: Number.isFinite(timeout) && timeout > 0 ? timeout : 4000,
+  };
 }
 
 function githubModeFromEnv(value: string | undefined): ApiConfig["githubMode"] {

@@ -1,6 +1,7 @@
 import { OpenFeedbackStore } from "@open-feedback-factory/db";
 import { buildApp } from "./app.js";
 import { readConfig } from "./config.js";
+import { createAnthropicIntentClassifier } from "./intentClassifier.js";
 
 const config = readConfig();
 
@@ -9,7 +10,20 @@ if (!config.databaseUrl) {
 }
 
 const store = new OpenFeedbackStore(config.databaseUrl);
-const app = await buildApp({ config, store });
+const intentClassifier =
+  config.semanticClustering.enabled && config.semanticClustering.apiKey
+    ? createAnthropicIntentClassifier({
+        apiKey: config.semanticClustering.apiKey,
+        model: config.semanticClustering.model,
+        timeoutMs: config.semanticClustering.timeoutMs,
+      })
+    : undefined;
+
+if (intentClassifier) {
+  console.log(`Semantic clustering enabled (model: ${config.semanticClustering.model})`);
+}
+
+const app = await buildApp({ config, intentClassifier, store });
 
 await app.listen({
   host: config.apiHost,
