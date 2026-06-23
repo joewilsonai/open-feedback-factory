@@ -57,6 +57,7 @@ const config: ApiConfig = {
   publicBaseUrl: "http://api.test",
   runnerWorkspace: "/tmp/open-feedback-factory-test",
   sdkPackagePublished: false,
+  semanticClustering: { enabled: false, model: "claude-haiku-4-5-20251001", timeoutMs: 4000 },
   workCadence: {
     hourUtc: 9,
     interval: "weekly",
@@ -866,6 +867,90 @@ test("API promotes repeated below-threshold feedback from demand memory", async 
   assert.equal(cluster.signalCount, 2);
   assert.equal(cluster.activeWorkItemId, second.json().workItemId);
   assert.equal(cluster.latestStatus, "planned");
+
+  await app.close();
+});
+
+test("API groups paraphrased feedback into one semantic cluster and promotes it", async () => {
+  const store = new MemoryStore();
+  const classifierCalls: string[] = [];
+  const intentClassifier = {
+    async classify(message: string) {
+      classifierCalls.push(message);
+      return { clusterKey: "watering-reminders", title: "Watering reminders" };
+    },
+  };
+  const app = await buildApp({ config, store, intentClassifier });
+
+  const first = await app.inject({
+    method: "POST",
+    payload: { message: "ping me when my plants need water", source: "demo", userId: "para-1" },
+    url: "/sdk/feedback",
+  });
+  assert.equal(first.statusCode, 201);
+  assert.equal(first.json().status.state, "needs_more_signal");
+
+  // Different wording for the same intent — deterministically this would land in
+  // a separate cluster, but the semantic classifier collapses it onto the first.
+  const second = await app.inject({
+    method: "POST",
+    payload: { message: "send push notifications for watering schedules", source: "demo", userId: "para-2" },
+    url: "/sdk/feedback",
+  });
+  assert.equal(second.statusCode, 201);
+  assert.match(second.json().workItemId, /^work_/);
+  assert.equal(second.json().status.state, "planned");
+
+  const controlRoom = await app.inject({ method: "GET", url: "/admin/control-room" });
+  const cluster = controlRoom
+    .json()
+    .feedbackClusters.find((row: { clusterKey: string }) => row.clusterKey === "feature.intent.watering-reminders");
+  assert.ok(cluster, "paraphrases should share one semantic cluster");
+  assert.equal(cluster.signalCount, 2);
+  assert.equal(classifierCalls.length, 2);
+
+  await app.close();
+});
+
+test("API keeps protected-area feedback away from the semantic classifier", async () => {
+  const store = new MemoryStore();
+  const classifierCalls: string[] = [];
+  const intentClassifier = {
+    async classify(message: string) {
+      classifierCalls.push(message);
+      return { clusterKey: "should-not-happen" };
+    },
+  };
+  const app = await buildApp({ config, store, intentClassifier });
+
+  const res = await app.inject({
+    method: "POST",
+    payload: { message: "please add a password reset flow to login", source: "demo", userId: "prot-1" },
+    url: "/sdk/feedback",
+  });
+  assert.equal(res.statusCode, 201);
+  assert.equal(res.json().status.state, "blocked");
+  assert.deepEqual(classifierCalls, [], "protected-area feedback must never reach the model");
+
+  await app.close();
+});
+
+test("API intake still succeeds when the semantic classifier fails", async () => {
+  const store = new MemoryStore();
+  const intentClassifier = {
+    async classify() {
+      throw new Error("model unavailable");
+    },
+  };
+  const app = await buildApp({ config, store, intentClassifier });
+
+  const res = await app.inject({
+    method: "POST",
+    payload: { message: "an uncategorized request about widgets", source: "demo", userId: "fail-1" },
+    url: "/sdk/feedback",
+  });
+  assert.equal(res.statusCode, 201);
+  assert.ok(res.json().status.state);
 
   await app.close();
 });

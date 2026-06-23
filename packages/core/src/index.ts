@@ -8,5 +8,6 @@ export * from "./cost.js";
 export * from "./playbooks.js";
 export * from "./router.js";
 export * from "./sanitize.js";
+export * from "./semanticCluster.js";
 export * from "./status.js";
 export * from "./types.js";

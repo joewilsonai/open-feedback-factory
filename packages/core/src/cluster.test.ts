@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { clusterKeyForFeedback } from "./cluster.js";
+import { clusterKeyForFeedback, deterministicCluster } from "./cluster.js";
 
 test("clusterKeyForFeedback groups dark mode phrasing variants", () => {
   const variants = [
@@ -57,4 +57,22 @@ test("clusterKeyForFeedback groups Daybook todo requests", () => {
     clusterKeyForFeedback({ sanitizedMessage: "Please add pinned notes" }),
     "feature.daybook.pinned-note",
   );
+});
+
+test("deterministicCluster marks dedicated buckets precise and the generic fallback imprecise", () => {
+  assert.equal(deterministicCluster({ sanitizedMessage: "Please add dark mode" }).precise, true);
+  assert.equal(deterministicCluster({ sanitizedMessage: "the app crashes on launch" }).precise, true);
+  assert.equal(deterministicCluster({ sanitizedMessage: "Add due dates to todos" }).precise, true);
+  assert.equal(
+    deterministicCluster({ sanitizedMessage: "Copy update: change the save button label" }).precise,
+    true,
+  );
+
+  // Brittle path: paraphrases of the same intent scatter into distinct keys,
+  // which is exactly what the semantic clusterer is allowed to override.
+  const a = deterministicCluster({ sanitizedMessage: "send me a watering reminder for my plants" });
+  const b = deterministicCluster({ sanitizedMessage: "notify me when my plants need water" });
+  assert.equal(a.precise, false);
+  assert.equal(b.precise, false);
+  assert.notEqual(a.clusterKey, b.clusterKey);
 });

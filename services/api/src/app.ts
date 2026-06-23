@@ -2,6 +2,7 @@ import cors from "@fastify/cors";
 import {
   type AgentAssumptionRecord,
   type FeedbackInput,
+  type IntentClassifier,
   type MergeMode,
   type UserFeedbackStatus,
   type WorkCadencePolicy,
@@ -132,6 +133,12 @@ export interface AppGithubClient {
 export interface AppDeps {
   config: ApiConfig;
   githubClient?: AppGithubClient;
+  /**
+   * Optional semantic clusterer for the intake path. When present, paraphrased
+   * feedback in the generic-fallback bucket is grouped by canonical intent
+   * instead of by raw keywords. Absent → deterministic clustering only.
+   */
+  intentClassifier?: IntentClassifier;
   store: AppStore;
 }
 
