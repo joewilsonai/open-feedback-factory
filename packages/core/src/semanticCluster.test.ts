@@ -80,6 +80,7 @@ test("resolveClusterKey offers existing clusters and reuses a returned key", asy
   ]);
   assert.equal(resolved.clusterKey, "feature.intent.watering-reminders");
   assert.equal(resolved.source, "semantic");
+  assert.equal(resolved.attempted, true);
 });
 
 test("existing-cluster loader is NOT called on the deterministic (precise) path", async () => {
@@ -189,13 +190,25 @@ test("a classifier that never settles times out and falls back deterministically
   assert.ok(resolved.clusterKey.startsWith("feedback."));
 });
 
-test("null classification keeps the deterministic key", async () => {
+test("null classification keeps the deterministic key (attempted)", async () => {
   const resolved = await resolveClusterKey(
     { sanitizedMessage: "some uncategorized request about widgets", privacyRisk: "low" },
     { classifier: classifierReturning(null) },
   );
 
   assert.equal(resolved.source, "deterministic");
+  assert.equal(resolved.attempted, true);
+  assert.ok(resolved.clusterKey.startsWith("feedback."));
+});
+
+test("an unusable classifier key falls back deterministically (attempted)", async () => {
+  const resolved = await resolveClusterKey(
+    { sanitizedMessage: "yet another uncategorized widget request", privacyRisk: "low" },
+    { classifier: classifierReturning({ clusterKey: "!!!" }) },
+  );
+
+  assert.equal(resolved.source, "deterministic");
+  assert.equal(resolved.attempted, true);
   assert.ok(resolved.clusterKey.startsWith("feedback."));
 });
 
