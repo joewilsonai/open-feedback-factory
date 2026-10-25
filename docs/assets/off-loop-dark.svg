@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="790" viewBox="0 0 1320 790" role="img" aria-label="Open Feedback Factory: capture, sanitize, route, build, ship, and back to the user">
+<defs>
+<linearGradient id="acc" gradientUnits="userSpaceOnUse" x1="60" y1="0" x2="1260" y2="0">
+<stop offset="0" stop-color="#22D3EE"/><stop offset="1" stop-color="#A78BFA"/></linearGradient>
+<marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M0 0 L10 5 L0 10 z" fill="#A78BFA"/></marker>
+<marker id="arrw" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M0 0 L10 5 L0 10 z" fill="#F5A524"/></marker>
+<marker id="arro" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M0 0 L10 5 L0 10 z" fill="#34D399"/></marker>
+</defs>
+<rect width="1320" height="790" rx="24" fill="#0B0F17"/>
+<text x="60" y="70" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="url(#acc)" text-anchor="start" letter-spacing="3">OPEN FEEDBACK FACTORY</text>
+<text x="60" y="112" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="32" font-weight="700" fill="#E8ECF4" text-anchor="start">From a user's request to a shipped feature</text>
+<text x="60" y="143" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="17" font-weight="400" fill="#93A0B8" text-anchor="start">Agents do the building. Policy gates decide what ships. Users see every outcome.</text>
+<rect x="60" y="172" width="1200" height="44" rx="12" fill="#121A2A" stroke="#26324D"/>
+<text x="82" y="199" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#22D3EE" text-anchor="start" letter-spacing="2">CONTROL CENTER</text>
+<text x="250" y="200" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#E8ECF4" text-anchor="start">Every request, decision, agent run, PR, cost and outcome, in one view</text>
+<line x1="164.0" y1="216" x2="164.0" y2="245" stroke="#26324D" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round"/>
+<line x1="412.0" y1="216" x2="412.0" y2="245" stroke="#26324D" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round"/>
+<line x1="660.0" y1="216" x2="660.0" y2="245" stroke="#26324D" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round"/>
+<line x1="908.0" y1="216" x2="908.0" y2="245" stroke="#26324D" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round"/>
+<line x1="1156.0" y1="216" x2="1156.0" y2="245" stroke="#26324D" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round"/>
+<rect x="60" y="245" width="208" height="180" rx="16" fill="#121A2A" stroke="#26324D" stroke-width="1.2"/>
+<circle cx="92" cy="281" r="16" fill="none" stroke="url(#acc)" stroke-width="2.5"/>
+<text x="92" y="287" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#E8ECF4" text-anchor="middle">1</text>
+<text x="118" y="286" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#22D3EE" text-anchor="start" letter-spacing="2">CAPTURE</text>
+<text x="82" y="337" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#E8ECF4" text-anchor="start">User asks in-app</text>
+<text x="82" y="369" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#93A0B8" text-anchor="start">Floating widget,</text>
+<text x="82" y="391" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#93A0B8" text-anchor="start">published npm SDK</text>
+<line x1="274" y1="335.0" x2="300" y2="335.0" stroke="url(#acc)" stroke-width="2.5" marker-end="url(#arr)"/>
+<rect x="308" y="245" width="208" height="180" rx="16" fill="#121A2A" stroke="#26324D" stroke-width="1.2"/>
+<circle cx="340" cy="281" r="16" fill="none" stroke="url(#acc)" stroke-width="2.5"/>
+<text x="340" y="287" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#E8ECF4" text-anchor="middle">2</text>
+<text x="366" y="286" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#22D3EE" text-anchor="start" letter-spacing="2">SANITIZE</text>
+<text x="330" y="337" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#E8ECF4" text-anchor="start">Private data out</text>
+<text x="330" y="369" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#93A0B8" text-anchor="start">Secrets and PII</text>
+<text x="330" y="391" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#93A0B8" text-anchor="start">redacted first</text>
+<line x1="522" y1="335.0" x2="548" y2="335.0" stroke="url(#acc)" stroke-width="2.5" marker-end="url(#arr)"/>
+<rect x="556" y="245" width="208" height="180" rx="16" fill="#121A2A" stroke="#26324D" stroke-width="1.2"/>
+<circle cx="588" cy="281" r="16" fill="none" stroke="url(#acc)" stroke-width="2.5"/>
+<text x="588" y="287" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#E8ECF4" text-anchor="middle">3</text>
+<text x="614" y="286" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#22D3EE" text-anchor="start" letter-spacing="2">ROUTE</text>
+<text x="578" y="337" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#E8ECF4" text-anchor="start">Worth building?</text>
+<text x="578" y="369" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#93A0B8" text-anchor="start">Clusters demand,</text>
+<text x="578" y="391" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#93A0B8" text-anchor="start">risk tier, cost cap</text>
+<line x1="770" y1="335.0" x2="796" y2="335.0" stroke="url(#acc)" stroke-width="2.5" marker-end="url(#arr)"/>
+<rect x="804" y="245" width="208" height="180" rx="16" fill="#121A2A" stroke="#26324D" stroke-width="1.2"/>
+<circle cx="836" cy="281" r="16" fill="none" stroke="url(#acc)" stroke-width="2.5"/>
+<text x="836" y="287" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#E8ECF4" text-anchor="middle">4</text>
+<text x="862" y="286" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#22D3EE" text-anchor="start" letter-spacing="2">BUILD</text>
+<text x="826" y="337" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#E8ECF4" text-anchor="start">Agent opens a PR</text>
+<text x="826" y="369" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#93A0B8" text-anchor="start">Sanitized issue →</text>
+<text x="826" y="391" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#93A0B8" text-anchor="start">branch → checks</text>
+<line x1="1018" y1="335.0" x2="1044" y2="335.0" stroke="url(#acc)" stroke-width="2.5" marker-end="url(#arr)"/>
+<rect x="1052" y="245" width="208" height="180" rx="16" fill="#121A2A" stroke="#34D399" stroke-width="2"/>
+<circle cx="1084" cy="281" r="16" fill="none" stroke="url(#acc)" stroke-width="2.5"/>
+<text x="1084" y="287" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#E8ECF4" text-anchor="middle">5</text>
+<text x="1110" y="286" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#34D399" text-anchor="start" letter-spacing="2">SHIP</text>
+<text x="1074" y="337" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#E8ECF4" text-anchor="start">Gate, merge, ship</text>
+<text x="1074" y="369" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#93A0B8" text-anchor="start">Policy-gated merge,</text>
+<text x="1074" y="391" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#93A0B8" text-anchor="start">release detected</text>
+<rect x="60" y="470" width="230" height="140" rx="14" fill="none" stroke="#26324D" stroke-dasharray="5 5"/>
+<text x="80" y="504" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#22D3EE" text-anchor="start" letter-spacing="2">PRIVATE BY DESIGN</text>
+<text x="80" y="534" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#E8ECF4" text-anchor="start">Raw feedback stays</text>
+<text x="80" y="556" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#E8ECF4" text-anchor="start">private. Agents only see</text>
+<text x="80" y="578" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#E8ECF4" text-anchor="start">the sanitized summary.</text>
+<line x1="660.0" y1="425" x2="660.0" y2="694" stroke="#F5A524" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#arrw)"/>
+<rect x="316" y="470" width="324" height="140" rx="14" fill="#121A2A" stroke="#F5A524" stroke-width="1.2"/>
+<text x="336" y="504" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#F5A524" text-anchor="start" letter-spacing="2">OR IT SAYS NO, OUT LOUD</text>
+<text x="336" y="532" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#E8ECF4" text-anchor="start">Unsafe, duplicate or low-demand</text>
+<text x="336" y="552" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#E8ECF4" text-anchor="start">requests never reach an agent.</text>
+<text x="336" y="572" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#E8ECF4" text-anchor="start">The user is told why, and demand</text>
+<text x="336" y="592" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#E8ECF4" text-anchor="start">memory keeps counting.</text>
+<rect x="804" y="470" width="456" height="170" rx="14" fill="#121A2A" stroke="#26324D"/>
+<path d="M835 488 L844 492 V499 C844 505 840 509 835 511 C830 509 826 505 826 499 V492 Z" fill="none" stroke="url(#acc)" stroke-width="2"/>
+<text x="854" y="506" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#22D3EE" text-anchor="start" letter-spacing="2">GUARDRAILS ON EVERY RUN</text>
+<rect x="826" y="526" width="152" height="30" rx="15" fill="#18223A" stroke="#26324D"/>
+<text x="839" y="546" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#E8ECF4" text-anchor="start">Allowed paths only</text>
+<rect x="986.0" y="526" width="138" height="30" rx="15" fill="#18223A" stroke="#26324D"/>
+<text x="999.0" y="546" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#E8ECF4" text-anchor="start">Diff size limits</text>
+<rect x="826" y="566" width="138" height="30" rx="15" fill="#18223A" stroke="#26324D"/>
+<text x="839" y="586" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#E8ECF4" text-anchor="start">Checks must pass</text>
+<rect x="972.0" y="566" width="117" height="30" rx="15" fill="#18223A" stroke="#26324D"/>
+<text x="985.0" y="586" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#E8ECF4" text-anchor="start">Reviewer lane</text>
+<rect x="1097.0" y="566" width="124" height="30" rx="15" fill="#18223A" stroke="#26324D"/>
+<text x="1110.0" y="586" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#E8ECF4" text-anchor="start">Cost under cap</text>
+<rect x="826" y="606" width="145" height="30" rx="15" fill="#18223A" stroke="#26324D"/>
+<text x="839" y="626" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#E8ECF4" text-anchor="start">No secrets or PII</text>
+<rect x="979.0" y="606" width="201" height="30" rx="15" fill="#18223A" stroke="#26324D"/>
+<text x="992.0" y="626" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#E8ECF4" text-anchor="start">Human approval by default</text>
+<path d="M1266 335.0 H1274 Q1288 335.0 1288 349.0 V686 Q1288 700 1274 700 H46 Q32 700 32 686 V349.0 Q32 335.0 46 335.0 H52" fill="none" stroke="#34D399" stroke-width="2.5" marker-end="url(#arro)"/>
+<rect x="724" y="682" width="512" height="36" rx="18" fill="#0B0F17" stroke="#34D399" stroke-width="1.5"/>
+<text x="743.75" y="705" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#E8ECF4" text-anchor="start">Status in the widget:  submitted → planned → building → shipped</text>
+<text x="660.0" y="750" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#93A0B8" text-anchor="middle">Usage is tracked after ship, and every outcome sharpens routing, cost estimates and guardrails.</text>
+<text x="48" y="676" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#34D399" text-anchor="start" letter-spacing="2">BACK TO THE USER</text>
+</svg>
