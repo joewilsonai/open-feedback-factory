@@ -1,5 +1,10 @@
 # Open Feedback Factory
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/off-loop-dark.svg">
+  <img alt="Open Feedback Factory loop: a user asks in-app, private data is redacted, the work router decides what is worth building, a coding agent opens a PR, policy gates decide what merges and ships, and the user sees the outcome in the widget." src="docs/assets/off-loop-light.svg">
+</picture>
+
 Open Feedback Factory is a standalone feedback-to-feature control plane for
 indie developers and small teams.
 
