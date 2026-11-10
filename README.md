@@ -1,449 +1,268 @@
 # Open Feedback Factory
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/off-loop-dark.svg">
-  <img alt="Open Feedback Factory loop: a user asks in-app, private data is redacted, the work router decides what is worth building, a coding agent opens a PR, policy gates decide what merges and ships, and the user sees the outcome in the widget." src="docs/assets/off-loop-light.svg">
-</picture>
+**Your users ask for things inside your app. Open Feedback Factory turns those asks into guarded pull requests, and tells each user what happened.**
 
-Open Feedback Factory is a standalone feedback-to-feature control plane for
-indie developers and small teams.
+Built for indie developers and small teams who want a coding agent working their feedback queue without handing it the keys.
 
-The wedge is autonomous feature shipping for indie apps: real users ask for
-improvements inside the app, the system clusters demand, safe work becomes
-guarded agent implementation, and users get told what shipped or why it did not.
+## How it works
 
-The goal is simple: let an app listen to real user demand, decide what is worth
-acting on, turn safe requests into guarded agent work, track cost and release
-proof, notify users what happened, and measure whether shipped features get
-used.
+1. **Capture.** Your app embeds a small browser SDK. Users send feedback from a floating launcher and can watch its status from the same widget.
+2. **Sanitize.** Emails, phone numbers, keys, tokens and private keys are redacted before anything is stored. Feedback that carried a secret is blocked outright.
+3. **Route.** Feedback is grouped with similar requests, given a risk tier and a cost estimate, and either queued as work, held until enough people ask, sent back with clarifying questions, or blocked.
+4. **Build.** A worker you run claims a queued item and hands the Codex CLI the sanitized summary only. Codex makes the change on its own branch and the worker opens a pull request.
+5. **Gate.** A reviewer decision is recorded on the work item, CI runs on the pull request, and a merge only happens when every policy gate passes. Auto-merge is off until you turn it on.
+6. **Close the loop.** Work is only `shipped` once a release is recorded. Then the user who asked sees it in the widget, and feature usage is attributed back to the request.
 
-Agent-built pull requests are becoming table stakes. Open Feedback Factory's
-wedge is the managed loop around them: in-app feedback intake, privacy
-sanitization, demand thresholds, decision memory, cost controls, release proof,
-and user follow-up.
+```mermaid
+flowchart LR
+    A[User asks in your app] --> B[Sanitize<br/>redact or block]
+    B --> C{Route}
+    C -->|blocked or protected| X[Told why, in the widget]
+    C -->|not enough demand yet| M[Demand memory keeps counting]
+    M --> C
+    C -->|safe to build| D[Worker runs Codex<br/>on a fresh branch]
+    D --> E[Pull request + CI]
+    E --> F{Review + policy gates}
+    F -->|pass| G[Merge, record release]
+    F -->|fail| H[Stays blocked, reasons shown]
+    G --> I[User sees Shipped]
+```
 
-The product should also improve itself over time. Every request, decision,
-agent run, PR, review, release marker, usage event, rejection, rollback, and
-blocked policy result should become structured learning evidence for future
-routing, cost estimation, guardrails, provider/model choice, and eval coverage.
+## What makes it different
 
-V1 is an internal dogfood build. It is designed as an open-source product, but
-the first implementation should prove the loop privately before public launch.
-See [docs/v1-dogfood-build-checklist.md](docs/v1-dogfood-build-checklist.md)
-for the exact private dogfood completion gate.
+**It says no out loud.** Most of the work is deciding what not to build. Secret-bearing feedback never reaches GitHub or an agent. Requests that touch auth, billing, privacy, legal, encryption or bulk export are blocked for human product review. Low-demand requests wait in demand memory until enough people ask. In every case the user gets a plain answer instead of silence.
 
-## Hosted Private Stack
+**Safety is a design rule, not a setting.**
 
-The private hosted stack is now split across Railway and Vercel:
+- Raw feedback stays in your database. Agents, GitHub issues and the optional clustering model only ever see the sanitized text.
+- The merge gate reads its evidence from stored runner output or live GitHub data, never from fields a caller sends in a request.
+- A recorded reviewer approval is required. Passing `reviewerApproved: true` in a one-off request does nothing.
+- Unresolved assumptions that touch privacy, cost, merge safety or release status block auto-merge until someone resolves them.
+- Merged is not shipped. The release endpoint refuses work that is still planned or in progress.
 
-- Railway: API, control center, demo app, disabled worker, and Postgres.
-- Vercel: public landing page from `apps/landing`.
-- Hostinger: DNS for `openfeedbackfactory.com`, `.dev`, and `.org`.
+**You stay in charge.** Out of the box the stack runs in its most conservative shape:
 
-Current private Railway URLs and the target custom-domain map are documented in
-[docs/hosted-deployment.md](docs/hosted-deployment.md).
+| Waits for you by default | Runs on its own |
+| --- | --- |
+| Starting work on an item (`APPROVAL_MODE=manual`) | Sanitizing, clustering and routing new feedback |
+| Any code execution (`CODEX_RUNNER_MODE=disabled`) | Telling users their request was received, grouped, held or blocked |
+| Any GitHub write (`GITHUB_MODE=disabled`) | Counting demand on held requests |
+| Any merge (`AUTO_MERGE_ENABLED=false`, `MERGE_MODE=implement_only`) | Enforcing cost caps before model spend |
+| Marking work shipped (an explicit release marker) | Rate limiting every route group |
 
-The hosted stack starts honest and safe: manual approval, runner disabled,
-GitHub disabled, auto-merge disabled, and admin/runner tokens required. It can
-receive real feedback and show real queued work, but it should not claim PRs,
-cost actuals, releases, or shipped state until the corresponding integrations
-are configured.
+Turn each one on when you trust it. `AUTO_MERGE_ENABLED=false` stays a hard kill switch even if the policy in the control center allows auto-merge.
 
-## V1 Direction
+**It never fakes progress.** If the runner, GitHub or a release is not configured, the control center shows queued, blocked or needs-configuration states and the exact thing that is missing. The sample seed creates real feedback records only. It does not invent pull requests, costs, agent runs or releases.
 
-- Docker Compose local install.
-- Hosted trial/sandbox path for developers who want to test before installing.
-- Web SDK first, including a floating suggestion launcher with automatic
-  in-widget request status tracking.
-- Hosted landing page and a clean plant-care demo for developers who need to
-  see the loop before self-hosting. The plant app must start without the OFF
-  SDK so the demo can show a real SDK-install PR. LaunchBrief is only an
-  interim real-SDK proof app.
-- Postgres database.
-- GitHub App integration.
-- Codex-only built-in runner.
-- Policy-gated safe auto-merge.
-- User-facing shipped, blocked, not-planned, and needs-more-signal statuses.
-- Demand memory for below-threshold and blocked feedback clusters.
-- Feature usage attribution.
-- Focused operator control center with a realtime feature lifecycle view.
-- Recursive learning events that make routing, cost estimates, guardrails, and
-  agent/provider selection smarter without weakening safety gates.
-- Agent playbook layer for product critique, engineering review, design review,
-  security, QA, release, docs, and retro/learning. OFF can adapt MIT/open-source
-  methodology packs, but the work router still owns privacy, cost, policy,
-  merge, release, and user-follow-up decisions.
-- Codebase health/readiness scoring that turns repo and integration findings
-  into normal work items.
-- Secure integration secrets vault for scoped Supabase, Vercel, Resend, GitHub,
-  provider, and deployment credentials.
+## Quick start
 
-Hosted trial/sandbox should let a developer connect a test or starter repo,
-install the SDK snippet, submit real feedback, watch the lifecycle, and see a
-guarded PR path without pretending that anything shipped.
-
-## SDK Package Status
-
-The web SDK package is live on public npm as
-`@open-feedback-factory/sdk@0.1.0`: it builds to `packages/sdk/dist`, exports
-declaration files, has package-local install docs, passed `npm pack` dry-run
-plus a disposable tarball import smoke test, and is installable through the
-normal npm registry.
-
-The next proof point is not publishing. It is a real SDK-install PR against the
-clean Sprout demo repo, followed by merge/redeploy proof that the launcher is
-running from the public package in the target app.
-
-The admin SDK-install handoff endpoint is wired to stay honest:
-`POST /admin/connect/sdk-install-pr` verifies GitHub App repo access, queues a
-real work item and sanitized GitHub issue only when prerequisites are present,
-and still returns no PR URL until a live worker actually creates one.
-
-## Governance
-
-Open-source launch governance is staged but conservative:
-
-- [CONTRIBUTING.md](CONTRIBUTING.md) explains contribution expectations,
-  verification, and honesty requirements.
-- [SECURITY.md](SECURITY.md) defines private vulnerability reporting for the
-  dogfood alpha.
-- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) sets conduct expectations.
-- [docs/governance.md](docs/governance.md) captures maintainer boundaries,
-  safe agent patterns, and public-launch holds.
-- [docs/threat-model.md](docs/threat-model.md) names the core trust
-  boundaries and open security gaps.
-
-The license and public roadmap remain held for explicit maintainer approval.
-
-Future/V2: requester-first rollout can expose a shipped feature first to the
-users or cohort who asked for it, collect lightweight feedback, watch health
-and usage, then fall back to the operator's normal rollout policy.
-
-## Local Development
-
-V1 uses a pnpm TypeScript workspace and Docker Compose.
-
-If you are pointing Codex, Claude Code, GitHub Copilot, or another coding
-agent at this repo, start with [AGENTS.md](AGENTS.md) and
-[docs/agent-install.md](docs/agent-install.md).
+You need Node 24 or newer (CI uses 24), pnpm 10.28.1 and a Postgres database you control.
 
 ```bash
+git clone https://github.com/joewilsonai/open-feedback-factory.git
+cd open-feedback-factory
 pnpm install
-pnpm typecheck
-pnpm test
-pnpm run doctor
+
+# Point the stack at your Postgres, then create the schema.
+export DATABASE_URL=postgres://off:off@127.0.0.1:55432/open_feedback_factory
+pnpm db:migrate
+
+# API, worker, control center and demo app together.
 pnpm dev
 ```
 
-Landing page:
-
-```bash
-pnpm landing:dev
-pnpm landing:build
-```
-
-Default local ports:
-
-- API: `http://localhost:4100`
-- Control center: `http://localhost:5173`
-- Demo app: `http://localhost:5174`
-- Postgres: `localhost:55432`
-
-Docker path:
-
-```bash
-cp .env.example .env
-pnpm docker:up
-```
-
-Optional sample data after the stack is up:
+In a second terminal, add sample data:
 
 ```bash
 pnpm demo:seed
 ```
 
-`pnpm demo:seed` submits real Daybook feedback through the SDK and records one
-real feature-usage event. It does not create fake PRs, fake costs, fake agent
-runs, fake release events, or fake shipped states. Use `pnpm demo:reset` to clear
-sample seed and local integration-test rows from the Docker database without
-touching real `daybook_demo_app` submissions.
-Live workers leave sample-only seed work queued so dry-run data does not burn
-real agent runs.
+Then open:
 
-The Docker stack starts Postgres, the API, the worker, the control center, and
-the Daybook notepad/todo demo app. The worker polls `/runner/jobs/claim`, runs the configured runner,
-and posts results back to `/runner/jobs/:id/complete`.
+| What | Where |
+| --- | --- |
+| Control center | http://localhost:5173/ops/ |
+| Demo app (Daybook, a notes and todo app using the SDK) | http://localhost:5174 |
+| API | http://localhost:4100 (try `/health` and `/doctor`) |
 
-Safety defaults:
+The seed sends three requests through the real SDK path. Two become queued work items. The third ("Export every private note and email it to me") is blocked as a protected-area request, which is the point. `pnpm demo:reset` clears sample rows again.
 
-- real auto-merge is disabled by default;
-- GitHub mutations are disabled by default;
-- approval mode defaults to manual, so live workers only run targeted items;
-- runner mode defaults to disabled, so feedback is queued until a real runner is attached;
-- Codex auth can use either the local Codex CLI subscription path or a
-  server-side OpenAI API key saved outside git.
-- admin and runner token gates are available through `ADMIN_TOKEN` and
-  `RUNNER_TOKEN`; set both before exposing a tunnel or shared dogfood URL.
-- SDK, admin, runner, and GitHub endpoints have separate fixed-window rate-limit
-  defaults that can be tuned from `.env`.
-
-## Private Access Gates
-
-Local-only development can leave `ADMIN_TOKEN` and `RUNNER_TOKEN` blank. Before
-using Tailscale Funnel, Cloudflare Tunnel, or any shared network URL, set both
-values in `.env` and restart the stack.
-`pnpm run tunnel:tailscale` refuses to expose the local stack until both tokens
-are present.
-
-Local Vite dev servers automatically allow localhost and Tailscale `.ts.net`
-hosts. For other tunnel domains, add a comma-separated list to
-`VITE_ALLOWED_HOSTS` in `.env`, then restart `pnpm dev`.
-
-`ADMIN_TOKEN` protects `/admin/*` routes and the control center queue/settings
-actions. The control center reads `/doctor`, asks for the token when required,
-stores it in local browser storage, and sends it as a bearer token for admin
-requests.
-
-`RUNNER_TOKEN` protects `/runner/*` claim and completion routes. Docker and host
-workers read the same `.env` value and send it as `x-off-runner-token`.
-Generated host-worker commands refuse to start against a hosted API if
-`RUNNER_TOKEN` is missing, which keeps a misconfigured subscription worker from
-silently failing every claim.
-
-## Approval And Credential Modes
-
-`APPROVAL_MODE=manual` requires an operator to run a selected work item. It is
-the default for local demos and beta installs.
-
-`APPROVAL_MODE=auto` lets a live Codex worker claim safe queued work without
-selecting a specific work item. It still uses real runners, real PRs, and real
-guardrails.
-
-`CODEX_AUTH_MODE=cli` uses the signed-in local Codex CLI subscription path.
-
-`CODEX_AUTH_MODE=api_key` can be selected from the control center, and the
-control center can save a server-side OpenAI API key to
-`CODEX_SECRETS_PATH` without echoing it back to the browser. The worker injects
-that key only when `CODEX_AUTH_MODE=api_key`.
-
-## Runner Modes
-
-`CODEX_RUNNER_MODE=disabled` is the default. It accepts feedback and creates
-queued work items, but it does not claim work, report implementation, create
-agent runs, produce costs, or tell users something shipped.
-
-`CODEX_RUNNER_MODE=codex` uses `codex exec --json`. In `cli` auth mode, it uses
-the signed-in local Codex subscription path. In `api_key` auth mode, the worker
-loads `OPENAI_API_KEY` from `CODEX_SECRETS_PATH` or the environment and injects
-it into the Codex process.
-
-For local CLI/subscription installs, run the worker on the host so it can use
-the installed Codex CLI:
+You can watch the sanitizer work directly:
 
 ```bash
-docker compose stop worker
-pnpm worker:install:host
-pnpm worker:status:host
+curl -s localhost:4100/sdk/feedback \
+  -H 'content-type: application/json' \
+  -d '{"message":"login fails, my api_key=abc123secretvalue","source":"curl","userId":"sample-user"}'
 ```
 
-The helper creates a macOS LaunchAgent or Linux user systemd service, sources
-the ignored `.env` file at startup, and avoids copying secrets into the service
-file. Remove it with `pnpm worker:uninstall:host`.
+The response says `"state":"blocked"` with the message the user would see: it included secret-looking details and will not be sent to GitHub or an agent.
 
-For Docker API-key installs, save the API key in the control center, set
-`CODEX_RUNNER_MODE=codex` and `CODEX_AUTH_MODE=api_key`, then restart the worker
-service with `docker compose up -d --build worker`. Print the helper snippet
-with `pnpm worker:print:docker-api`. Docker installs `@openai/codex` in the API
-and worker containers when runner mode is `codex`; use `CODEX_CLI_VERSION` to
-pin that container CLI version and `DOCKER_CODEX_CLI` for the in-container
-binary path. Host workers can keep using `CODEX_CLI` for a host-specific path.
-The Docker worker intentionally leaves work queued in `cli` auth mode because it
-cannot use your host Codex subscription auth; switch it to `api_key` or use the
-host worker.
+There is also a Docker Compose stack in [docker-compose.yml](docker-compose.yml) that starts Postgres, the API, the worker, the control center and the demo app together, with `.env.example` as its starting config.
 
-The worker reads live approval/auth settings from `/doctor` before each claim,
-so changing Codex auth mode in the control center is picked up by an attached
-worker. The worker process still needs `CODEX_RUNNER_MODE=codex` because that is
-the explicit opt-in to real code execution. Host workers should pass an
-absolute `CODEX_SECRETS_PATH` or `CODEX_SECRETS_PATH="$PWD/.off/secrets.env"` so
-they read the same saved key the API reports.
+### Checks
 
-`CODEX_MANAGE_GIT=true` lets the Codex runner create a work branch before it
-runs. `GITHUB_CREATE_PR=true` plus `GITHUB_MODE=gh` lets the worker push that
-branch and open a pull request after a successful Codex run.
+```bash
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm run doctor
+```
 
-Set the optional `CODEX_*_USD_PER_1M` rate variables to convert captured Codex
-JSON usage totals into actual dollar cost records. Without rates, V1 records
-actual tokens and keeps the configured estimate as the dollar amount.
+Set `TEST_DATABASE_URL` to a throwaway Postgres database to include the Postgres-backed tests, which cover the store and row-level workspace isolation. `pnpm run doctor` checks your config, ports and the running API, and reports what is safe to expose.
 
-GitHub Actions can also run a manual one-item worker through the copyable
-template in [docs/github-actions-runner.md](docs/github-actions-runner.md).
-That lane uses API-key auth in CI, not a developer's local Codex subscription.
+## Connect your app
 
-Set `WORKER_WORK_ITEM_ID=work_...` with `WORKER_RUN_ONCE=true` to run one
-specific queued item. This is useful for demos, retries, and Codex PR smoke
-tests where another worker should not claim the oldest queue item.
+The SDK is published on npm as [`@open-feedback-factory/sdk`](https://www.npmjs.com/package/@open-feedback-factory/sdk).
 
-Live demos must be real. If Codex, GitHub, or release proof is not configured,
-the product should show queued/blocked states and the exact missing requirement,
-not simulated implementation.
+```bash
+pnpm add @open-feedback-factory/sdk
+```
 
-Runner completions store structured assumptions, checks run, skipped checks,
-actual token/cost data when available, and a user-safe message. Any unresolved
-assumption that affects privacy, cost, merge safety, or release status blocks
-safe auto-merge until a reviewer lane or human operator resolves it.
+Mount the launcher:
 
-Reviewer approval is also durable evidence. The control center records review
-approval or rejection on the work item ledger, and safe auto-merge reads that
-latest stored decision. Passing `reviewerApproved` in a one-off request is not a
-merge gate; the review must be recorded first by a reviewer agent or human.
+```ts
+import {
+  createOpenFeedbackClient,
+  mountFeedbackLauncher,
+} from "@open-feedback-factory/sdk";
 
-The control center shows estimated cost before work starts and latest actual
-cost after a runner reports completion. It also exposes a reconciliation action
-that requeues stale in-progress work and identifies implemented work still
-waiting for release proof.
+const client = createOpenFeedbackClient({
+  apiBaseUrl: "https://off-api.example.com", // your Open Feedback Factory API
+  userId: currentUser.id,
+  metadata: { appVersion: "1.4.0", platform: "web" },
+});
 
-Each selected work item also has an evidence ledger. The ledger shows agent
-runs, estimate and actual cost records, all recorded assumptions, GitHub
-artifacts, review decisions, release markers, user-facing follow-up
-notifications, feature-usage attribution, and audit events. This is the
-operator proof trail for "what happened, what did it cost, what assumptions were
-made, who reviewed it, what PR exists, is it actually shipped, and is it being
-used?"
+const launcher = mountFeedbackLauncher({
+  client,
+  title: "Suggest an improvement",
+  description: "Tell us what would make this app better.",
+  suggestions: [
+    { label: "Add dark mode", message: "I'd like a dark theme." },
+  ],
+});
 
-Learning is part of that ledger. Runs should record what the system learned:
-cost-estimate calibration, repeated assumptions, provider/model performance,
-guardrail hits, missed tests, rollback causes, and suggested eval/regression
-cases. The router should use those records to make better future decisions, but
-learning artifacts must never silently relax privacy, cost, security, or merge
-guards.
+// When your app unmounts the surface:
+launcher.destroy();
+```
 
-Feature usage attribution is tied to release proof. When marking a work item
-shipped, record the app's stable `featureId`; later SDK calls to
-`trackFeatureUsage({ featureId })` are attributed back to the shipped work item,
-requesting feedback cluster, and requester count without exposing raw feedback.
+The launcher submits feedback, remembers the latest request in browser storage, polls its status while open, and asks plain-language follow-up questions when the backend needs more detail.
 
-Below-threshold feedback is not thrown away. The API stores it in feedback
-clusters, increments the cluster signal count on later matching requests, and
-routes repeated unclear requests into a guarded work item once the V1 threshold
-is reached. The control center's demand-memory panel shows these clusters,
-their latest safe decision, and whether they have promoted into work.
+You can also call the client directly:
 
-Matching uses a hybrid clusterer. Deterministic dedicated buckets (dark mode,
-crashes, copy edits, Daybook features) group instantly with no model call. For
-everything else — the brittle path where "send me a watering reminder" and
-"push notifications for watering" would otherwise scatter into separate
-one-signal clusters — an optional semantic classifier groups requests by
-canonical intent so paraphrases accumulate demand together. It is shown the
-intents that already exist and reuses a matching one rather than minting a
-near-duplicate sibling. Only the sanitized message is sent to the model;
-blocked, secret-bearing, or protected-area feedback never is; and any model
-error or timeout falls back to the deterministic key, so intake never breaks.
-It is off until `ANTHROPIC_API_KEY` is configured.
+```ts
+const { feedbackId, status } = await client.submitFeedback({
+  message: "Let me filter plants by room.",
+});
 
-Operators can also record explicit not-planned or blocked decisions from the
-control center. That updates the work item, writes a user-safe notification for
-matching requesters, and stores an audit event so rejected work is explained
-instead of silently disappearing.
+await client.getFeedbackStatus(feedbackId);
 
-The control center can update the max feature cost cap, max safe diff size,
-protected path fragments, and policy-level auto-merge allowance. `/doctor`,
-manual runs, runner claims, and safe auto-merge all read live policy config, so
-over-budget work stays queued instead of spending model time and over-broad PRs
-stay blocked. `AUTO_MERGE_ENABLED=false` remains the hard env kill switch even
-when the policy-level auto-merge allowance is on.
+// After a feature ships, record that people use it.
+await client.trackFeatureUsage({ featureId: "room-filter", action: "opened" });
+```
 
-## Rate Limits
+Usage events are attributed to the shipped work item and the cluster of people who asked for it, without exposing anyone's raw feedback.
 
-V1 includes local fixed-window HTTP rate limits. Defaults are intentionally high
-for private dogfood, but visible and configurable:
+The client drops metadata keys that look like transcripts, screenshots, passwords, tokens or secrets, and only sends primitive values. Even so, keep private user content, credentials and raw logs out of metadata. More in the [SDK README](packages/sdk/README.md).
 
-- `SDK_RATE_LIMIT_MAX=120`
-- `ADMIN_RATE_LIMIT_MAX=120`
-- `RUNNER_RATE_LIMIT_MAX=300`
-- `GITHUB_RATE_LIMIT_MAX=300`
-- `RATE_LIMIT_WINDOW_MS=60000`
+## Architecture
 
-Hosted installs should back these with shared storage such as Redis; the V1
-in-memory limiter exists so local and Docker installs exercise the same failure
-shape instead of silently accepting abuse.
+A pnpm TypeScript workspace.
 
-## GitHub Modes
+| Path | What it is |
+| --- | --- |
+| `packages/sdk` | Browser client and floating launcher. Published to npm. |
+| `packages/core` | The rules: sanitizer, clusterer, router, user statuses, cost estimates, the auto-merge gate, assumption checks, agent playbooks. |
+| `packages/db` | Postgres schema, store, migrations, sample seed and reset, row-level workspace isolation. |
+| `packages/runner` | Codex CLI runner (sandbox mode, network off by default, command allow and deny rules) and the GitHub client. |
+| `services/api` | Fastify API: `/sdk` for apps, `/admin` for the owner, `/runner` for workers, `/github` for the GitHub App, plus `/doctor` and `/health`. |
+| `services/worker` | Polls `/runner/jobs/claim`, runs Codex, optionally pushes a branch and opens a pull request, then reports to `/runner/jobs/:id/complete`. |
+| `apps/control-center` | The owner console: queue, demand memory, evidence ledger, policy settings, GitHub App setup, readiness. |
+| `apps/demo-app` | Daybook, a small notes and todo app wired to the SDK. |
+| `apps/landing` | The landing page. |
+| `templates/github-actions` | A manual, one-item worker you can run in GitHub Actions with an API key. |
 
-`GITHUB_MODE=disabled` is the default.
+### Running a real worker
 
-`GITHUB_MODE=gh` enables internal dogfood mutations through the GitHub CLI. In
-that mode, newly accepted sanitized feedback can create a GitHub issue and store
-the URL on the work item. Safe auto-merge still requires every gate to pass:
-safe risk tier, trusted branch, persisted reviewer approval, passing checks,
-release health, cost cap, allowed paths, and an attached PR URL.
-Branch, diff, check, and cost evidence is read from stored runner output or live
-GitHub PR data, not caller-supplied request fields.
+The worker uses the Codex CLI. Two ways to authenticate it:
 
-`GITHUB_MODE=app` is the installable GitHub App path. Configure
-`GITHUB_APP_ID` plus either `GITHUB_APP_PRIVATE_KEY` or
-`GITHUB_APP_PRIVATE_KEY_PATH`; `GITHUB_APP_INSTALLATION_ID` is optional because
-the client can resolve it from the configured owner/repo. In App mode, sanitized
-issues, PR creation, PR comments, branch cleanup, and guarded merges use
-installation tokens instead of a personal GitHub CLI session.
+- **Your Codex subscription, on your machine.** Run the worker on the host so it can use your signed-in CLI. `pnpm worker:install:host` installs it as a macOS LaunchAgent or Linux user service that reads your `.env` at startup without copying secrets into the service file.
+- **An OpenAI API key.** Save the key from the control center. It is stored server-side and never echoed back to the browser. The worker injects it into the Codex process only in `api_key` mode.
 
-The control center shows a GitHub App install wizard at
-`http://localhost:5173` locally and `/ops` through the Tailscale HTTPS demo URL.
-Use **Create GitHub App** to start GitHub's
-manifest-based App registration flow. GitHub still requires a confirmation
-screen, then it returns to the local callback page where you can generate and
-copy the `GITHUB_MODE=app` env values for Docker. GitHub will not create a
-manifest-based App from `localhost` URLs. For local testing, run
-`pnpm run tunnel:tailscale`, set `PUBLIC_BASE_URL` to the printed HTTPS URL,
-restart Docker, then use the wizard. The helper maps `/` to the demo app and
-`/ops` to the control center, while keeping `/sdk`, `/admin`, `/runner`,
-`/doctor`, `/health`, and `/github` pointed at the API so the demo app, control
-center, and GitHub webhook callback work on one hostname.
-If Tailscale Funnel is not available, `cloudflared tunnel --url
-http://localhost:4100` can expose the API-only wizard path, but it will not serve
-the demo app unless you add equivalent routing.
+Then set `CODEX_RUNNER_MODE=codex`, which is the explicit opt-in to running code. Add `CODEX_MANAGE_GIT=true` for a fresh branch per run, and `GITHUB_CREATE_PR=true` with a GitHub mode to open pull requests. Full setup is in [docs/agent-runner-setup.md](docs/agent-runner-setup.md).
 
-The API also exposes `/github/app/manifest`, `/github/app/setup`,
-`/github/app/installed`, and `/github/webhook` for the App installation and
-webhook flow.
+### GitHub
 
-After App credentials are configured, operators can verify the installation
-scope with `GET /admin/github/repositories` using the admin token. That endpoint
-lists the repositories visible to the GitHub App installation, reports whether
-the configured `GITHUB_OWNER/GITHUB_REPO` target is accessible, and returns a
-safe blocked/error summary instead of raw provider errors. It never returns the
-App private key, installation token, webhook secret, or admin token.
+`GITHUB_MODE=app` is the installable path. The control center has a GitHub App wizard that uses GitHub's manifest flow, so registration is a confirmation screen rather than a form. GitHub will not create a manifest App from `localhost`, so expose the stack through a tunnel first (`pnpm run tunnel:tailscale` refuses to run until admin and runner tokens are set). `GET /admin/github/repositories` confirms which repositories the installation can see. Webhook deliveries are deduplicated by delivery id.
 
-GitHub webhook deliveries are recorded by delivery id so redelivered events are
-acknowledged without duplicating artifacts or agent-run records. GitHub
-artifacts are idempotent per work item/type/URL, and generated runner branches
-are eligible for cleanup after a guarded merge.
+`GITHUB_MODE=gh` uses the GitHub CLI and is meant for dogfooding.
 
-## CI And Safe Merge
+## Safety model
 
-The default GitHub Actions workflow runs tests, typecheck, build, and the
-Postgres-backed DB integration test on pull requests. Safe auto-merge depends
-on that check lane plus the Open Feedback Factory policy gates; it is disabled
-until `AUTO_MERGE_ENABLED=true` and GitHub mutation mode are explicitly set.
-The DB integration test includes a non-owner app role RLS check that proves one
-workspace cannot read or write another workspace's rows through direct SQL.
+| Layer | What happens |
+| --- | --- |
+| Intake | Messages are redacted for emails, phone numbers, API keys, `key=value` secrets and PEM private keys. Only allow-listed metadata keys with primitive values are kept. |
+| Routing | Any secret blocks the request entirely. Protected product areas are blocked for human review. Unclear requests get clarifying questions instead of agent work. |
+| External models | Optional semantic clustering (off until `ANTHROPIC_API_KEY` is set) sees only sanitized text, never blocked or protected-area feedback, and falls back to deterministic keys on any error or timeout. |
+| Agent | Codex gets the sanitized summary, a sandbox mode, network access off unless you enable it, and command rules you control. It is told not to commit, push or open pull requests itself. |
+| Spend | Per-item, daily and monthly dollar caps and a per-run token cap are checked before any model time is spent. Over-budget work stays queued. |
+| Merge | Every one of these must pass: auto-merge enabled, a merge mode that allows it, the `safe_auto_merge` risk tier, a runner-created branch, passing checks, recorded reviewer approval, healthy release state, a diff under the size cap, cost under the cap, no blocking assumptions, and no protected paths touched. |
+| Access | `ADMIN_TOKEN` protects `/admin/*`; scoped viewer, operator and admin tokens are supported. `RUNNER_TOKEN` protects `/runner/*`. Set both before anything leaves localhost. |
+| Proof | Every work item has an evidence ledger: agent runs, cost estimates and actuals, assumptions, GitHub artifacts, review decisions, release markers, user notifications and feature usage. |
 
-Merged or implemented work is not user-facing `shipped` until an explicit
-release marker is recorded. The release endpoint refuses still-planned or
-in-progress work.
+Deeper reading: [threat model](docs/threat-model.md), [security policy](SECURITY.md), [governance](docs/governance.md).
+
+## Configuration
+
+Everything is environment variables, documented in [.env.example](.env.example). The ones you will touch first:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `DATABASE_URL` | none | Postgres connection for the API. |
+| `APPROVAL_MODE` | `manual` | `auto` lets a live worker claim safe queued work without you picking it. |
+| `CODEX_RUNNER_MODE` | `disabled` | `codex` runs real code. |
+| `CODEX_AUTH_MODE` | `cli` | `cli` for your subscription, `api_key` for a saved key. |
+| `GITHUB_MODE` | `disabled` | `app` or `gh`. |
+| `MERGE_MODE` | `implement_only` | Stop at the pull request. |
+| `AUTO_MERGE_ENABLED` | `false` | Hard kill switch for merges. |
+| `MAX_FEATURE_COST_USD` | `5` | Per-item cap. Daily and monthly caps sit beside it. |
+| `MAX_SAFE_DIFF_LINES` | `120` | Larger diffs never auto-merge. |
+| `PROTECTED_PATHS` | auth, billing, privacy, legal, ... | Path fragments that block auto-merge. |
+| `WORK_CADENCE_MODE` | `immediate` | `threshold` waits for repeat asks; `scheduled` batches work into a window. |
+
+The control center can change approval mode, Codex auth, cost caps, merge guardrails and work cadence at runtime. The worker reads live settings from `/doctor` before every claim.
+
+## Status
+
+This is an early alpha, version 0.1.0. Be clear-eyed about what that means:
+
+- The SDK is on npm. The API, worker, runner, control center and gates are implemented and covered by tests that run in CI.
+- The full loop from a user's request to a released, attributed feature has more proof to collect in the open. [docs/implementation-status.md](docs/implementation-status.md) lists what is done, partial and not started, and why.
+- The hosted stack is private. Self-hosting is the way to try it today.
+- Codex is the only built-in runner.
+- There are no stable public releases, and no license has been chosen yet.
+
+## On the way
+
+These are built on an unreleased branch and are not part of `main` yet. They will land here when they are ready.
+
+- **A product take before any code.** The fixer writes down what was asked, what the bare minimum would be, and what the better version is, then builds the better version inside the request's area. Each app can set its own taste notes, and bigger ideas become tickets for the owner rather than scope creep.
+- **Apps that report their own errors.** An SDK call for crash and error reporting, one ticket per cause with a count and first and last seen, and a cause that comes back after its fix reopens.
+- **An owner board.** Lanes for just in, waiting, being fixed, review and shipped, with the live steps of a fix in progress and why a failed fix failed.
+- **A lane that ships and watches.** A fix gets an independent review, has to pass every gate, lands on its own, and is watched after release, with an automatic rollback if new errors appear. A fix that cannot pass is held with the reasons shown, and never blocks the rest.
+- **Whole-payload checks and warnings that stick.** Everything a tester or an agent writes is checked whole for credentials and personal details at every boundary before it is stored or sent, and any work that ever carried a warning keeps it and cannot ship on its own.
+- **Several apps on one install**, and capped retries for failed fixes.
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) first. The short version: make the loop more truthful, safer or easier to operate, never fake a pull request, release, cost or shipped state, and say what you ran to prove a change. Pointing a coding agent at this repo? Start it on [AGENTS.md](AGENTS.md) and [docs/agent-install.md](docs/agent-install.md).
+
+Please report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), not in a public issue. Conduct expectations are in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## Docs
 
-- [Agent instructions](AGENTS.md)
-- [Agent install guide](docs/agent-install.md)
-- [Agent runner setup](docs/agent-runner-setup.md)
-- [Hosted deployment](docs/hosted-deployment.md)
-- [Hosted Demo Alpha](docs/hosted-demo-alpha.md)
-- [Governance](docs/governance.md)
-- [Threat model](docs/threat-model.md)
-- [V1 dogfood build checklist](docs/v1-dogfood-build-checklist.md)
-- [V1 test strategy](docs/v1-test-strategy.md)
-- [PRD](docs/feedback-to-feature-platform-prd.md)
-- [Polished PRD HTML](docs/feedback-to-feature-platform-prd.html)
-- [V1 design](docs/superpowers/specs/2026-06-19-open-feedback-factory-v1-design.md)
-- [Implementation plan](docs/superpowers/plans/2026-06-19-open-feedback-factory-v1.md)
+- [Agent install guide](docs/agent-install.md) and [runner setup](docs/agent-runner-setup.md)
+- [GitHub Actions worker](docs/github-actions-runner.md)
+- [Hosted deployment](docs/hosted-deployment.md) and [hosted demo alpha](docs/hosted-demo-alpha.md)
+- [Threat model](docs/threat-model.md) and [governance](docs/governance.md)
+- [Implementation status](docs/implementation-status.md), [V1 test strategy](docs/v1-test-strategy.md), [V1 dogfood checklist](docs/v1-dogfood-build-checklist.md)
+- [Product requirements](docs/feedback-to-feature-platform-prd.md), [V1 design](docs/superpowers/specs/2026-06-19-open-feedback-factory-v1-design.md), [implementation plan](docs/superpowers/plans/2026-06-19-open-feedback-factory-v1.md)
